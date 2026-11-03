@@ -369,3 +369,17 @@ Implemented:
 13. Verification: 30/30 unit tests pass; typecheck/build OK; browser checks as noted above.
 
 Not yet verified in browser: invoice auto-extraction end-to-end with a real file (code path implemented; Gemini latency dependent), password toggles, unsaved-changes prompt, keyboard-only dropdown use.
+
+## Usability verification checkpoint — 2026-11-03 21:40–22:00 UTC
+Browser (Playwright, signed in as the owner account) unless noted. Real Gemini (`gemini-3.1-flash-lite`).
+- Invoice upload (fictional `INV-UX-TEST-001`, 3 × 25.00 = 75.00, no currency, merchant ID line): reading started automatically on file selection; time to "Ready to review" 24.5 s and 62.1 s on two runs. Reference, total 75.00, line items and recipient read correctly; currency, due date, tax and shipping flagged "Missing — needs your input". Values are only filled after "Use these values".
+  - Finding: recipient was read as "PayPal merchant ID: L8SVBX42QHT3U" (label included). Kept verbatim by design; the reviewer must trim it. Not auto-corrected.
+  - Fixed: missing currency was being filled from the organisation default; it now stays empty for the user to enter. Fixed: submission could be blocked permanently by missing/uncertain flags even after the user filled them; now missing fields only need a value and uncertain ones need a user edit.
+  - Manual edit preserved: after editing the reference, "Use these values" asked before replacing; declining kept "MY-MANUAL-REF".
+- Show/Hide password: sign-in, sign-up and recent sign-in confirmation each toggle password → text → password, value preserved, no submission.
+- Leaving an edited form — FAILED then fixed: the leave guard blocked navigation silently with no prompt and leaving was impossible. Now a confirmation appears on invoice and proposal forms; "Stay" kept all entries, "Leave" returned to Purchases.
+- Overview "Reserved" now opens Weekly budget at the Active reservations section (`/budget#active-reservations`).
+- CA$25 proposal `410f4593…` labelled test data with an audit entry; status unchanged; reserve/pay hidden in the interface for it. No reservation or payment exists.
+- CA$75 `PP-CHECKOUT-20261103` still `verification_required`, change request `pending_verification`, no reserve/pay buttons.
+- Readability pass: proposal raw JSON replaced with an item/quantity/proposed-values summary (calculated values remain in Request details); invoice-only fields hidden on proposals; evidence history has readable text for every stored event type and a readable fallback; raw backend errors in notifications mapped to plain language; status codes humanised in suppliers/approvals/change reviews; "—" placeholders replaced with "Not provided"/"Not recorded" where they meant missing data. CSV export and stored records unchanged.
+- Unit tests 30/30 pass. Not tested: keyboard-only dropdown use; mobile layout.

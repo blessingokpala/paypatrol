@@ -6,6 +6,7 @@ import { PageHeader, Panel, StatusBadge } from "@/components/brand";
 import { BackLink } from "@/components/back-link";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/budget")({
@@ -26,6 +27,14 @@ function BudgetPage() {
     },
   });
   const b = budget.data;
+  const ready = Boolean(b) && !reservations.isLoading;
+  useEffect(() => {
+    if (ready && window.location.hash === "#active-reservations") {
+      const el = document.getElementById("active-reservations");
+      el?.scrollIntoView({ block: "start" });
+      (el?.nextElementSibling as HTMLElement | null)?.focus?.();
+    }
+  }, [ready]);
   const reservedIds = new Set((reservations.data ?? []).map((r) => r.purchase_id));
   const reservedPurchases = (purchases.data ?? []).filter((p) => reservedIds.has(p.id));
 
@@ -44,6 +53,7 @@ function BudgetPage() {
           <p className="mt-3 text-xs text-muted-foreground">
             Week starts {new Date(b.week_start).toLocaleDateString("en-CA", { timeZone: b.timezone })} ({b.timezone}) · rules version {b.policy_version}. Limits are changed under Spending rules.
           </p>
+          <div id="active-reservations" className="scroll-mt-20" />
           <Panel title="Active reservations" className="mt-6">
             {reservedPurchases.length === 0 ? (
               <p className="text-sm text-muted-foreground">No budget is reserved right now.</p>

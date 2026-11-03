@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -57,14 +58,14 @@ function Settings() {
   async function add(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.rpc("add_member_by_email", { _org: org.orgId, _email: email, _role: role });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Role added");
     setEmail("");
     qc.invalidateQueries();
   }
   async function remove(user: string, r: (typeof ROLES)[number]) {
     const { error } = await supabase.rpc("remove_member_role", { _org: org.orgId, _user: user, _role: r });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     qc.invalidateQueries();
   }
 
@@ -160,7 +161,7 @@ function Settings() {
                      if (!confirm("Create a new Sandbox supplier baseline? Historical requested recipients will not be rewritten and open requests will be rechecked.")) return;
                      setConfiguring(true);
                      try { await configureFn({ data: { orgId: org.orgId, supplierId, merchantId, cadConfirmed } }); toast.success("Sandbox supplier configured. PayPal will validate the order payee before capture."); qc.invalidateQueries(); }
-                     catch (e) { toast.error(e instanceof Error ? e.message : "Supplier configuration failed"); }
+                     catch (e) { toast.error(friendlyError(e, "Supplier configuration")); }
                      finally { setConfiguring(false); }
                    }}>Configure Sandbox supplier</Button>
                  </div>

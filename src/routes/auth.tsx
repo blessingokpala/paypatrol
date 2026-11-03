@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,14 +55,14 @@ function AuthPage() {
     setBusy(true);
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) toast.error(error.message);
+      if (error) toast.error(friendlyError(error));
     } else {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: window.location.origin + "/overview", data: { display_name: name } },
       });
-      if (error) toast.error(error.message);
+      if (error) toast.error(friendlyError(error));
       else setSent(true);
     }
     setBusy(false);

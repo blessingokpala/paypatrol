@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -33,7 +34,7 @@ function Approvals() {
 
   async function approve(id: string, version: number) {
     const { error } = await supabase.rpc("approve_purchase", { _pid: id, _version: version, _note: notes[id] ?? "" });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Approved this exact version");
     refresh();
   }
@@ -57,7 +58,7 @@ function Approvals() {
                   <div><dt className="text-muted-foreground">Recipient</dt><dd className="font-mono text-xs">{p.requested_recipient}</dd></div>
                   <div><dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name} (record v{sv?.version})</dd></div>
                   <div><dt className="text-muted-foreground">Rules version</dt><dd>v{(p.spending_policies as { version: number } | null)?.version}</dd></div>
-                  <div><dt className="text-muted-foreground">Requested by</dt><dd>{names[p.requested_by] ?? "—"}</dd></div>
+                  <div><dt className="text-muted-foreground">Requested by</dt><dd>{names[p.requested_by] ?? "Team member"}</dd></div>
                   <div><dt className="text-muted-foreground">Fingerprint</dt><dd className="font-mono text-xs">{p.digest?.slice(0, 12)}</dd></div>
                 </dl>
                 <ul className="mt-3 space-y-1 text-sm">

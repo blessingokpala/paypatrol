@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -64,17 +65,18 @@ function Review() {
   const activeRes = res.find((r) => r.status === "active");
   const latestExtraction = exs[0];
   const firstDoc = docs[0];
+  const isTestData = p.is_test_fixture && (p.fixture_label ?? "").toLowerCase().includes("do not reserve or pay");
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success(ok);
     refresh();
   }
 
   const openDoc = async (path: string) => {
     const { data, error } = await supabase.storage.from("invoices").createSignedUrl(path, 120);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     window.open(data.signedUrl, "_blank", "noopener");
   };
 
@@ -99,11 +101,7 @@ function Review() {
               </div>
             ))
           ) : (
-            <div className="space-y-2 text-sm">
-              <p>Submitted fields (as received):</p>
-              <pre className="whitespace-pre-wrap rounded-md border bg-muted p-3 text-xs">{JSON.stringify(p.ai_claims, null, 2)}</pre>
-              <p className="text-xs text-muted-foreground">These are the assistant's own claims. The server resolved price, total, currency and recipient from the approved listing and supplier record.</p>
-            </div>
+            <ProposalSummary claims={p.ai_claims} items={items} />
           )}
         </Panel>
 
@@ -113,19 +111,21 @@ function Review() {
               <dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name ?? "Not matched"}</dd>
               <dt className="text-muted-foreground">Amount</dt><dd className="font-semibold">{formatMinor(p.total_minor, p.currency)}</dd>
               <dt className="text-muted-foreground">Currency</dt><dd>{p.currency}</dd>
-              <dt className="text-muted-foreground">Invoice ref</dt><dd>{p.invoice_reference ?? "—"}</dd>
-              <dt className="text-muted-foreground">Category</dt><dd>{p.category ?? "—"}</dd>
+              {p.source === "invoice" && <><dt className="text-muted-foreground">Invoice reference</dt><dd>{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}</dd></>}
+              <dt className="text-muted-foreground">Category</dt><dd>{p.category || <span className="text-muted-foreground">Not provided</span>}</dd>
             </dl>
           )}
           {items.length > 0 && (
             <table className="mt-4 w-full text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1">Line</th><th>Qty</th><th className="text-right">Total</th></tr></thead>
-              <tbody>{items.map((i) => <tr key={i.id} className="border-t"><td className="py-1">{i.description}{!i.listing_id && <span className="block text-xs text-muted-foreground">Summary total, not an itemised line. See what AI read below for the invoice's own lines.</span>}</td><td>{i.listing_id ? i.quantity : "—"}</td><td className="text-right">{formatMinor(i.line_total_minor, p.currency)}</td></tr>)}</tbody>
+              <tbody>{items.map((i) => <tr key={i.id} className="border-t"><td className="py-1">{i.description}{!i.listing_id && <span className="block text-xs text-muted-foreground">Summary total, not an itemised line. See what AI read below for the invoice's own lines.</span>}</td><td>{i.listing_id ? i.quantity : <span className="text-xs text-muted-foreground">Not itemised</span>}</td><td className="text-right">{formatMinor(i.line_total_minor, p.currency)}</td></tr>)}</tbody>
             </table>
           )}
+          {p.source !== "invoice" && <p className="mt-3 text-xs text-muted-foreground">Price and payment recipient were taken from the approved listing and supplier record.</p>}
         </Panel>
       </div>
 
+      {p.source === "invoice" && (
       <Panel title="What AI read from the document" className="mt-6">
         {latestExtraction ? (
           <ExtractionView row={latestExtraction} />
@@ -156,6 +156,7 @@ function Review() {
           </div>
         )}
       </Panel>
+      )}
 
       <Panel title="Recipient comparison" className="mt-6">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -171,7 +172,7 @@ function Review() {
             {sv
               ? <p className="mt-1 font-mono text-sm">{sv.paypal_merchant_id}</p>
               : <p className="mt-1 text-sm italic text-muted-foreground">{p.supplier_id ? "Supplier record is loading." : "No approved supplier selected."}</p>}
-            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value} · enrolment: {sv.enrolment_status.replace("_", " ")}</p>}
+            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value} · enrolment: {humanize(sv.enrolment_status)}</p>}
           </div>
         </div>
         <p className="mt-3 text-sm">{!sv ? (p.supplier_id ? "Supplier record is loading." : "No approved supplier to compare against. Match this request to an approved supplier or add the supplier through verification.") : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
@@ -203,7 +204,7 @@ function Review() {
             {approvals.map((a) => (
               <li key={a.id} className="rounded-md border p-3">
                 <span className="font-semibold">{names[a.approver_id] ?? "Approver"}</span> approved v{a.purchase_version} · {formatMinor(a.amount_minor, a.currency)} to {a.recipient} · {new Date(a.created_at).toLocaleString("en-CA")}{" "}
-                {a.is_valid ? <ToneBadge tone="success">Valid</ToneBadge> : <ToneBadge tone="neutral">Invalidated: {a.invalidated_reason}</ToneBadge>}
+                {a.is_valid ? <ToneBadge tone="success">Valid</ToneBadge> : <ToneBadge tone="neutral">No longer valid: {humanize(a.invalidated_reason, "details changed")}</ToneBadge>}
               </li>
             ))}
           </ul>
@@ -214,7 +215,7 @@ function Review() {
               ? <p className="text-sm text-muted-foreground">You submitted this request, so a different payer must approve it.</p>
               : <Button asChild><Link to="/approvals">Review in Approvals</Link></Button>
           )}
-          {p.status === "cleared_for_checkout" && org.has("payer", "owner") && !activeRes && (
+          {p.status === "cleared_for_checkout" && org.has("payer", "owner") && !activeRes && !isTestData && (
             <Button onClick={() => call(() => supabase.rpc("reserve_budget", { _pid: p.id }), "Budget reserved")}>Reserve budget for checkout</Button>
           )}
           {activeRes && (
@@ -228,7 +229,8 @@ function Review() {
           )}
           <Button variant="ghost" onClick={() => call(() => supabase.rpc("recheck_purchase", { _pid: p.id }), "Checks re-run")}>Re-run checks</Button>
         </div>
-        {org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending", "paid"].includes(p.status) && <SandboxCheckout purchaseId={p.id} onDone={refresh} />}
+        {isTestData && p.status === "cleared_for_checkout" && <p className="mt-3 text-sm text-muted-foreground">Labelled as test data. Budget reservation and payment are not offered for this request.</p>}
+        {!isTestData && org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending", "paid"].includes(p.status) && <SandboxCheckout purchaseId={p.id} onDone={refresh} />}
       </Panel>
     </>
   );
@@ -241,7 +243,7 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
     const m = parseToMinor(f.amount);
     if (m === null) { toast.error("Enter the amount like 75.00"); return; }
     const { error } = await supabase.rpc("edit_purchase", { _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Saved as a new version. Earlier approvals no longer apply.");
     onDone();
   }
@@ -270,7 +272,7 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
       _cr: cr.id, _merchant_seen: f.merchant, _business_account_seen: f.account,
       _outcome: f.outcome as "confirmed" | "denied" | "unreachable", _evidence: f.notes,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Sandbox account check recorded. No real supplier was verified.");
     onDone();
   }
@@ -311,20 +313,20 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
       _cr: cr.id, _channel_value: f.channel_value, _person: f.person, _contacted_at: new Date(f.when).toISOString(),
       _outcome: f.outcome as "confirmed" | "denied" | "unreachable", _evidence: f.evidence,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Verification recorded");
     onDone();
   }
   async function decide(approve: boolean) {
     const { error } = await supabase.rpc("decide_supplier_change", { _cr: cr.id, _approve: approve, _note: note });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success(approve ? "Change approved. New recipient stays unpayable until PayPal enrolment." : "Change rejected. Original supplier record retained.");
     onDone();
   }
 
   return (
     <Panel title="Supplier payment-detail change" className="mt-6">
-      <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{cr.status.replaceAll("_", " ")}</strong></p>
+      <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{humanize(cr.status)}</strong></p>
       {cr.status === "superseded"
         ? <p className="mt-1 text-sm text-muted-foreground">Closed automatically, not approved: {cr.decision_note}</p>
         : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Decision by {names[cr.decided_by ?? ""] ?? "reviewer"}: {cr.decision_note}</p>}
@@ -463,6 +465,31 @@ function ExtractionView({ row }: { row: ExtractionRow }) {
         </details>
       )}
       <p className="text-xs text-muted-foreground">AI output is untrusted. It cannot change spending rules, approve a request, confirm a supplier or move money.</p>
+    </div>
+  );
+}
+
+/** Readable view of what the AI proposal itself claimed. Calculated values live in Request details. */
+function ProposalSummary({ claims, items }: { claims: unknown; items: { listing_id: string | null; description: string }[] }) {
+  const c = (claims && typeof claims === "object" ? claims : {}) as Record<string, unknown>;
+  const listingId = typeof c["listing_id"] === "string" ? c["listing_id"] : null;
+  const item = items.find((i) => i.listing_id && i.listing_id === listingId)?.description ?? (listingId ? "Approved listing (name unavailable)" : null);
+  const qty = typeof c["quantity"] === "number" ? String(c["quantity"]) : null;
+  const total = typeof c["claimed_total_minor"] === "number" ? formatMinor(c["claimed_total_minor"], typeof c["currency"] === "string" ? c["currency"] : "CAD") : null;
+  const recipient = typeof c["claimed_recipient"] === "string" && c["claimed_recipient"].trim() ? c["claimed_recipient"] : null;
+  const reasoning = typeof c["reasoning"] === "string" && c["reasoning"].trim() ? c["reasoning"] : null;
+  const ns = <span className="text-muted-foreground">Not supplied</span>;
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-muted-foreground">What the original proposal asked for:</p>
+      <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2">
+        <dt className="text-muted-foreground">Item</dt><dd>{item ?? ns}</dd>
+        <dt className="text-muted-foreground">Quantity</dt><dd>{qty ?? ns}</dd>
+        <dt className="text-muted-foreground">Proposed total</dt><dd>{total ?? ns}</dd>
+        <dt className="text-muted-foreground">Proposed payment recipient</dt><dd className={recipient ? "font-mono" : ""}>{recipient ?? ns}</dd>
+        {reasoning && <><dt className="text-muted-foreground">Assistant's explanation</dt><dd>{reasoning}</dd></>}
+      </dl>
+      <p className="text-xs text-muted-foreground">Proposed values are claims only. They never set the price, recipient or approval.</p>
     </div>
   );
 }

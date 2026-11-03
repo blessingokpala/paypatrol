@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, useNavigate, useBlocker } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -67,7 +68,7 @@ function NewInvoice() {
 
   const dirty = edited.size > 0 || file !== null;
   useBlocker({
-    shouldBlockFn: () => dirty && !busy,
+    shouldBlockFn: () => dirty && !busy && !window.confirm("Leave this form? Your unsaved entries will be lost."),
     enableBeforeUnload: dirty && !busy,
   });
 
@@ -132,7 +133,7 @@ function NewInvoice() {
     const incoming = {
       ref: extraction.invoice_reference,
       amount: extraction.total,
-      currency: extraction.currency || f.currency,
+      currency: extraction.currency,
       recipient: extraction.requested_payment_recipient,
       contact: extraction.payment_change_instructions || f.contact,
       description: extraction.line_items[0]?.description ?? f.description,
@@ -164,8 +165,10 @@ function NewInvoice() {
       return;
     }
     if (applied && extraction) {
-      const blocked = ["invoice_reference", "total", "currency", "requested_payment_recipient"].filter(
-        (k) => extraction.missing_fields.includes(k) || extraction.uncertain_fields.includes(k),
+      const fieldOf: Record<string, keyof typeof f> = { invoice_reference: "ref", total: "amount", currency: "currency", requested_payment_recipient: "recipient" };
+      // Uncertain values must be re-entered or confirmed by editing; missing ones must be filled in.
+      const blocked = Object.keys(fieldOf).filter(
+        (k) => extraction.uncertain_fields.includes(k) && !edited.has(fieldOf[k]!),
       );
       const stillEmpty = [
         !f.ref.trim() && "invoice_reference",
@@ -186,7 +189,7 @@ function NewInvoice() {
     });
     if (error) {
       setBusy(false);
-      toast.error(`Could not save: ${error.message}. Your entries are still here — try again.`);
+      toast.error(`Could not save: ${friendlyError(error, "Saving")} Your entries are still here — try again.`);
       return;
     }
     const purchaseId = data as string;
@@ -328,7 +331,7 @@ function NewInvoice() {
                 placeholder="Not matched to an approved supplier"
                 options={[
                   { value: "", label: "Not matched to an approved supplier" },
-                  ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.status !== "active" ? ` (${s.status.replace("_", " ")})` : ""}` })),
+                  ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.status !== "active" ? ` (${humanize(s.status)})` : ""}` })),
                 ]}
               />
               {extraction?.supplier_name && (

@@ -52,7 +52,7 @@ function NewProposal() {
 
   const dirty = request.trim().length > 0 || f.listing !== "";
   useBlocker({
-    shouldBlockFn: () => dirty && !busy && !asking,
+    shouldBlockFn: () => dirty && !busy && !asking && !window.confirm("Leave this form? Your unsaved entries will be lost."),
     enableBeforeUnload: dirty && !busy && !asking,
   });
 
