@@ -5,6 +5,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg, useProfiles } from "@/lib/org";
 import { getIntegrationStatus } from "@/lib/integrations.functions";
+import { testAiConnection } from "@/lib/ai/ai.functions";
 import { ROLE_LABELS } from "@/lib/status";
 import { PageHeader, Panel, ToneBadge } from "@/components/brand";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,9 @@ function Settings() {
     },
   });
   const status = useQuery({ queryKey: ["integrations", org.orgId], enabled: isOwner, queryFn: () => statusFn({ data: { orgId: org.orgId } }) });
+  const testFn = useServerFn(testAiConnection);
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]>("change_approver");
 
@@ -90,9 +94,29 @@ function Settings() {
         <Panel title="Integrations (restricted)">
           {!isOwner ? <p className="text-sm text-muted-foreground">Only owners can view integration settings.</p> : (
             <ul className="space-y-4 text-sm">
-              <li className="flex items-start justify-between gap-3">
-                <div><p className="font-medium">Gemini (invoice extraction, proposals, explanations)</p><p className="text-xs text-muted-foreground">Server-side only. Cannot change rules, approve, verify suppliers or capture payments.</p></div>
-                {status.data?.gemini ? <ToneBadge tone="success">Key present</ToneBadge> : <ToneBadge tone="warning">AI not connected</ToneBadge>}
+              <li className="space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div><p className="font-medium">Gemini (invoice extraction, proposals, explanations)</p><p className="text-xs text-muted-foreground">Server-side only. Cannot change rules, approve, verify suppliers or capture payments.</p></div>
+                  {status.data?.gemini ? <ToneBadge tone="success">Key present</ToneBadge> : <ToneBadge tone="warning">AI not connected</ToneBadge>}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={testing}
+                    onClick={async () => {
+                      setTesting(true);
+                      const out = await testFn({ data: { orgId: org.orgId } });
+                      setTesting(false);
+                      setTest(out.ok ? { ok: true, text: `Connected · ${out.model} · ${new Date(out.at).toLocaleString("en-CA")}` } : { ok: false, text: out.error.message });
+                    }}
+                  >
+                    {testing ? "Testing…" : "Test connection"}
+                  </Button>
+                  {test && <ToneBadge tone={test.ok ? "success" : "warning"}>{test.ok ? "Connected" : "AI not connected"}</ToneBadge>}
+                </div>
+                {test && <p className="text-xs text-muted-foreground">{test.text}</p>}
+                <p className="text-xs text-muted-foreground">“Connected” appears only after a real model request succeeds. A key being present is not a connection.</p>
               </li>
               <li className="flex items-start justify-between gap-3">
                 <div><p className="font-medium">PayPal Sandbox (Orders v2, JS SDK v6)</p><p className="text-xs text-muted-foreground">Only protected server functions will create and capture orders. Paid is set only after a server-confirmed completed capture.</p></div>

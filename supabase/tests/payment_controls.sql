@@ -92,3 +92,47 @@ begin
   reset role;
   raise exception 'RESULTS: %', res;
 end $$;
+
+-- Block 3: approved-quote checks. The invoice amount is compared with the approved
+-- quote, both are kept, and a difference is held rather than paid.
+do $$
+declare
+  a uuid := '00000000-0000-0000-0000-00000000000a';
+  v_org uuid; v_sup uuid; v_listing uuid; v_rec text; v_price bigint; v_max int;
+  v_p uuid; v_st text; v_n int; res text := '';
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub',a,'role','authenticated')::text, true);
+  v_org := public.create_organization('Quote Test Grocery', true);
+  select l.id, l.supplier_id, l.unit_price_minor, l.max_quantity into v_listing, v_sup, v_price, v_max
+  from public.listings l where l.org_id = v_org and l.is_active order by l.name limit 1;
+  select v.paypal_merchant_id into v_rec from public.suppliers s
+  join public.supplier_versions v on v.id = s.current_version_id where s.id = v_sup;
+
+  -- invoice asks for more than the approved quote -> held, difference reported
+  v_p := public.submit_invoice(v_org, v_sup, 'INV-Q1', v_price + 3000, 'CAD', v_rec, null, 'packaging', 'T', null, null, null, v_listing, 1);
+  select status into v_st from public.purchases where id = v_p;
+  select count(*) into v_n from public.findings where purchase_id = v_p and code = 'AMOUNT_DIFFERS_FROM_QUOTE';
+  res := res || 'MISMATCH status=' || v_st || ' findings=' || v_n || '; ';
+  select count(*) into v_n from public.findings where purchase_id = v_p and code = 'AMOUNT_DIFFERS_FROM_QUOTE'
+    and message like '%' || to_char((v_price + 3000)/100.0,'FM999999990.00') || '%'
+    and message like '%' || to_char(v_price/100.0,'FM999999990.00') || '%';
+  res := res || 'both amounts shown=' || v_n || '; ';
+
+  -- invoice matches the approved quote -> no quote finding
+  v_p := public.submit_invoice(v_org, v_sup, 'INV-Q2', v_price, 'CAD', v_rec, null, 'packaging', 'T', null, null, null, v_listing, 1);
+  select count(*) into v_n from public.findings where purchase_id = v_p and code = 'AMOUNT_DIFFERS_FROM_QUOTE';
+  res := res || 'MATCH quote findings=' || v_n || '; ';
+
+  -- quantity above the listing's own limit is reported
+  v_p := public.submit_invoice(v_org, v_sup, 'INV-Q3', v_price, 'CAD', v_rec, null, 'packaging', 'T', null, null, null, v_listing, v_max + 1);
+  select count(*) into v_n from public.findings where purchase_id = v_p and code = 'AMOUNT_DIFFERS_FROM_QUOTE'
+    and message like '%above the listing limit%';
+  res := res || 'OVERLIMIT findings=' || v_n || '; ';
+
+  -- correcting the request keeps the quote link
+  perform public.edit_purchase(v_p, v_price, 'CAD', v_rec, 'INV-Q3', 'packaging');
+  select count(*) into v_n from public.purchase_line_items where purchase_id = v_p and listing_id = v_listing;
+  res := res || 'quote line after edit=' || v_n || '; ';
+
+  raise exception 'RESULTS: %', res;
+end $$;

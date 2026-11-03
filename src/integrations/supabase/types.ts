@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_extractions: {
+        Row: {
+          created_at: string
+          created_by: string
+          excerpts: Json
+          extracted: Json
+          file_name: string | null
+          id: string
+          missing_fields: string[]
+          model: string
+          org_id: string
+          purchase_id: string | null
+          storage_path: string | null
+          uncertain_fields: string[]
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          excerpts?: Json
+          extracted: Json
+          file_name?: string | null
+          id?: string
+          missing_fields?: string[]
+          model: string
+          org_id: string
+          purchase_id?: string | null
+          storage_path?: string | null
+          uncertain_fields?: string[]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          excerpts?: Json
+          extracted?: Json
+          file_name?: string | null
+          id?: string
+          missing_fields?: string[]
+          model?: string
+          org_id?: string
+          purchase_id?: string | null
+          storage_path?: string | null
+          uncertain_fields?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_extractions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_extractions_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       approvals: {
         Row: {
           amount_minor: number
@@ -1181,6 +1241,10 @@ export type Database = {
         Args: { _pid: string }
         Returns: Database["public"]["Enums"]["purchase_status"]
       }
+      evaluate_purchase_core: {
+        Args: { _pid: string }
+        Returns: Database["public"]["Enums"]["purchase_status"]
+      }
       has_org_role: {
         Args: {
           _org: string
@@ -1193,6 +1257,10 @@ export type Database = {
         Returns: number
       }
       is_org_member: { Args: { _org: string }; Returns: boolean }
+      link_extraction: {
+        Args: { _extraction: string; _purchase: string }
+        Returns: undefined
+      }
       log_audit: {
         Args: {
           _action: string
@@ -1211,6 +1279,19 @@ export type Database = {
       recheck_purchase: {
         Args: { _pid: string }
         Returns: Database["public"]["Enums"]["purchase_status"]
+      }
+      record_extraction: {
+        Args: {
+          _excerpts: Json
+          _extracted: Json
+          _file_name: string
+          _missing: string[]
+          _model: string
+          _org: string
+          _storage_path: string
+          _uncertain: string[]
+        }
+        Returns: string
       }
       record_verification: {
         Args: {
@@ -1254,8 +1335,10 @@ export type Database = {
           _description: string
           _file_name: string
           _invoice_ref: string
+          _listing?: string
           _message: string
           _org: string
+          _quantity?: number
           _recipient: string
           _storage_path: string
           _supplier: string

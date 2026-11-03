@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
+import type { Excerpt, Extraction } from "@/lib/ai/schemas";
 import { useOrg, useProfiles } from "@/lib/org";
 import { useRefreshAll } from "@/lib/queries";
 import { formatMinor, minorToInput, parseToMinor } from "@/lib/money";
@@ -23,7 +26,7 @@ function useReview(id: string) {
     queryFn: async () => {
       const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name)").eq("id", id).single();
       if (error) throw error;
-      const [items, docs, findings, crs, approvals, res, sv] = await Promise.all([
+      const [items, docs, findings, crs, approvals, res, sv, exs] = await Promise.all([
         supabase.from("purchase_line_items").select("*").eq("purchase_id", id),
         supabase.from("invoice_documents").select("*").eq("purchase_id", id),
         supabase.from("findings").select("*").eq("purchase_id", id).eq("purchase_version", p.version).order("created_at"),
@@ -31,10 +34,11 @@ function useReview(id: string) {
         supabase.from("approvals").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
         supabase.from("budget_reservations").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
         p.supplier_version_id ? supabase.from("supplier_versions").select("*").eq("id", p.supplier_version_id).single() : Promise.resolve({ data: null }),
+        supabase.from("ai_extractions").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
       ]);
       const crIds = (crs.data ?? []).map((c) => c.id);
       const verifs = crIds.length ? await supabase.from("verification_records").select("*").in("change_request_id", crIds).order("created_at") : { data: [] };
-      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [] };
+      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [] };
     },
   });
 }
@@ -46,12 +50,16 @@ function Review() {
   const q = useReview(id);
   const refresh = useRefreshAll();
   const [editing, setEditing] = useState(false);
+  const readInvoice = useServerFn(extractInvoiceDetails);
+  const [reading, setReading] = useState(false);
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (q.error || !q.data) return <p className="text-sm text-blocked">Request not found or not available to you.</p>;
-  const { p, items, docs, findings, crs, approvals, res, sv, verifs } = q.data;
+  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs } = q.data;
   const recipientDiffers = sv && p.requested_recipient && p.requested_recipient.trim().toLowerCase() !== sv.paypal_merchant_id.toLowerCase();
   const activeRes = res.find((r) => r.status === "active");
+  const latestExtraction = exs[0];
+  const firstDoc = docs[0];
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
@@ -90,7 +98,7 @@ function Review() {
             <div className="space-y-2 text-sm">
               <p>Submitted fields (as received):</p>
               <pre className="whitespace-pre-wrap rounded-md border bg-muted p-3 text-xs">{JSON.stringify(p.ai_claims, null, 2)}</pre>
-              <p className="text-xs text-muted-foreground">The server resolved price, total, currency and recipient from the approved listing and supplier record. No AI model is connected.</p>
+              <p className="text-xs text-muted-foreground">These are the assistant's own claims. The server resolved price, total, currency and recipient from the approved listing and supplier record.</p>
             </div>
           )}
         </Panel>
@@ -113,6 +121,35 @@ function Review() {
           )}
         </Panel>
       </div>
+
+      <Panel title="What AI read from the document" className="mt-6">
+        {latestExtraction ? (
+          <ExtractionView row={latestExtraction} />
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">No AI reading recorded for this request.</p>
+            {firstDoc?.storage_path && org.has("preparer", "owner") && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={reading}
+                onClick={async () => {
+                  const path = firstDoc.storage_path;
+                  if (!path) return;
+                  setReading(true);
+                  const out = await readInvoice({ data: { orgId: org.orgId, storagePath: path, fileName: firstDoc.file_name ?? "document" } });
+                  setReading(false);
+                  if (!out.ok) { toast.error(out.error.message); return; }
+                  await supabase.rpc("link_extraction", { _extraction: out.extractionId, _purchase: id });
+                  refresh();
+                }}
+              >
+                {reading ? "Reading…" : "Read this document with AI"}
+              </Button>
+            )}
+          </div>
+        )}
+      </Panel>
 
       <Panel title="Recipient comparison" className="mt-6">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -292,5 +329,76 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
         </div>
       )}
     </Panel>
+  );
+}
+
+type ExtractionRow = {
+  model: string;
+  created_at: string;
+  file_name: string | null;
+  extracted: unknown;
+  excerpts: unknown;
+  uncertain_fields: string[];
+  missing_fields: string[];
+};
+
+function ExtractionView({ row }: { row: ExtractionRow }) {
+  const e = row.extracted as Extraction;
+  const quotes = (row.excerpts ?? []) as Excerpt[];
+  const flag = (k: string) => (row.missing_fields?.includes(k) ? "missing" : row.uncertain_fields?.includes(k) ? "uncertain" : "ok");
+  const fields: [string, string, string][] = [
+    ["Supplier", e.supplier_name ?? "", "supplier_name"],
+    ["Invoice ref", e.invoice_reference ?? "", "invoice_reference"],
+    ["Invoice date", e.invoice_date ?? "", "invoice_date"],
+    ["Due date", e.due_date ?? "", "due_date"],
+    ["Buyer", e.buyer_name ?? "", "buyer_name"],
+    ["Subtotal", e.subtotal ?? "", "subtotal"],
+    ["Tax", e.tax ?? "", "tax"],
+    ["Shipping", e.shipping ?? "", "shipping"],
+    ["Total", e.total ?? "", "total"],
+    ["Currency", e.currency ?? "", "currency"],
+    ["Payment recipient", e.requested_payment_recipient ?? "", "requested_payment_recipient"],
+  ];
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Read by {row.model} on {new Date(row.created_at).toLocaleString("en-CA")}
+        {row.file_name ? ` · ${row.file_name}` : ""}
+      </p>
+      <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
+        {fields.map(([label, value, key]) => (
+          <div key={key} className="contents">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="flex flex-wrap items-center gap-2">
+              <span className={value ? "" : "italic text-muted-foreground"}>{value || "not stated"}</span>
+              {flag(key) === "missing" && <ToneBadge tone="warning">Missing — needs input</ToneBadge>}
+              {flag(key) === "uncertain" && <ToneBadge tone="warning">Hard to read</ToneBadge>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {(e.line_items?.length ?? 0) > 0 && (
+        <table className="w-full text-sm">
+          <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1">Line</th><th>Qty</th><th className="text-right">Unit</th><th className="text-right">Amount</th></tr></thead>
+          <tbody>{e.line_items.map((l, i) => <tr key={i} className="border-t"><td className="py-1">{l.description}</td><td>{l.quantity}</td><td className="text-right">{l.unit_price}</td><td className="text-right">{l.amount}</td></tr>)}</tbody>
+        </table>
+      )}
+      {e.payment_change_instructions && (
+        <div className="rounded-md border-2 border-warning bg-warning-soft p-3">
+          <p className="text-xs font-semibold uppercase text-warning">Document asks for payment details to change</p>
+          <blockquote className="mt-1 whitespace-pre-wrap text-sm">{e.payment_change_instructions}</blockquote>
+          <p className="mt-2 text-xs">Reported as evidence only. It has no authority over who gets paid.</p>
+        </div>
+      )}
+      {quotes.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-sm text-muted-foreground">Source quotes ({quotes.length})</summary>
+          <ul className="mt-2 space-y-1 text-xs">
+            {quotes.map((x, i) => <li key={i} className="text-muted-foreground"><span className="font-medium text-foreground">{x.field}</span> — “{x.quote}”{x.page ? ` (page ${x.page})` : ""}</li>)}
+          </ul>
+        </details>
+      )}
+      <p className="text-xs text-muted-foreground">AI output is untrusted. It cannot change spending rules, approve a request, confirm a supplier or move money.</p>
+    </div>
   );
 }
