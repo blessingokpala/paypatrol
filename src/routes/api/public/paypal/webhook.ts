@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { sandboxRequest, sandboxToken, reconcileSandboxOrder } from "@/lib/paypal.server";
-import type { PaymentSnapshot } from "@/lib/paypal-contract";
+import { isHandledWebhookEvent, type PaymentSnapshot } from "@/lib/paypal-contract";
 
 const eventSchema = z.object({ id: z.string().min(1).max(150), event_type: z.string().max(100), resource: z.object({ supplementary_data: z.object({ related_ids: z.object({ order_id: z.string().min(1).max(100) }) }).optional(), id: z.string().optional() }) });
 export const Route = createFileRoute("/api/public/paypal/webhook")({
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/api/public/paypal/webhook")({
       const verified = await sandboxRequest(token, "/v1/notifications/verify-webhook-signature", "POST", { auth_algo: authAlgo, cert_url: certUrl, transmission_id: transmissionId, transmission_sig: transmissionSig, transmission_time: transmissionTime, webhook_id: webhookId, webhook_event: raw }) as { verification_status?: string };
       if (verified.verification_status !== "SUCCESS") return new Response("Invalid signature", { status: 401 });
       const orderId = event.resource.supplementary_data?.related_ids.order_id;
-      if (!orderId || !["PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.PENDING", "PAYMENT.CAPTURE.DENIED"].includes(event.event_type)) return new Response("Ignored", { status: 200 });
+      if (!orderId || !isHandledWebhookEvent(event.event_type)) return new Response("Ignored", { status: 200 });
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: order } = await supabaseAdmin.from("paypal_orders").select("payment_attempt_id,org_id").eq("paypal_order_id", orderId).maybeSingle();
       if (!order) return new Response("Unknown payment", { status: 404 });

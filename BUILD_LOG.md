@@ -305,3 +305,9 @@ https://developer.paypal.com/docs/api/webhooks/v1/
 - Handled (re-reads the PayPal order before any change): PAYMENT.CAPTURE.COMPLETED, PENDING, DENIED.
 - Acknowledged and ignored (no payment-status or budget change): DECLINED, REFUNDED, REVERSED, and any other type.
 - Genuine signed PayPal notification received and verified: NOT YET OBSERVED.
+
+## Webhook deployment check after republish (2026-11-03 17:30 UTC)
+- Live endpoint with fake PayPal signature headers: 401 "Invalid signature" (previously 503 "Webhook not configured"). Shows the deployed handler reads PAYPAL_WEBHOOK_ID and asked PayPal to verify, which refused the fake signature.
+- Added PAYMENT.CAPTURE.DECLINED alongside DENIED: signature verified with PayPal → event matched to stored order/attempt → order re-read from PayPal → DENIED/DECLINED never marks Paid, never writes a capture confirmation, never releases the reservation (held for owner review). Duplicate events are deduplicated by event ID; a COMPLETED capture is never downgraded (SQL guard).
+- REFUNDED and REVERSED: explicitly unsupported in this demo — acknowledged (200) with no status or budget change. Refunds/reversals must be reconciled manually.
+- Tests performed: 18 scripted unit tests passed (incl. declined, denied, handled-event list). NOT performed: genuine signed PayPal notification receipt, duplicate/delayed real deliveries.

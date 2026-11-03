@@ -22,3 +22,7 @@ export function validateOrder(raw: unknown, attempt: PaymentSnapshot, expectedOr
   if (captures.length > 1 || captures.some(c => c.amount.value !== value || c.amount.currency_code !== attempt.currency)) throw new Error("PayPal capture amount differs from the authorised purchase");
   return order;
 }
+// Webhook events that trigger an authoritative order re-read. Everything else
+// (including REFUNDED and REVERSED) is acknowledged and ignored for this demo.
+export const HANDLED_WEBHOOK_EVENTS = ["PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.PENDING", "PAYMENT.CAPTURE.DENIED", "PAYMENT.CAPTURE.DECLINED"] as const;
+export function isHandledWebhookEvent(type: string) { return (HANDLED_WEBHOOK_EVENTS as readonly string[]).includes(type); }

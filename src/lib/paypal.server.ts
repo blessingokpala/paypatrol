@@ -36,6 +36,9 @@ export async function recordVerifiedSandboxOrder(admin: SupabaseClient<Database>
     if (error) throw new Error("Payment confirmation could not be recorded safely");
     return { status: capture.status === "COMPLETED" ? "paid" as const : "pending" as const, orderId: order.id, captureId: capture.id };
   }
+  // DENIED/DECLINED: never marks Paid and never releases budget; the reservation
+  // stays held for owner review because the provider outcome is not a completed payment.
+  if (capture && ["DENIED", "DECLINED"].includes(capture.status)) return { status: "declined" as const, orderId: order.id, captureId: capture.id };
   return { status: "pending" as const, orderId: order.id, captureId: null };
 }
 
