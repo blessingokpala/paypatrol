@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { authenticateSandbox, recordVerifiedSandboxOrder, reconcileSandboxOrder } from "./paypal.server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { validateOrder, type PaymentSnapshot } from "./paypal-contract";
+import { isHandledWebhookEvent, validateOrder, type PaymentSnapshot } from "./paypal-contract";
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Sandbox authentication", () => {
@@ -49,8 +49,17 @@ describe("authorised order comparison", () => {
   });
   it("a denied capture cannot mark Paid or write a confirmation", async () => {
     const { rpc, admin } = adminFixture();
-    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("DENIED"))).status).toBe("pending");
+    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("DENIED"))).status).toBe("declined");
     expect(rpc).not.toHaveBeenCalled();
+  });
+  it("a declined capture cannot mark Paid, release budget or write a confirmation", async () => {
+    const { rpc, admin } = adminFixture();
+    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("DECLINED"))).status).toBe("declined");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("only completed, pending, denied and declined events are handled; refunds and reversals are ignored", () => {
+    for (const t of ["PAYMENT.CAPTURE.COMPLETED", "PAYMENT.CAPTURE.PENDING", "PAYMENT.CAPTURE.DENIED", "PAYMENT.CAPTURE.DECLINED"]) expect(isHandledWebhookEvent(t)).toBe(true);
+    for (const t of ["PAYMENT.CAPTURE.REFUNDED", "PAYMENT.CAPTURE.REVERSED", "CHECKOUT.ORDER.APPROVED"]) expect(isHandledWebhookEvent(t)).toBe(false);
   });
   it("a database refusal cannot be reported as Paid", async () => {
     const { rpc, admin } = adminFixture(); rpc.mockResolvedValue({ error: { message: "Snapshot mismatch" } });
