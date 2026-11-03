@@ -75,7 +75,7 @@ function Overview() {
   );
 }
 
-function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "warning" }) {
+function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string | undefined; tone?: "warning" }) {
   return (
     <div className="rounded-lg border bg-card p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
