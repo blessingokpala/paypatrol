@@ -37,17 +37,17 @@ function Overview() {
         description="What needs attention before any money moves."
         actions={
           <>
-            <Button asChild><Link to="/purchases/new-invoice"><FileText className="mr-1 h-4 w-4" /> Check an invoice</Link></Button>
-            <Button asChild variant="outline"><Link to="/purchases/new-proposal"><Sparkles className="mr-1 h-4 w-4" /> Create AI purchase request</Link></Button>
+            <Button asChild><Link to="/purchases/new-invoice" search={{ from: "/overview" }}><FileText className="mr-1 h-4 w-4" /> Check an invoice</Link></Button>
+            <Button asChild variant="outline"><Link to="/purchases/new-proposal" search={{ from: "/overview" }}><Sparkles className="mr-1 h-4 w-4" /> Create AI purchase request</Link></Button>
           </>
         }
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Stat to="/budget" label="Available this week" value={b ? formatMinor(b.available_minor, b.currency) : "—"} sub={b ? `of ${formatMinor(b.weekly_limit_minor, b.currency)} weekly limit` : undefined} />
-        <Stat to="/budget" hash="active-reservations" label="Reserved" value={b ? formatMinor(b.reserved_minor, b.currency) : "—"} sub={b ? `Spent ${formatMinor(b.spent_minor, b.currency)} this week` : undefined} />
-        <Stat to="/purchases" search={{ status: "verification_required" }} label="Awaiting verification" value={String(verif.length)} sub="Changed payment details" tone="warning" />
-        <Stat to="/approvals" label="Pending approvals" value={String(approvals.length)} sub="Requests awaiting spending approval" />
-        <Stat to="/purchases" search={{ status: "blocked" }} label="Blocked requests" value={String(blocked.length)} sub="Failed a spending rule" tone={blocked.length ? "blocked" : undefined} />
+        <Stat to="/budget" label="Available this week" value={b ? formatMinor(b.available_minor, b.currency) : "Not set"} sub={b ? `of ${formatMinor(b.weekly_limit_minor, b.currency)} weekly limit` : "No active spending rules"} />
+        <Stat to="/reserved" label="Reserved" value={b ? formatMinor(b.reserved_minor, b.currency) : "Not set"} sub="Budget set aside for checkout" />
+        <Stat to="/purchases" search={{ status: "verification_required" }} label="Requests awaiting verification" value={String(verif.length)} sub="Purchase requests, all outstanding — recipient or supplier change unresolved" tone="warning" />
+        <Stat to="/approvals" label="Pending approvals" value={String(approvals.length)} sub="Purchase requests, all outstanding" />
+        <Stat to="/purchases" search={{ status: "blocked" }} label="Blocked requests" value={String(blocked.length)} sub="Purchase requests, all outstanding — failed a spending rule" tone={blocked.length ? "blocked" : undefined} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -58,7 +58,7 @@ function Overview() {
             <ul className="divide-y">
               {[...verif, ...approvals, ...blocked].slice(0, 8).map((p) => (
                 <li key={p.id} className="py-3">
-                  <Link to="/purchases/$id" params={{ id: p.id }} className="flex flex-wrap items-center justify-between gap-2 rounded hover:underline">
+                  <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: "/overview" }} className="flex flex-wrap items-center justify-between gap-2 rounded hover:underline">
                     <span className="min-w-0">
                       <span className="block truncate font-medium">{p.title}</span>
                       <span className="text-xs text-muted-foreground">{(p.suppliers as { name: string } | null)?.name ?? "Unmatched supplier"} · {formatMinor(p.total_minor, p.currency)}</span>
@@ -101,12 +101,11 @@ function Overview() {
   );
 }
 
-function Stat({ label, value, sub, tone, to, search, hash }: { hash?: string | undefined; label: string; value: string; sub?: string | undefined; tone?: "warning" | "blocked" | undefined; to: string; search?: Record<string, string> | undefined }) {
+function Stat({ label, value, sub, tone, to, search }: { label: string; value: string; sub?: string | undefined; tone?: "warning" | "blocked" | undefined; to: string; search?: Record<string, string> | undefined }) {
   return (
     <Link
       to={to as "/budget"}
-      search={search ?? {}}
-      {...(hash ? { hash } : {})}
+      search={{ ...(search ?? {}), from: "/overview" }}
       className="block rounded-lg border bg-card p-4 transition-colors hover:border-brand-bright hover:bg-selected/40 focus-visible:outline-none"
       aria-label={`${label}: ${value}. Open details.`}
     >

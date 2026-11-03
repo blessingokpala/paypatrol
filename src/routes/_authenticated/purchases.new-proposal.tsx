@@ -9,6 +9,7 @@ import { proposePurchase } from "@/lib/ai/ai.functions";
 import { AI_ERROR_COPY, type AiError } from "@/lib/ai/schemas";
 import { PageHeader, Panel, Req, RequiredNote, ToneBadge } from "@/components/brand";
 import { BackLink } from "@/components/back-link";
+import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/purchases/new-proposal")({
+  validateSearch: fromSearch,
   head: () => ({
     meta: [
       { title: "Create a purchase request — PayPatrol" },
@@ -66,7 +68,7 @@ function NewProposal() {
       setOutcome(out);
       if (!out.ok) { toast.error(out.error.message || AI_ERROR_COPY[out.error.code]); return; }
       refresh();
-      navigate({ to: "/purchases/$id", params: { id: out.purchaseId } });
+      navigate({ to: "/purchases/$id", params: { id: out.purchaseId }, search: { from: "/purchases" } });
     } finally {
       setAsking(false);
     }
@@ -90,7 +92,7 @@ function NewProposal() {
       return;
     }
     refresh();
-    navigate({ to: "/purchases/$id", params: { id: data as string } });
+    navigate({ to: "/purchases/$id", params: { id: data as string }, search: { from: "/purchases" } });
   }
 
   if (!canSubmit) return <p className="text-sm">Only request preparers or owners can create purchase requests.</p>;

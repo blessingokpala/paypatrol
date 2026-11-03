@@ -383,3 +383,10 @@ Browser (Playwright, signed in as the owner account) unless noted. Real Gemini (
 - CA$75 `PP-CHECKOUT-20261103` still `verification_required`, change request `pending_verification`, no reserve/pay buttons.
 - Readability pass: proposal raw JSON replaced with an item/quantity/proposed-values summary (calculated values remain in Request details); invoice-only fields hidden on proposals; evidence history has readable text for every stored event type and a readable fallback; raw backend errors in notifications mapped to plain language; status codes humanised in suppliers/approvals/change reviews; "—" placeholders replaced with "Not provided"/"Not recorded" where they meant missing data. CSV export and stored records unchanged.
 - Unit tests 30/30 pass. Not tested: keyboard-only dropdown use; mobile layout.
+
+## Navigation and overview drill-downs (2026-11-03 22:15 UTC)
+- New Reserved purchases page (/reserved): active reservations for the current policy week only, the same conditions as the Reserved card. Empty state: "No reserved purchases". Reserved card subtitle is now "Budget set aside for checkout". Available still opens Weekly budget.
+- Verification, approval and blocked cards are labelled as counts of purchase requests, all outstanding.
+- Shared back link with a validated `?from=` return destination (internal pages only, kept on refresh) on purchases list (from overview), request details, invoice/proposal forms, approvals, budget and reserved. Purchases source filter moved into the address; list scroll position restored.
+- Browser-verified: Overview → Blocked → request → Back to purchases (filters kept, scroll restored) → Back to overview; refresh and direct links; external `from` rejected; Evidence → request → Back to evidence history; 390 px detail page shows the back link below the header.
+- Consolidated summary for judges: JUDGES_REPORT.md.

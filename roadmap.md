@@ -20,3 +20,5 @@
 - Real PayPal sandbox checkout + genuine signed webhook — after partner review
 - Cross-org invoice isolation re-test
 - [x] Replace raw JSON/codes/nulls app-wide with readable summaries (proposal content, evidence, findings, errors); hide invoice-only fields on proposals
+- [x] Overview drill-downs verified; Reserved purchases page; shared back navigation
+- [ ] CA$75 Sandbox checkout — blocked on partner's independent review

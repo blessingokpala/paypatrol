@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { BackLink, useHere } from "@/components/back-link";
+import { fromSearch, rememberScroll, takeScroll } from "@/lib/return-to";
 import { useOrg } from "@/lib/org";
 import { usePurchases } from "@/lib/queries";
 import { formatMinor } from "@/lib/money";
@@ -12,8 +14,11 @@ import { toast } from "sonner";
 const STATUS_FILTERS = ["verification_required", "approval_required", "blocked", "needs_clarification", "cleared_for_checkout", "payment_pending", "paid"] as const;
 
 export const Route = createFileRoute("/_authenticated/purchases/")({
-  validateSearch: (s: Record<string, unknown>): { status?: string } =>
-    typeof s["status"] === "string" && (STATUS_FILTERS as readonly string[]).includes(s["status"]) ? { status: s["status"] } : {},
+  validateSearch: (s: Record<string, unknown>): { status?: string; source?: "invoice" | "ai_proposal"; from?: string } => ({
+    ...(typeof s["status"] === "string" && (STATUS_FILTERS as readonly string[]).includes(s["status"]) ? { status: s["status"] } : {}),
+    ...(s["source"] === "invoice" || s["source"] === "ai_proposal" ? { source: s["source"] } : {}),
+    ...fromSearch(s),
+  }),
   head: () => ({ meta: [{ title: "Purchases — PayPatrol" }, { name: "description", content: "Invoices and AI purchase proposals in one list." }, { property: "og:title", content: "Purchases — PayPatrol" }, { property: "og:description", content: "PayPatrol invoices, AI proposals and payment-check outcomes." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Purchases,
 });
@@ -21,9 +26,19 @@ export const Route = createFileRoute("/_authenticated/purchases/")({
 function Purchases() {
   const { orgId } = useOrg();
   const q = usePurchases(orgId);
-  const { status } = Route.useSearch();
+  const { status, source } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [filter, setFilter] = useState<"all" | "invoice" | "ai_proposal">("all");
+  const here = useHere();
+  const filter: "all" | "invoice" | "ai_proposal" = source ?? "all";
+  const setFilter = (f: "all" | "invoice" | "ai_proposal") =>
+    navigate({ search: ({ source: _s, ...rest }) => (f === "all" ? rest : { ...rest, source: f }), replace: true });
+  // Restore the scroll position saved when a request was opened from this exact view.
+  useEffect(() => {
+    if (q.isLoading) return;
+    const y = takeScroll(here);
+    if (y !== null) requestAnimationFrame(() => window.scrollTo(0, y));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q.isLoading]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const rows = useMemo(
     () => (q.data ?? []).filter((p) => (filter === "all" || p.source === filter) && (!status || p.status === status)),
@@ -76,13 +91,14 @@ function Purchases() {
 
   return (
     <>
+      <BackLink to="/overview" label="Back to overview" optional />
       <PageHeader
         title="Purchases"
         description="Invoices and AI proposals pass through the same checks."
         actions={
           <>
-            <Button asChild><Link to="/purchases/new-invoice">Check an invoice</Link></Button>
-            <Button asChild variant="outline"><Link to="/purchases/new-proposal">Create AI purchase request</Link></Button>
+            <Button asChild><Link to="/purchases/new-invoice" search={{ from: here }}>Check an invoice</Link></Button>
+            <Button asChild variant="outline"><Link to="/purchases/new-proposal" search={{ from: here }}>Create AI purchase request</Link></Button>
           </>
         }
       />
@@ -95,7 +111,7 @@ function Purchases() {
           ))}
         </div>
         {status && (
-          <Button size="sm" variant="outline" onClick={() => navigate({ to: "/purchases", search: {}, replace: true })}>
+          <Button size="sm" variant="outline" onClick={() => navigate({ search: ({ status: _st, ...rest }) => rest, replace: true })}>
             Showing: {STATUS_META[status as PurchaseStatus]?.label ?? status} — clear
           </Button>
         )}
@@ -145,7 +161,7 @@ function Purchases() {
                       />
                     </td>
                     <td className="px-4 py-3">
-                      <Link to="/purchases/$id" params={{ id: p.id }} className="font-medium text-brand-deep underline-offset-2 hover:underline">{p.title}</Link>
+                      <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} onClick={() => rememberScroll(here)} className="font-medium text-brand-deep underline-offset-2 hover:underline">{p.title}</Link>
                       {p.is_test_fixture && <div className="mt-1"><FixtureTag /></div>}
                     </td>
                     <td className="px-4 py-3">{(p.suppliers as { name: string } | null)?.name ?? "Unmatched"}</td>

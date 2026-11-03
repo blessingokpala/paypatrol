@@ -16,6 +16,7 @@ import { Route as AuthenticatedApprovalsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBudgetRouteImport } from './routes/_authenticated/budget'
 import { Route as AuthenticatedEvidenceRouteImport } from './routes/_authenticated/evidence'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
+import { Route as AuthenticatedReservedRouteImport } from './routes/_authenticated/reserved'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
@@ -58,6 +59,11 @@ const AuthenticatedEvidenceRoute = AuthenticatedEvidenceRouteImport.update({
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReservedRoute = AuthenticatedReservedRouteImport.update({
+  id: '/reserved',
+  path: '/reserved',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedRulesRoute = AuthenticatedRulesRouteImport.update({
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/budget': typeof AuthenticatedBudgetRoute
   '/evidence': typeof AuthenticatedEvidenceRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/reserved': typeof AuthenticatedReservedRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/budget': typeof AuthenticatedBudgetRoute
   '/evidence': typeof AuthenticatedEvidenceRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/reserved': typeof AuthenticatedReservedRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/_authenticated/budget': typeof AuthenticatedBudgetRoute
   '/_authenticated/evidence': typeof AuthenticatedEvidenceRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
+  '/_authenticated/reserved': typeof AuthenticatedReservedRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/budget'
     | '/evidence'
     | '/overview'
+    | '/reserved'
     | '/rules'
     | '/settings'
     | '/suppliers'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/budget'
     | '/evidence'
     | '/overview'
+    | '/reserved'
     | '/rules'
     | '/settings'
     | '/suppliers'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/_authenticated/budget'
     | '/_authenticated/evidence'
     | '/_authenticated/overview'
+    | '/_authenticated/reserved'
     | '/_authenticated/rules'
     | '/_authenticated/settings'
     | '/_authenticated/suppliers'
@@ -276,6 +288,13 @@ declare module '@tanstack/react-router' {
       path: '/overview'
       fullPath: '/overview'
       preLoaderRoute: typeof AuthenticatedOverviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reserved': {
+      id: '/_authenticated/reserved'
+      path: '/reserved'
+      fullPath: '/reserved'
+      preLoaderRoute: typeof AuthenticatedReservedRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/rules': {
@@ -349,6 +368,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedBudgetRoute: typeof AuthenticatedBudgetRoute
   AuthenticatedEvidenceRoute: typeof AuthenticatedEvidenceRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
+  AuthenticatedReservedRoute: typeof AuthenticatedReservedRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
@@ -363,6 +383,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedBudgetRoute: AuthenticatedBudgetRoute,
   AuthenticatedEvidenceRoute: AuthenticatedEvidenceRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
+  AuthenticatedReservedRoute: AuthenticatedReservedRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,

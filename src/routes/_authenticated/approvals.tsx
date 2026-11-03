@@ -1,3 +1,5 @@
+import { BackLink, useHere } from "@/components/back-link";
+import { fromSearch } from "@/lib/return-to";
 import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -12,11 +14,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/approvals")({
+  validateSearch: fromSearch,
   head: () => ({ meta: [{ title: "Approvals — PayPatrol" }, { name: "description", content: "Approve exact request versions." }, { property: "og:title", content: "Approvals — PayPatrol" }, { property: "og:description", content: "Review approvals bound to exact PayPatrol request versions." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Approvals,
 });
 
 function Approvals() {
+  const here = useHere();
   const org = useOrg();
   const names = useProfiles(org.orgId).data ?? {};
   const refresh = useRefreshAll();
@@ -41,6 +45,7 @@ function Approvals() {
 
   return (
     <>
+      <BackLink to="/overview" label="Back to overview" optional />
       <PageHeader title="Approvals" description="Each approval is bound to one version. Any change to amount, currency, recipient, supplier record or rules cancels it. Approval cannot override a hard limit." />
       {!org.has("payer", "owner") && <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">You can view this queue but only payers or owners can approve.</p>}
       {q.isLoading ? <p className="text-sm">Loading…</p> : (q.data ?? []).length === 0 ? <EmptyState>No requests awaiting approval.</EmptyState> : (
@@ -49,7 +54,7 @@ function Approvals() {
             const sv = p.supplier_versions as { version: number; paypal_merchant_id: string } | null;
             const own = p.requested_by === org.userId;
             return (
-              <Panel key={p.id} title={p.title} actions={<Link to="/purchases/$id" params={{ id: p.id }} className="text-sm text-brand-bright underline">Full review</Link>}>
+              <Panel key={p.id} title={p.title} actions={<Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} className="text-sm text-brand-bright underline">Full review</Link>}>
                 {p.is_test_fixture && <div className="mb-2"><FixtureTag /></div>}
                 <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   <div><dt className="text-muted-foreground">Request version</dt><dd className="font-semibold">v{p.version}</dd></div>

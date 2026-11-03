@@ -1,3 +1,4 @@
+import { fromSearch } from "@/lib/return-to";
 import { humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/evidence")({
+  validateSearch: fromSearch,
   head: () => ({ meta: [{ title: "Evidence history — PayPatrol" }, { name: "description", content: "Who requested, reviewed, changed or approved, and when." }, { property: "og:title", content: "Evidence history — PayPatrol" }, { property: "og:description", content: "PayPatrol request, review and control-change evidence." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Evidence,
 });
@@ -203,7 +205,7 @@ function FragmentRow({ r, isOpen, toggle, actor, pairs, reason }: { r: AuditRow;
         <td className="px-3 py-2">{actor}</td>
         <td className="px-3 py-2">{summarize(r)}</td>
         <td className="px-3 py-2">
-          {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} className="text-brand-bright underline">Request</Link> : humanize(r.entity_type)}
+          {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} search={{ from: "/evidence" }} className="text-brand-bright underline">Request</Link> : humanize(r.entity_type)}
           {r.entity_version ? ` v${r.entity_version}` : ""}
         </td>
         <td className="px-3 py-2">
@@ -221,7 +223,7 @@ function FragmentRow({ r, isOpen, toggle, actor, pairs, reason }: { r: AuditRow;
               <div>
                 <dt className="text-xs text-muted-foreground">Linked record</dt>
                 <dd>
-                  {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} className="text-brand-bright underline">Open request</Link> : humanize(r.entity_type)}
+                  {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} search={{ from: "/evidence" }} className="text-brand-bright underline">Open request</Link> : humanize(r.entity_type)}
                   {r.entity_version ? ` v${r.entity_version}` : ""}
                 </dd>
               </div>
