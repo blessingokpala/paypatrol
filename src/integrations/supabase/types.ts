@@ -1346,6 +1346,7 @@ export type Database = {
       }
       expire_safe_reservations: { Args: { _org: string }; Returns: number }
       finish_sandbox_event: { Args: { _event: string }; Returns: undefined }
+      has_open_change_request: { Args: { _pid: string }; Returns: boolean }
       has_org_role: {
         Args: {
           _org: string
@@ -1382,6 +1383,10 @@ export type Database = {
       recheck_purchase: {
         Args: { _pid: string }
         Returns: Database["public"]["Enums"]["purchase_status"]
+      }
+      reconcile_obsolete_change_requests: {
+        Args: { _supplier: string }
+        Returns: number
       }
       record_extraction: {
         Args: {
@@ -1504,6 +1509,7 @@ export type Database = {
         | "verified_pending_decision"
         | "approved"
         | "rejected"
+        | "superseded"
       enrolment_status: "not_enrolled" | "pending" | "enrolled" | "demo_fixture"
       finding_severity: "info" | "warning" | "block"
       member_role: "owner" | "preparer" | "change_approver" | "payer"
@@ -1653,6 +1659,7 @@ export const Constants = {
         "verified_pending_decision",
         "approved",
         "rejected",
+        "superseded",
       ],
       enrolment_status: ["not_enrolled", "pending", "enrolled", "demo_fixture"],
       finding_severity: ["info", "warning", "block"],
