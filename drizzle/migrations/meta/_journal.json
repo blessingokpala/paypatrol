@@ -43,6 +43,13 @@
       "when": 1793680706348,
       "tag": "0005_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793713213788,
+      "tag": "0006_ai_extraction_evidence_and_quote_checks",
+      "breakpoints": true
     }
   ]
 }
