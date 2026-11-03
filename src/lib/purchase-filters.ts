@@ -8,13 +8,13 @@ export const SORTS: { value: PurchaseSort; label: string }[] = [
 ];
 
 export type PurchaseFilters = {
-  q?: string;
-  source?: "invoice" | "ai_proposal";
-  status?: string;
-  supplier?: string; // supplier id, or "unmatched"
-  dfrom?: string; // YYYY-MM-DD, submission date (local)
-  dto?: string;
-  sort?: PurchaseSort;
+  q?: string | undefined;
+  source?: "invoice" | "ai_proposal" | undefined;
+  status?: string | undefined;
+  supplier?: string | undefined; // supplier id, or "unmatched"
+  dfrom?: string | undefined; // YYYY-MM-DD, submission date (local)
+  dto?: string | undefined;
+  sort?: PurchaseSort | undefined;
 };
 
 export type FilterableRow = {

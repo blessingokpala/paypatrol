@@ -93,7 +93,7 @@ export function FixtureTag({ label }: { label?: string | null }) {
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">{children}</p>;
+  return <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">{children}</div>;
 }
 
 /** Red asterisk marking a genuinely mandatory field. Pair with RequiredNote once per form. */
