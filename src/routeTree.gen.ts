@@ -14,6 +14,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedPurchasesIndexRouteImport } from './routes/_authenticated/purchases.index'
+import { Route as AuthenticatedPurchasesNewInvoiceRouteImport } from './routes/_authenticated/purchases.new-invoice'
+import { Route as AuthenticatedPurchasesNewProposalRouteImport } from './routes/_authenticated/purchases.new-proposal'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,17 +42,33 @@ const AuthenticatedPurchasesIndexRoute =
     path: '/purchases/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPurchasesNewInvoiceRoute =
+  AuthenticatedPurchasesNewInvoiceRouteImport.update({
+    id: '/purchases/new-invoice',
+    path: '/purchases/new-invoice',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPurchasesNewProposalRoute =
+  AuthenticatedPurchasesNewProposalRouteImport.update({
+    id: '/purchases/new-proposal',
+    path: '/purchases/new-proposal',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
+  '/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
   '/purchases/': typeof AuthenticatedPurchasesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/overview': typeof AuthenticatedOverviewRoute
+  '/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
+  '/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
   '/purchases': typeof AuthenticatedPurchasesIndexRoute
 }
 export interface FileRoutesById {
@@ -59,19 +77,35 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
+  '/_authenticated/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
+  '/_authenticated/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
   '/_authenticated/purchases/': typeof AuthenticatedPurchasesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/overview' | '/purchases/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/overview'
+    | '/purchases/new-invoice'
+    | '/purchases/new-proposal'
+    | '/purchases/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/overview' | '/purchases'
+  to:
+    | '/'
+    | '/auth'
+    | '/overview'
+    | '/purchases/new-invoice'
+    | '/purchases/new-proposal'
+    | '/purchases'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/overview'
+    | '/_authenticated/purchases/new-invoice'
+    | '/_authenticated/purchases/new-proposal'
     | '/_authenticated/purchases/'
   fileRoutesById: FileRoutesById
 }
@@ -118,16 +152,35 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPurchasesIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/purchases/new-invoice': {
+      id: '/_authenticated/purchases/new-invoice'
+      path: '/purchases/new-invoice'
+      fullPath: '/purchases/new-invoice'
+      preLoaderRoute: typeof AuthenticatedPurchasesNewInvoiceRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/purchases/new-proposal': {
+      id: '/_authenticated/purchases/new-proposal'
+      path: '/purchases/new-proposal'
+      fullPath: '/purchases/new-proposal'
+      preLoaderRoute: typeof AuthenticatedPurchasesNewProposalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
+  AuthenticatedPurchasesNewInvoiceRoute: typeof AuthenticatedPurchasesNewInvoiceRoute
+  AuthenticatedPurchasesNewProposalRoute: typeof AuthenticatedPurchasesNewProposalRoute
   AuthenticatedPurchasesIndexRoute: typeof AuthenticatedPurchasesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
+  AuthenticatedPurchasesNewInvoiceRoute: AuthenticatedPurchasesNewInvoiceRoute,
+  AuthenticatedPurchasesNewProposalRoute:
+    AuthenticatedPurchasesNewProposalRoute,
   AuthenticatedPurchasesIndexRoute: AuthenticatedPurchasesIndexRoute,
 }
 
