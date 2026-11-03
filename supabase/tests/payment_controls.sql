@@ -114,7 +114,8 @@ begin
   select count(*) into v_n from public.findings where purchase_id = v_p and code = 'AMOUNT_DIFFERS_FROM_QUOTE';
   res := res || 'MISMATCH status=' || v_st || ' findings=' || v_n || '; ';
   select count(*) into v_n from public.findings where purchase_id = v_p and code = 'AMOUNT_DIFFERS_FROM_QUOTE'
-    and message like '%' || (v_price + 3000) || '%' and message like '%' || v_price || '%';
+    and message like '%' || to_char((v_price + 3000)/100.0,'FM999999990.00') || '%'
+    and message like '%' || to_char(v_price/100.0,'FM999999990.00') || '%';
   res := res || 'both amounts shown=' || v_n || '; ';
 
   -- invoice matches the approved quote -> no quote finding
@@ -124,7 +125,8 @@ begin
 
   -- quantity above the listing's own limit is reported
   v_p := public.submit_invoice(v_org, v_sup, 'INV-Q3', v_price, 'CAD', v_rec, null, 'packaging', 'T', null, null, null, v_listing, v_max + 1);
-  select count(*) into v_n from public.findings where purchase_id = v_p and code = 'QUANTITY_OVER_LISTING_LIMIT';
+  select count(*) into v_n from public.findings where purchase_id = v_p and code = 'AMOUNT_DIFFERS_FROM_QUOTE'
+    and message like '%above the listing limit%';
   res := res || 'OVERLIMIT findings=' || v_n || '; ';
 
   -- correcting the request keeps the quote link
