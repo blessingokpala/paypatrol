@@ -92,6 +92,13 @@
       "when": 1793723213969,
       "tag": "0012_safe_sandbox_checkout_cancellation",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793728597143,
+      "tag": "0013_change_status_superseded",
+      "breakpoints": true
     }
   ]
 }

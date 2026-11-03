@@ -1504,6 +1504,7 @@ export type Database = {
         | "verified_pending_decision"
         | "approved"
         | "rejected"
+        | "superseded"
       enrolment_status: "not_enrolled" | "pending" | "enrolled" | "demo_fixture"
       finding_severity: "info" | "warning" | "block"
       member_role: "owner" | "preparer" | "change_approver" | "payer"
@@ -1653,6 +1654,7 @@ export const Constants = {
         "verified_pending_decision",
         "approved",
         "rejected",
+        "superseded",
       ],
       enrolment_status: ["not_enrolled", "pending", "enrolled", "demo_fixture"],
       finding_severity: ["info", "warning", "block"],
