@@ -11,8 +11,9 @@ export const orderSchema = z.object({
   })).length(1),
 });
 export type PaymentSnapshot = { id: string; purchase_id: string; purchase_version: number; amount_minor: number; currency: string; merchant_id: string; digest: string; idempotency_key: string; status: string; created_at: string };
-export function validateOrder(raw: unknown, attempt: PaymentSnapshot) {
+export function validateOrder(raw: unknown, attempt: PaymentSnapshot, expectedOrderId?: string) {
   const order = orderSchema.parse(raw);
+  if (expectedOrderId && order.id !== expectedOrderId) throw new Error("PayPal returned a different order");
   const unit = order.purchase_units[0];
   if (!unit) throw new Error("PayPal order is incomplete");
   const value = `${Math.floor(attempt.amount_minor / 100)}.${String(attempt.amount_minor % 100).padStart(2, "0")}`;
