@@ -205,6 +205,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           currency: string
+          expires_at: string
           id: string
           org_id: string
           period_start: string
@@ -218,6 +219,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency: string
+          expires_at?: string
           id?: string
           org_id: string
           period_start: string
@@ -231,6 +233,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           currency?: string
+          expires_at?: string
           id?: string
           org_id?: string
           period_start?: string
@@ -1245,6 +1248,7 @@ export type Database = {
         Args: { _pid: string }
         Returns: Database["public"]["Enums"]["purchase_status"]
       }
+      expire_safe_reservations: { Args: { _org: string }; Returns: number }
       has_org_role: {
         Args: {
           _org: string
@@ -1313,6 +1317,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      require_recent_authentication: { Args: never; Returns: undefined }
       reserve_budget: { Args: { _pid: string }; Returns: string }
       submit_ai_proposal: {
         Args: {

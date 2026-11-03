@@ -64,6 +64,13 @@
       "when": 1793717945951,
       "tag": "0008_missing_currency_needs_clarification",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793722019256,
+      "tag": "0009_recent_reauth_and_safe_reservation_guards",
+      "breakpoints": true
     }
   ]
 }
