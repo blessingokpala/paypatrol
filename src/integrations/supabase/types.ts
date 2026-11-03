@@ -1292,6 +1292,10 @@ export type Database = {
         Args: { _pid: string; _reason: string }
         Returns: undefined
       }
+      cancel_uncaptured_sandbox_attempt: {
+        Args: { _attempt: string }
+        Returns: undefined
+      }
       configure_sandbox_merchant: {
         Args: {
           _actor: string
