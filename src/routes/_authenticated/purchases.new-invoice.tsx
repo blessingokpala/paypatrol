@@ -132,7 +132,7 @@ function NewInvoice() {
     const incoming = {
       ref: extraction.invoice_reference,
       amount: extraction.total,
-      currency: extraction.currency || f.currency,
+      currency: extraction.currency,
       recipient: extraction.requested_payment_recipient,
       contact: extraction.payment_change_instructions || f.contact,
       description: extraction.line_items[0]?.description ?? f.description,
@@ -164,8 +164,10 @@ function NewInvoice() {
       return;
     }
     if (applied && extraction) {
-      const blocked = ["invoice_reference", "total", "currency", "requested_payment_recipient"].filter(
-        (k) => extraction.missing_fields.includes(k) || extraction.uncertain_fields.includes(k),
+      const fieldOf: Record<string, keyof typeof f> = { invoice_reference: "ref", total: "amount", currency: "currency", requested_payment_recipient: "recipient" };
+      // Uncertain values must be re-entered or confirmed by editing; missing ones must be filled in.
+      const blocked = Object.keys(fieldOf).filter(
+        (k) => extraction.uncertain_fields.includes(k) && !edited.has(fieldOf[k]!),
       );
       const stillEmpty = [
         !f.ref.trim() && "invoice_reference",
