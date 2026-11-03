@@ -64,8 +64,8 @@ function NewProposal() {
       _org: orgId,
       _listing: f.listing,
       _quantity: Number(f.quantity),
-      _claimed_recipient: null,
-      _claimed_total_minor: null,
+      _claimed_recipient: null as unknown as string,
+      _claimed_total_minor: null as unknown as number,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }

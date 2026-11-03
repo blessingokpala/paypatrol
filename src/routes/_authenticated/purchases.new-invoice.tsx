@@ -119,7 +119,7 @@ function NewInvoice() {
       _org: orgId, _supplier: (f.supplier || null) as string, _invoice_ref: f.ref, _amount_minor: minor, _currency: f.currency,
       _recipient: f.recipient, _contact: f.contact, _category: f.category, _description: f.description, _message: f.message,
       _storage_path: objectPath as string, _file_name: (file?.name ?? null) as string,
-      _listing: (quote.listing || null) as string, _quantity: quote.listing ? Number(quote.quantity) : null,
+      _listing: (quote.listing || null) as string, _quantity: (quote.listing ? Number(quote.quantity) : null) as number,
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }

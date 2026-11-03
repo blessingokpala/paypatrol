@@ -4,7 +4,9 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import { parseToMinor } from "@/lib/money";
 import { AI_ERROR_COPY, type AiError, type Extraction } from "./schemas";
 import { GEMINI_MODEL, extractInvoiceFromFile, pingGemini, proposeFromListings } from "./gemini.server";
@@ -13,7 +15,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
 
 const fail = (code: AiError["code"], message?: string) => ({ ok: false as const, error: { code, message: message ?? AI_ERROR_COPY[code] } });
 
-async function isPreparerOrOwner(supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }> }, orgId: string) {
+async function isPreparerOrOwner(supabase: SupabaseClient<Database, "public", "public">, orgId: string) {
   const { data: preparer } = await supabase.rpc("has_org_role", { _org: orgId, _role: "preparer" });
   if (preparer) return true;
   const { data: owner } = await supabase.rpc("has_org_role", { _org: orgId, _role: "owner" });
@@ -62,7 +64,7 @@ export const testAiConnection = createServerFn({ method: "POST" })
     const at = new Date().toISOString();
     await context.supabase.rpc("record_extraction", {
       _org: data.orgId,
-      _storage_path: null,
+      _storage_path: null as unknown as string,
       _file_name: "connection test",
       _model: result.model,
       _extracted: { probe: result.data.status, checked_at: at },
@@ -108,7 +110,7 @@ export const extractInvoiceDetails = createServerFn({ method: "POST" })
     const { data: extractionId, error: recordError } = await supabase.rpc("record_extraction", {
       _org: data.orgId,
       _storage_path: data.storagePath,
-      _file_name: data.fileName ?? null,
+      _file_name: (data.fileName ?? null) as unknown as string,
       _model: result.model,
       _extracted: result.data,
       _excerpts: result.data.excerpts,
@@ -154,8 +156,8 @@ export const proposePurchase = createServerFn({ method: "POST" })
       _org: data.orgId,
       _listing: chosen.id,
       _quantity: quantity,
-      _claimed_recipient: result.data.claimed_recipient.trim() || null,
-      _claimed_total_minor: claimedMinor,
+      _claimed_recipient: (result.data.claimed_recipient.trim() || null) as unknown as string,
+      _claimed_total_minor: claimedMinor as unknown as number,
     });
     if (submitError || !purchaseId) return fail("unavailable", submitError?.message ?? "The request could not be created.");
 

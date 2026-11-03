@@ -2,7 +2,7 @@
 // scope), always asks for JSON it can validate, and turns every failure into a
 // typed, user-facing reason. Nothing here is reachable from the browser bundle.
 
-import { extractionSchema, proposalSchema, type AiOutcome, type Extraction, type Proposal } from "./schemas";
+import { extractionSchema, proposalSchema, type AiError, type AiOutcome, type Extraction, type Proposal } from "./schemas";
 
 export const GEMINI_MODEL = "gemini-3.1-flash-lite";
 
@@ -78,7 +78,7 @@ const PROPOSAL_SCHEMA = {
   propertyOrdering: ["listing_id", "quantity", "reasoning", "claimed_recipient", "claimed_total"],
 };
 
-function mapHttpError(status: number, body: string): AiOutcome<never>["error"] {
+function mapHttpError(status: number, body: string): AiError {
   if (status === 429) return { code: "quota", message: "AI quota is exhausted for now. Try again later." };
   if (status === 404) return { code: "model_unavailable", message: `The AI model ${GEMINI_MODEL} is not available.` };
   if (status === 400 || status === 401 || status === 403)

@@ -58,6 +58,8 @@ function Review() {
   const [reading, setReading] = useState(false);
   const recipientDiffers = sv && p.requested_recipient && p.requested_recipient.trim().toLowerCase() !== sv.paypal_merchant_id.toLowerCase();
   const activeRes = res.find((r) => r.status === "active");
+  const latestExtraction = exs[0];
+  const firstDoc = docs[0];
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
@@ -121,19 +123,21 @@ function Review() {
       </div>
 
       <Panel title="What AI read from the document" className="mt-6">
-        {exs.length > 0 ? (
-          <ExtractionView row={exs[0]} />
+        {latestExtraction ? (
+          <ExtractionView row={latestExtraction} />
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">No AI reading recorded for this request.</p>
-            {docs[0]?.storage_path && org.has("preparer", "owner") && (
+            {firstDoc?.storage_path && org.has("preparer", "owner") && (
               <Button
                 size="sm"
                 variant="outline"
                 disabled={reading}
                 onClick={async () => {
+                  const path = firstDoc.storage_path;
+                  if (!path) return;
                   setReading(true);
-                  const out = await readInvoice({ data: { orgId: org.orgId, storagePath: docs[0].storage_path!, fileName: docs[0].file_name ?? "document" } });
+                  const out = await readInvoice({ data: { orgId: org.orgId, storagePath: path, fileName: firstDoc.file_name ?? "document" } });
                   setReading(false);
                   if (!out.ok) { toast.error(out.error.message); return; }
                   await supabase.rpc("link_extraction", { _extraction: out.extractionId, _purchase: id });
