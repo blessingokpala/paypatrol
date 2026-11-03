@@ -44,7 +44,7 @@ function Overview() {
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat to="/budget" label="Available this week" value={b ? formatMinor(b.available_minor, b.currency) : "—"} sub={b ? `of ${formatMinor(b.weekly_limit_minor, b.currency)} weekly limit` : undefined} />
-        <Stat to="/budget" label="Reserved" value={b ? formatMinor(b.reserved_minor, b.currency) : "—"} sub={b ? `Spent ${formatMinor(b.spent_minor, b.currency)} this week` : undefined} />
+        <Stat to="/budget" hash="active-reservations" label="Reserved" value={b ? formatMinor(b.reserved_minor, b.currency) : "—"} sub={b ? `Spent ${formatMinor(b.spent_minor, b.currency)} this week` : undefined} />
         <Stat to="/purchases" search={{ status: "verification_required" }} label="Awaiting verification" value={String(verif.length)} sub="Changed payment details" tone="warning" />
         <Stat to="/approvals" label="Pending approvals" value={String(approvals.length)} sub="Requests awaiting spending approval" />
         <Stat to="/purchases" search={{ status: "blocked" }} label="Blocked requests" value={String(blocked.length)} sub="Failed a spending rule" tone={blocked.length ? "blocked" : undefined} />
@@ -101,11 +101,12 @@ function Overview() {
   );
 }
 
-function Stat({ label, value, sub, tone, to, search }: { label: string; value: string; sub?: string | undefined; tone?: "warning" | "blocked" | undefined; to: string; search?: Record<string, string> | undefined }) {
+function Stat({ label, value, sub, tone, to, search, hash }: { hash?: string | undefined; label: string; value: string; sub?: string | undefined; tone?: "warning" | "blocked" | undefined; to: string; search?: Record<string, string> | undefined }) {
   return (
     <Link
       to={to as "/budget"}
       search={search ?? {}}
+      {...(hash ? { hash } : {})}
       className="block rounded-lg border bg-card p-4 transition-colors hover:border-brand-bright hover:bg-selected/40 focus-visible:outline-none"
       aria-label={`${label}: ${value}. Open details.`}
     >
