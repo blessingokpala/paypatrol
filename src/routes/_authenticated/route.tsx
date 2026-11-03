@@ -80,17 +80,17 @@ function Shell() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card px-4">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-card px-3 sm:gap-3 sm:px-4">
         <button className="rounded p-1 lg:hidden" onClick={() => setOpen(!open)} aria-label={open ? "Close menu" : "Open menu"}>
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
-        <Link to="/overview" aria-label="PayPatrol overview">
+        <Link className="shrink-0" to="/overview" aria-label="PayPatrol overview">
           <Wordmark className="text-lg" />
         </Link>
         <SandboxBanner />
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
           {org.orgs.length > 1 ? (
-            <div className="w-44">
+            <div className="w-28 min-w-0 sm:w-44">
               <FieldSelect
                 ariaLabel="Organisation"
                 value={org.orgId}
@@ -102,8 +102,8 @@ function Shell() {
             <span className="hidden text-sm font-medium sm:inline">{org.orgName}</span>
           )}
           <span className="hidden text-xs text-muted-foreground md:inline">{org.email}</span>
-          <Button variant="ghost" size="sm" onClick={signOut}>
-            <LogOut className="mr-1 h-4 w-4" /> Sign out
+          <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sign out" className="px-2 sm:px-3">
+            <LogOut className="h-4 w-4 sm:mr-1" aria-hidden /> <span className="hidden sm:inline">Sign out</span>
           </Button>
         </div>
       </header>

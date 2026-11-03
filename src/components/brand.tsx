@@ -51,9 +51,9 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function SandboxBanner() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning-soft px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-warning">
+    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-warning/40 bg-warning-soft px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-warning">
       <span className="h-2 w-2 rounded-full bg-warning" aria-hidden />
-      Sandbox test mode
+      Sandbox<span className="hidden sm:inline"> test mode</span>
     </span>
   );
 }
