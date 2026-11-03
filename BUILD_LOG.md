@@ -350,3 +350,22 @@ https://developer.paypal.com/docs/api/webhooks/v1/
 - Refused for: the request submitter, the change proposer, the person who set up the Sandbox supplier, and a "confirmed" result whose Merchant ID differs from either the configured Sandbox merchant or the requested recipient. Approval still needs a separate reviewer decision with recent sign-in.
 - Tests performed: none end-to-end yet. A rolled-back impersonation test could not run (SQL runner cannot assume the signed-in role). To be exercised by the partner's real account.
 - PP-CHECKOUT-20261103 confirmed still `verification_required`, change request `pending_verification`. No request, order or payment created.
+
+## Usability pass (2026-11-03, brief of 13 items)
+
+Implemented:
+1. Proposal/invoice submission navigates with the actual returned id; form values kept on save failure with a useful error; submit buttons disabled while busy. VERIFIED in browser: manual proposal submit opened /purchases/410f4593-afa3-4ee9-afe7-270720f6c8d7 and a direct refresh of that URL rendered the detail page (no 404, no page errors). NOTE: this test created one real CA$25.00 proposal ("Purchase proposal — 1 × Compostable produce bags"), cleared_for_checkout; no reservation or payment made.
+2. Shared accessible dropdown (FieldSelect, Radix) replaces every native select: supplier, quote, listing, organisation, role, verification outcomes, trusted channel. Palette via popover tokens; keyboard/focus/scroll from Radix. VERIFIED: opened listing dropdown screenshot shows white panel, navy text, pale-blue hover/selected.
+3. Invoice upload now starts extraction automatically (Uploading → Reading → Ready to review / Could not read). Manual edits tracked; "Use these values" asks before replacing conflicting edits. Extracted supplier name shown separately from the approved-supplier match; requested recipient never replaced by the approved record.
+4. Extraction states shown as badges with aria-live; detail page no longer shows "No AI reading recorded" while a reading is active; saved extraction reused on revisit (no repeat model call); stale results from a previous file discarded via a sequence guard. No invented progress percentages.
+5. "Recipient on this request" wording; blanks now say "No payment recipient provided." / "No approved supplier selected." / "Supplier record is loading." VERIFIED on refreshed proposal page.
+6. Overview cards are links: Available/Reserved → new /budget breakdown (limit, spent, reserved, available, active reservations), Awaiting verification → /purchases?status=verification_required, Pending approvals → /approvals, Blocked → /purchases?status=blocked (separate card, no longer a sub-line). PayPal state read from live integration status, not hardcoded. VERIFIED: Available card opened /budget.
+7. Finding codes (NO_SUPPLIER etc.) removed from the reading flow on review and approvals pages; codes preserved in the database and CSV export.
+8. Placeholders render in a lighter tone (--placeholder) while labels stay visible; red asterisk + "* Required" note on genuinely mandatory fields; amount validation error shows inline and focuses the field.
+9. BackLink on invoice form, proposal form, purchase detail and budget page; returns to the previous in-app page when history exists, else the parent list. Unsaved-changes blocker on both forms.
+10. Show/hide password eye toggles on sign-in/sign-up and the recent-sign-in confirmation; value preserved, toggle never submits.
+11. Purchases table: header checkbox with partial state, per-row checkboxes independent of row links, selected count, Clear selection, Export selected (CSV) summaries. Note states selection covers the currently filtered rows. No batch approval/verification/payment added. VERIFIED: 2 rows selected, export bar shown.
+12. Evidence history: readable sentences instead of raw JSON; expandable detail panel (actor, time, linked request, before→after, recorded reason); hash-chain limitation moved into a labelled "About this log and its limits" section; CSV export unchanged with full technical record. VERIFIED with screenshot.
+13. Verification: 30/30 unit tests pass; typecheck/build OK; browser checks as noted above.
+
+Not yet verified in browser: invoice auto-extraction end-to-end with a real file (code path implemented; Gemini latency dependent), password toggles, unsaved-changes prompt, keyboard-only dropdown use.
