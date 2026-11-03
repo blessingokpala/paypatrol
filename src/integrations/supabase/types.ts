@@ -14,16 +14,1161 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      approvals: {
+        Row: {
+          amount_minor: number
+          approver_id: string
+          created_at: string
+          currency: string
+          digest: string
+          id: string
+          invalidated_at: string | null
+          invalidated_reason: string | null
+          is_valid: boolean
+          note: string | null
+          org_id: string
+          policy_version_id: string | null
+          purchase_id: string
+          purchase_version: number
+          recipient: string | null
+          supplier_version_id: string | null
+        }
+        Insert: {
+          amount_minor: number
+          approver_id: string
+          created_at?: string
+          currency: string
+          digest: string
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          is_valid?: boolean
+          note?: string | null
+          org_id: string
+          policy_version_id?: string | null
+          purchase_id: string
+          purchase_version: number
+          recipient?: string | null
+          supplier_version_id?: string | null
+        }
+        Update: {
+          amount_minor?: number
+          approver_id?: string
+          created_at?: string
+          currency?: string
+          digest?: string
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          is_valid?: boolean
+          note?: string | null
+          org_id?: string
+          policy_version_id?: string | null
+          purchase_id?: string
+          purchase_version?: number
+          recipient?: string | null
+          supplier_version_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approvals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approvals_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_kind: string
+          created_at: string
+          details: Json
+          entity_id: string | null
+          entity_type: string
+          entity_version: number | null
+          hash: string | null
+          id: number
+          org_id: string
+          prev_hash: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_kind?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type: string
+          entity_version?: number | null
+          hash?: string | null
+          id?: number
+          org_id: string
+          prev_hash?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_kind?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string | null
+          entity_type?: string
+          entity_version?: number | null
+          hash?: string | null
+          id?: number
+          org_id?: string
+          prev_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_reservations: {
+        Row: {
+          amount_minor: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          org_id: string
+          period_start: string
+          purchase_id: string
+          purchase_version: number
+          released_at: string | null
+          status: Database["public"]["Enums"]["reservation_status"]
+        }
+        Insert: {
+          amount_minor: number
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          id?: string
+          org_id: string
+          period_start: string
+          purchase_id: string
+          purchase_version: number
+          released_at?: string | null
+          status?: Database["public"]["Enums"]["reservation_status"]
+        }
+        Update: {
+          amount_minor?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          org_id?: string
+          period_start?: string
+          purchase_id?: string
+          purchase_version?: number
+          released_at?: string | null
+          status?: Database["public"]["Enums"]["reservation_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_reservations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_reservations_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      findings: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          message: string
+          next_action: string | null
+          org_id: string
+          purchase_id: string
+          purchase_version: number
+          severity: Database["public"]["Enums"]["finding_severity"]
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          message: string
+          next_action?: string | null
+          org_id: string
+          purchase_id: string
+          purchase_version: number
+          severity: Database["public"]["Enums"]["finding_severity"]
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          message?: string
+          next_action?: string | null
+          org_id?: string
+          purchase_id?: string
+          purchase_version?: number
+          severity?: Database["public"]["Enums"]["finding_severity"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "findings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_documents: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          id: string
+          org_id: string
+          purchase_id: string
+          source_message: string | null
+          storage_path: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          org_id: string
+          purchase_id: string
+          source_message?: string | null
+          storage_path?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          org_id?: string
+          purchase_id?: string
+          source_message?: string | null
+          storage_path?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_documents_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listings: {
+        Row: {
+          category: string
+          created_at: string
+          currency: string
+          id: string
+          is_active: boolean
+          max_quantity: number
+          name: string
+          org_id: string
+          pack_size: number
+          source: string | null
+          supplier_id: string
+          unit_price_minor: number
+          untrusted_description: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          currency: string
+          id?: string
+          is_active?: boolean
+          max_quantity?: number
+          name: string
+          org_id: string
+          pack_size?: number
+          source?: string | null
+          supplier_id: string
+          unit_price_minor: number
+          untrusted_description?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          is_active?: boolean
+          max_quantity?: number
+          name?: string
+          org_id?: string
+          pack_size?: number
+          source?: string | null
+          supplier_id?: string
+          unit_price_minor?: number
+          untrusted_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listings_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      memberships: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          role: Database["public"]["Enums"]["member_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          role: Database["public"]["Enums"]["member_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          role?: Database["public"]["Enums"]["member_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memberships_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      payment_attempts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error_detail: string | null
+          id: string
+          idempotency_key: string
+          org_id: string
+          purchase_id: string
+          purchase_version: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error_detail?: string | null
+          id?: string
+          idempotency_key: string
+          org_id: string
+          purchase_id: string
+          purchase_version: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error_detail?: string | null
+          id?: string
+          idempotency_key?: string
+          org_id?: string
+          purchase_id?: string
+          purchase_version?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paypal_captures: {
+        Row: {
+          amount_minor: number | null
+          created_at: string
+          currency: string | null
+          id: string
+          org_id: string
+          paypal_capture_id: string
+          paypal_order_row_id: string
+          raw: Json | null
+          status: string
+        }
+        Insert: {
+          amount_minor?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          org_id: string
+          paypal_capture_id: string
+          paypal_order_row_id: string
+          raw?: Json | null
+          status: string
+        }
+        Update: {
+          amount_minor?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          org_id?: string
+          paypal_capture_id?: string
+          paypal_order_row_id?: string
+          raw?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paypal_captures_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paypal_captures_paypal_order_row_id_fkey"
+            columns: ["paypal_order_row_id"]
+            isOneToOne: false
+            referencedRelation: "paypal_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paypal_orders: {
+        Row: {
+          amount_minor: number | null
+          created_at: string
+          currency: string | null
+          id: string
+          org_id: string
+          payee_merchant_id: string | null
+          payment_attempt_id: string
+          paypal_order_id: string
+          raw: Json | null
+          status: string
+        }
+        Insert: {
+          amount_minor?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          org_id: string
+          payee_merchant_id?: string | null
+          payment_attempt_id: string
+          paypal_order_id: string
+          raw?: Json | null
+          status: string
+        }
+        Update: {
+          amount_minor?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          org_id?: string
+          payee_merchant_id?: string | null
+          payment_attempt_id?: string
+          paypal_order_id?: string
+          raw?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paypal_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paypal_orders_payment_attempt_id_fkey"
+            columns: ["payment_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      purchase_line_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string
+          id: string
+          line_total_minor: number
+          listing_id: string | null
+          org_id: string
+          purchase_id: string
+          quantity: number
+          unit_price_minor: number
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          line_total_minor: number
+          listing_id?: string | null
+          org_id: string
+          purchase_id: string
+          quantity: number
+          unit_price_minor: number
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          line_total_minor?: number
+          listing_id?: string | null
+          org_id?: string
+          purchase_id?: string
+          quantity?: number
+          unit_price_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_line_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_line_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchases: {
+        Row: {
+          ai_claims: Json | null
+          category: string | null
+          created_at: string
+          currency: string
+          digest: string | null
+          fixture_label: string | null
+          id: string
+          invoice_reference: string | null
+          is_test_fixture: boolean
+          org_id: string
+          policy_version_id: string | null
+          requested_by: string
+          requested_contact: string | null
+          requested_recipient: string | null
+          source: Database["public"]["Enums"]["purchase_source"]
+          status: Database["public"]["Enums"]["purchase_status"]
+          supplier_id: string | null
+          supplier_version_id: string | null
+          title: string
+          total_minor: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          ai_claims?: Json | null
+          category?: string | null
+          created_at?: string
+          currency: string
+          digest?: string | null
+          fixture_label?: string | null
+          id?: string
+          invoice_reference?: string | null
+          is_test_fixture?: boolean
+          org_id: string
+          policy_version_id?: string | null
+          requested_by: string
+          requested_contact?: string | null
+          requested_recipient?: string | null
+          source: Database["public"]["Enums"]["purchase_source"]
+          status?: Database["public"]["Enums"]["purchase_status"]
+          supplier_id?: string | null
+          supplier_version_id?: string | null
+          title: string
+          total_minor?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          ai_claims?: Json | null
+          category?: string | null
+          created_at?: string
+          currency?: string
+          digest?: string | null
+          fixture_label?: string | null
+          id?: string
+          invoice_reference?: string | null
+          is_test_fixture?: boolean
+          org_id?: string
+          policy_version_id?: string | null
+          requested_by?: string
+          requested_contact?: string | null
+          requested_recipient?: string | null
+          source?: Database["public"]["Enums"]["purchase_source"]
+          status?: Database["public"]["Enums"]["purchase_status"]
+          supplier_id?: string | null
+          supplier_version_id?: string | null
+          title?: string
+          total_minor?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchases_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "spending_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchases_supplier_version_id_fkey"
+            columns: ["supplier_version_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spending_policies: {
+        Row: {
+          allowed_categories: string[]
+          allowed_supplier_ids: string[]
+          approval_threshold_minor: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          is_active: boolean
+          is_demo: boolean
+          order_limit_minor: number
+          org_id: string
+          timezone: string
+          version: number
+          weekly_limit_minor: number
+        }
+        Insert: {
+          allowed_categories?: string[]
+          allowed_supplier_ids?: string[]
+          approval_threshold_minor: number
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          id?: string
+          is_active?: boolean
+          is_demo?: boolean
+          order_limit_minor: number
+          org_id: string
+          timezone: string
+          version: number
+          weekly_limit_minor: number
+        }
+        Update: {
+          allowed_categories?: string[]
+          allowed_supplier_ids?: string[]
+          approval_threshold_minor?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          is_active?: boolean
+          is_demo?: boolean
+          order_limit_minor?: number
+          org_id?: string
+          timezone?: string
+          version?: number
+          weekly_limit_minor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spending_policies_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_change_requests: {
+        Row: {
+          base_version_id: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          org_id: string
+          proposed_by: string
+          proposed_contact: string | null
+          proposed_recipient: string
+          purchase_id: string | null
+          resulting_version_id: string | null
+          status: Database["public"]["Enums"]["change_status"]
+          supplier_id: string
+        }
+        Insert: {
+          base_version_id: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          org_id: string
+          proposed_by: string
+          proposed_contact?: string | null
+          proposed_recipient: string
+          purchase_id?: string | null
+          resulting_version_id?: string | null
+          status?: Database["public"]["Enums"]["change_status"]
+          supplier_id: string
+        }
+        Update: {
+          base_version_id?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          org_id?: string
+          proposed_by?: string
+          proposed_contact?: string | null
+          proposed_recipient?: string
+          purchase_id?: string | null
+          resulting_version_id?: string | null
+          status?: Database["public"]["Enums"]["change_status"]
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_change_requests_base_version_id_fkey"
+            columns: ["base_version_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_change_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_change_requests_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_change_requests_resulting_version_id_fkey"
+            columns: ["resulting_version_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_change_requests_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_versions: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          enrolment_status: Database["public"]["Enums"]["enrolment_status"]
+          id: string
+          org_id: string
+          paypal_merchant_id: string
+          recipient_email: string | null
+          status: string
+          supplier_id: string
+          trusted_contact_channel: string
+          trusted_contact_value: string
+          verification_evidence: string | null
+          version: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          enrolment_status?: Database["public"]["Enums"]["enrolment_status"]
+          id?: string
+          org_id: string
+          paypal_merchant_id: string
+          recipient_email?: string | null
+          status?: string
+          supplier_id: string
+          trusted_contact_channel: string
+          trusted_contact_value: string
+          verification_evidence?: string | null
+          version: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          enrolment_status?: Database["public"]["Enums"]["enrolment_status"]
+          id?: string
+          org_id?: string
+          paypal_merchant_id?: string
+          recipient_email?: string | null
+          status?: string
+          supplier_id?: string
+          trusted_contact_channel?: string
+          trusted_contact_value?: string
+          verification_evidence?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_versions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_versions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          current_version_id: string | null
+          id: string
+          is_demo: boolean
+          name: string
+          org_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          current_version_id?: string | null
+          id?: string
+          is_demo?: boolean
+          name: string
+          org_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          current_version_id?: string | null
+          id?: string
+          is_demo?: boolean
+          name?: string
+          org_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verification_records: {
+        Row: {
+          change_request_id: string | null
+          channel: string
+          channel_value: string
+          contacted_at: string
+          created_at: string
+          evidence: string
+          id: string
+          org_id: string
+          outcome: Database["public"]["Enums"]["verification_outcome"]
+          person_contacted: string
+          reviewer_id: string
+          supplier_id: string | null
+        }
+        Insert: {
+          change_request_id?: string | null
+          channel: string
+          channel_value: string
+          contacted_at: string
+          created_at?: string
+          evidence: string
+          id?: string
+          org_id: string
+          outcome: Database["public"]["Enums"]["verification_outcome"]
+          person_contacted: string
+          reviewer_id: string
+          supplier_id?: string | null
+        }
+        Update: {
+          change_request_id?: string | null
+          channel?: string
+          channel_value?: string
+          contacted_at?: string
+          created_at?: string
+          evidence?: string
+          id?: string
+          org_id?: string
+          outcome?: Database["public"]["Enums"]["verification_outcome"]
+          person_contacted?: string
+          reviewer_id?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_records_change_request_id_fkey"
+            columns: ["change_request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_records_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_records_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_events: {
+        Row: {
+          created_at: string
+          event_id: string
+          event_type: string
+          id: string
+          org_id: string | null
+          payload: Json | null
+          processed_at: string | null
+          provider: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          event_type: string
+          id?: string
+          org_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          provider: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          event_type?: string
+          id?: string
+          org_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+          provider?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_org_role: {
+        Args: {
+          _org: string
+          _role: Database["public"]["Enums"]["member_role"]
+        }
+        Returns: boolean
+      }
+      is_org_member: { Args: { _org: string }; Returns: boolean }
+      log_audit: {
+        Args: {
+          _action: string
+          _actor_kind?: string
+          _details: Json
+          _eid: string
+          _etype: string
+          _ever: number
+          _org: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      change_status:
+        | "pending_verification"
+        | "verified_pending_decision"
+        | "approved"
+        | "rejected"
+      enrolment_status: "not_enrolled" | "pending" | "enrolled" | "demo_fixture"
+      finding_severity: "info" | "warning" | "block"
+      member_role: "owner" | "preparer" | "change_approver" | "payer"
+      purchase_source: "invoice" | "ai_proposal"
+      purchase_status:
+        | "draft"
+        | "needs_clarification"
+        | "blocked"
+        | "verification_required"
+        | "approval_required"
+        | "cleared_for_checkout"
+        | "payment_pending"
+        | "paid"
+        | "failed"
+        | "cancelled"
+      reservation_status: "active" | "released" | "consumed"
+      verification_outcome: "confirmed" | "denied" | "unreachable"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +1295,31 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      change_status: [
+        "pending_verification",
+        "verified_pending_decision",
+        "approved",
+        "rejected",
+      ],
+      enrolment_status: ["not_enrolled", "pending", "enrolled", "demo_fixture"],
+      finding_severity: ["info", "warning", "block"],
+      member_role: ["owner", "preparer", "change_approver", "payer"],
+      purchase_source: ["invoice", "ai_proposal"],
+      purchase_status: [
+        "draft",
+        "needs_clarification",
+        "blocked",
+        "verification_required",
+        "approval_required",
+        "cleared_for_checkout",
+        "payment_pending",
+        "paid",
+        "failed",
+        "cancelled",
+      ],
+      reservation_status: ["active", "released", "consumed"],
+      verification_outcome: ["confirmed", "denied", "unreachable"],
+    },
   },
 } as const
