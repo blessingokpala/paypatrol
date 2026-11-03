@@ -282,10 +282,15 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
       <div className="space-y-1"><Label htmlFor="sb-a">Business Sandbox account email you opened</Label><Input id="sb-a" required value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} /></div>
       <div className="space-y-1">
         <Label htmlFor="sb-o">Result</Label>
-        <select id="sb-o" value={f.outcome} onChange={(e) => setF({ ...f, outcome: e.target.value })} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
-          <option value="denied">Does not match / not the connected app's account</option>
-          <option value="confirmed">Matches the requested recipient and connected app</option>
-        </select>
+        <FieldSelect
+          id="sb-o"
+          value={f.outcome}
+          onChange={(v) => setF({ ...f, outcome: v })}
+          options={[
+            { value: "denied", label: "Does not match / not the connected app's account" },
+            { value: "confirmed", label: "Matches the requested recipient and connected app" },
+          ]}
+        />
       </div>
       <div className="space-y-1"><Label htmlFor="sb-n">Notes</Label><Textarea id="sb-n" required value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="App name checked, where the ID was shown, CAD listed in wallet" /></div>
       <Button type="submit">Record Sandbox account check</Button>
@@ -359,11 +364,16 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
             <div className="space-y-1"><Label htmlFor="wh">When</Label><Input id="wh" type="datetime-local" required value={f.when} onChange={(e) => setF({ ...f, when: e.target.value })} /></div>
             <div className="space-y-1">
               <Label htmlFor="oc">Outcome</Label>
-              <select id="oc" value={f.outcome} onChange={(e) => setF({ ...f, outcome: e.target.value })} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
-                <option value="denied">Supplier denies the change</option>
-                <option value="confirmed">Supplier confirms the change</option>
-                <option value="unreachable">Could not reach supplier</option>
-              </select>
+              <FieldSelect
+                id="oc"
+                value={f.outcome}
+                onChange={(v) => setF({ ...f, outcome: v })}
+                options={[
+                  { value: "denied", label: "Supplier denies the change" },
+                  { value: "confirmed", label: "Supplier confirms the change" },
+                  { value: "unreachable", label: "Could not reach supplier" },
+                ]}
+              />
             </div>
             <div className="space-y-1"><Label htmlFor="ev">Evidence</Label><Textarea id="ev" required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} placeholder="What was said, call reference, notes" /></div>
             <Button type="submit">Record verification</Button>
