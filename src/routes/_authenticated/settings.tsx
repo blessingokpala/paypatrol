@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { configureSandboxMerchant } from "@/lib/paypal.functions";
+import { useSuppliers } from "@/lib/queries";
+import { RecentSignin } from "@/components/recent-signin";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Team & integrations — PayPatrol" }, { name: "description", content: "Members, roles and integration status." }, { property: "og:title", content: "Team & integrations — PayPatrol" }, { property: "og:description", content: "PayPatrol team permissions and verified integration status." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -40,6 +43,12 @@ function Settings() {
   const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]>("change_approver");
+  const configureFn = useServerFn(configureSandboxMerchant);
+  const suppliers = useSuppliers(org.orgId);
+  const [merchantId, setMerchantId] = useState("L8SVBX42QHT3U");
+  const [supplierId, setSupplierId] = useState("");
+  const [cadConfirmed, setCadConfirmed] = useState(false);
+  const [configuring, setConfiguring] = useState(false);
 
   const byUser = new Map<string, string[]>();
   for (const m of members.data ?? []) byUser.set(m.user_id, [...(byUser.get(m.user_id) ?? []), m.role]);
@@ -126,6 +135,24 @@ function Settings() {
                  <p className="text-xs text-muted-foreground">Checkout locked: Business merchant identity and CAD receiving are not yet verified. No order or payment has been created.</p>
                  {status.data?.paypalCheck.connected ? <p className="text-xs text-muted-foreground">Authentication checked {new Date(status.data.paypalCheck.checkedAt).toLocaleString("en-CA")}. This is not payment confirmation.</p> : <p className="text-xs text-warning">{status.data?.paypalCheck.reason ?? (status.error ? "Could not verify the connection." : "Connection not verified.")}</p>}
                  <Button size="sm" variant="outline" disabled={status.isFetching} onClick={() => status.refetch()}>Check Sandbox connection</Button>
+                 <div className="space-y-3 border-t pt-3">
+                   <Label htmlFor="sandbox-merchant">Sandbox Business Merchant ID</Label>
+                   <Input id="sandbox-merchant" value={merchantId} onChange={e => setMerchantId(e.target.value.trim())} maxLength={13} />
+                   <Label htmlFor="sandbox-supplier">Approved supplier represented by this Business account</Label>
+                   <select id="sandbox-supplier" className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm" value={supplierId} onChange={e => setSupplierId(e.target.value)}>
+                     <option value="">Select supplier</option>
+                     {(suppliers.data ?? []).filter(s => s.status === "active").map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                   </select>
+                   <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={cadConfirmed} onChange={e => setCadConfirmed(e.target.checked)} />I confirmed this is the connected app’s Business account and CAD is listed in its wallet.</label>
+                   <RecentSignin />
+                   <Button size="sm" disabled={!supplierId || !cadConfirmed || configuring} onClick={async () => {
+                     if (!confirm("Create a new Sandbox supplier baseline? Historical requested recipients will not be rewritten and open requests will be rechecked.")) return;
+                     setConfiguring(true);
+                     try { await configureFn({ data: { orgId: org.orgId, supplierId, merchantId, cadConfirmed } }); toast.success("Sandbox supplier configured. PayPal will validate the order payee before capture."); qc.invalidateQueries(); }
+                     catch (e) { toast.error(e instanceof Error ? e.message : "Supplier configuration failed"); }
+                     finally { setConfiguring(false); }
+                   }}>Configure Sandbox supplier</Button>
+                 </div>
               </li>
               <li className="text-xs text-muted-foreground">Secret values are never shown here.</li>
             </ul>

@@ -18,7 +18,7 @@ export async function sandboxToken(clientId: string, clientSecret: string): Prom
 export async function sandboxRequest(token: string, path: string, method = "GET", body?: unknown, requestId?: string) {
   const response = await fetch(`${SANDBOX_API}${path}`, {
     method, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "return=representation", ...(requestId ? { "PayPal-Request-Id": requestId } : {}) },
-    body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(20000),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(20000),
   });
   if (!response.ok) throw new Error(`PayPal Sandbox request was not confirmed (${response.status})`);
   return response.json() as Promise<unknown>;

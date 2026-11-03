@@ -24,7 +24,7 @@ export function SandboxCheckout({ purchaseId, onDone }: { purchaseId: string; on
       if (!window.paypal) await new Promise<void>((resolve, reject) => {
         const existing = document.querySelector<HTMLScriptElement>('script[data-paypatrol-paypal]');
         if (existing) { existing.addEventListener("load", () => resolve(), { once: true }); existing.addEventListener("error", reject, { once: true }); return; }
-        const script = document.createElement("script"); script.src = "https://www.sandbox.paypal.com/web-sdk/v6/core"; script.dataset.paypatrolPaypal = "true";
+        const script = document.createElement("script"); script.src = "https://www.sandbox.paypal.com/web-sdk/v6/core"; script.dataset["paypatrolPaypal"] = "true";
         script.onload = () => resolve(); script.onerror = () => reject(new Error("PayPal could not load")); document.head.appendChild(script);
       });
       if (!window.paypal || !clientId || disposed) return;
