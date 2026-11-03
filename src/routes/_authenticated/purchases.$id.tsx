@@ -55,6 +55,7 @@ function Review() {
   const org = useOrg();
   const names = useProfiles(org.orgId).data ?? {};
   const q = useReview(id);
+  const here = useHere();
   const refresh = useRefreshAll();
   const [editing, setEditing] = useState(false);
   const readInvoice = useServerFn(extractInvoiceDetails);
@@ -215,7 +216,7 @@ function Review() {
           {p.status === "approval_required" && org.has("payer", "owner") && (
             p.requested_by === org.userId
               ? <p className="text-sm text-muted-foreground">You submitted this request, so a different payer must approve it.</p>
-              : <Button asChild><Link to="/approvals">Review in Approvals</Link></Button>
+              : <Button asChild><Link to="/approvals" search={{ from: here }}>Review in Approvals</Link></Button>
           )}
           {p.status === "cleared_for_checkout" && org.has("payer", "owner") && !activeRes && !isTestData && (
             <Button onClick={() => call(() => supabase.rpc("reserve_budget", { _pid: p.id }), "Budget reserved")}>Reserve budget for checkout</Button>

@@ -1,3 +1,4 @@
+import { BackLink, useHere } from "@/components/back-link";
 import { fromSearch } from "@/lib/return-to";
 import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/_authenticated/approvals")({
 });
 
 function Approvals() {
+  const here = useHere();
   const org = useOrg();
   const names = useProfiles(org.orgId).data ?? {};
   const refresh = useRefreshAll();
@@ -43,6 +45,7 @@ function Approvals() {
 
   return (
     <>
+      <BackLink to="/overview" label="Back to overview" optional />
       <PageHeader title="Approvals" description="Each approval is bound to one version. Any change to amount, currency, recipient, supplier record or rules cancels it. Approval cannot override a hard limit." />
       {!org.has("payer", "owner") && <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">You can view this queue but only payers or owners can approve.</p>}
       {q.isLoading ? <p className="text-sm">Loading…</p> : (q.data ?? []).length === 0 ? <EmptyState>No requests awaiting approval.</EmptyState> : (

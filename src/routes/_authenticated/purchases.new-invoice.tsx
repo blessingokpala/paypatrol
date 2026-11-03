@@ -9,7 +9,7 @@ import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
 import { AI_ERROR_COPY, type AiError, type Extraction } from "@/lib/ai/schemas";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Req, RequiredNote, ToneBadge } from "@/components/brand";
-import { BackLink, useHere } from "@/components/back-link";
+import { BackLink } from "@/components/back-link";
 import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
