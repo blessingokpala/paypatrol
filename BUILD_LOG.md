@@ -34,10 +34,16 @@
   applied and submitted with a CA$45 approved quote, and the review page held the recipient change and
   reported `AMOUNT_DIFFERS_FROM_QUOTE` while keeping both amounts visible.
 - A real connection probe succeeded and was recorded (model `gemini-3.1-flash-lite`).
-- During the most recent test run the provider returned "high demand" (HTTP 503) for every request, so
-  the assistant-proposal path and a fresh connection probe could not be re-verified at that moment. The
-  app reported "AI is busy right now. Try again in a moment." and offered the manual listing path —
-  no fabricated suggestion was shown.
+- The assistant-proposal path was then verified end to end: the model picked the approved listing
+  "Compostable produce bags, roll of 250" at quantity 2, the server resolved CA$50.00 CAD and the
+  recipient `DEMO-MERCHANT-HARBOUR-001` from approved records, and the request reads back in the
+  purchases list as "Cleared for checkout — Reserve budget; PayPal not connected". The model's own
+  claimed recipient ("N/A") was ignored and recorded as the `AI_CLAIM_IGNORED` finding.
+- A request with no matching approved listing is refused honestly: the assistant returns no listing and
+  the app says "The assistant did not pick an approved listing. Choose one yourself."
+- During one test run the provider returned "high demand" (HTTP 503) for every request. The app reported
+  "AI is busy right now. Try again in a moment." and offered the manual listing path — no fabricated
+  suggestion was shown. Retries with a short backoff were added for these temporary spikes.
 
 ### Cost and access status
 - Official Google pricing page (ai.google.dev/gemini-api/docs/pricing) lists `gemini-3.1-flash-lite`
