@@ -29,7 +29,7 @@ function Purchases() {
     () => (q.data ?? []).filter((p) => (filter === "all" || p.source === filter) && (!status || p.status === status)),
     [q.data, filter, status],
   );
-  const allChecked = rows.length > 0 && rows.every((p) => selected.has(p.id)));
+  const allChecked = rows.length > 0 && rows.every((p) => selected.has(p.id));
   const someChecked = rows.some((p) => selected.has(p.id));
 
   function toggleAll() {
