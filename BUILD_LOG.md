@@ -390,3 +390,11 @@ Browser (Playwright, signed in as the owner account) unless noted. Real Gemini (
 - Shared back link with a validated `?from=` return destination (internal pages only, kept on refresh) on purchases list (from overview), request details, invoice/proposal forms, approvals, budget and reserved. Purchases source filter moved into the address; list scroll position restored.
 - Browser-verified: Overview → Blocked → request → Back to purchases (filters kept, scroll restored) → Back to overview; refresh and direct links; external `from` rejected; Evidence → request → Back to evidence history; 390 px detail page shows the back link below the header.
 - Consolidated summary for judges: JUDGES_REPORT.md.
+
+## Purchases search, keyboard and phone checks (2026-11-03 22:50 UTC)
+
+- Added search, Status/Supplier/submission-date filters, sorting, chips, Clear all and empty state to Purchases; state kept in the address. Logic in `src/lib/purchase-filters.ts` with 5 unit tests (37 total pass).
+- Browser-verified: drill-downs apply status filters; combined search/tab/status; empty state; amount sort; filtered export (6 of 6 AI proposals, CSV read back); selection resets on filter change; return + refresh restores the list.
+- Keyboard-only dropdowns passed (open, move, type-ahead, select, Escape, focus return, Tab).
+- Phone width 390 px: top bar overflowed on every page (581 px); Overview list and Evidence table also overflowed. Fixed; all 11 pages measured at 390 px.
+- No reservations, orders, captures or Paid states created. CA$75 request still Verification required with no Reserve/Pay buttons.

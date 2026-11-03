@@ -50,7 +50,7 @@ function Overview() {
         <Stat to="/purchases" search={{ status: "blocked" }} label="Blocked requests" value={String(blocked.length)} sub="Purchase requests, all outstanding — failed a spending rule" tone={blocked.length ? "blocked" : undefined} />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <Panel title="Needs action">
           {[...verif, ...approvals, ...blocked].length === 0 ? (
             <EmptyState>Nothing waiting.</EmptyState>
@@ -59,7 +59,7 @@ function Overview() {
               {[...verif, ...approvals, ...blocked].slice(0, 8).map((p) => (
                 <li key={p.id} className="py-3">
                   <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: "/overview" }} className="flex flex-wrap items-center justify-between gap-2 rounded hover:underline">
-                    <span className="min-w-0">
+                    <span className="min-w-0 max-w-full">
                       <span className="block truncate font-medium">{p.title}</span>
                       <span className="text-xs text-muted-foreground">{(p.suppliers as { name: string } | null)?.name ?? "Unmatched supplier"} · {formatMinor(p.total_minor, p.currency)}</span>
                     </span>
