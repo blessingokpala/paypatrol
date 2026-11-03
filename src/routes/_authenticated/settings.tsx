@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/settings")({
-  head: () => ({ meta: [{ title: "Team & integrations — PayPatrol" }, { name: "description", content: "Members, roles and integration status." }] }),
+  head: () => ({ meta: [{ title: "Team & integrations — PayPatrol" }, { name: "description", content: "Members, roles and integration status." }, { property: "og:title", content: "Team & integrations — PayPatrol" }, { property: "og:description", content: "PayPatrol team permissions and verified integration status." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Settings,
 });
 
@@ -118,9 +118,14 @@ function Settings() {
                 {test && <p className="text-xs text-muted-foreground">{test.text}</p>}
                 <p className="text-xs text-muted-foreground">This badge only appears after a real model request succeeds. A key being present is not a connection.</p>
               </li>
-              <li className="flex items-start justify-between gap-3">
-                <div><p className="font-medium">PayPal Sandbox (Orders v2, JS SDK v6)</p><p className="text-xs text-muted-foreground">Only protected server functions will create and capture orders. Paid is set only after a server-confirmed completed capture.</p></div>
-                {status.data?.paypal ? <ToneBadge tone="success">Keys present</ToneBadge> : <ToneBadge tone="warning">PayPal not connected</ToneBadge>}
+               <li className="space-y-2">
+                 <div className="flex flex-wrap items-start justify-between gap-3">
+                   <p className="font-medium">PayPal Sandbox</p>
+                   {status.isFetching ? <ToneBadge tone="info">Checking authentication…</ToneBadge> : status.data?.paypal ? <ToneBadge tone="success">PayPal Sandbox connected</ToneBadge> : <ToneBadge tone="warning">PayPal not connected</ToneBadge>}
+                 </div>
+                 <p className="text-xs text-muted-foreground">Checkout locked: Business merchant identity and CAD receiving are not yet verified. No order or payment has been created.</p>
+                 {status.data?.paypalCheck.connected ? <p className="text-xs text-muted-foreground">Authentication checked {new Date(status.data.paypalCheck.checkedAt).toLocaleString("en-CA")}. This is not payment confirmation.</p> : <p className="text-xs text-warning">{status.data?.paypalCheck.reason ?? (status.error ? "Could not verify the connection." : "Connection not verified.")}</p>}
+                 <Button size="sm" variant="outline" disabled={status.isFetching} onClick={() => status.refetch()}>Check Sandbox connection</Button>
               </li>
               <li className="text-xs text-muted-foreground">Secret values are never shown here.</li>
             </ul>

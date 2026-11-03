@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { RecentSignin } from "@/components/recent-signin";
 
 export const Route = createFileRoute("/_authenticated/rules")({
-  head: () => ({ meta: [{ title: "Spending rules — PayPatrol" }, { name: "description", content: "Order limits, weekly limits and approval thresholds." }] }),
+  head: () => ({ meta: [{ title: "Spending rules — PayPatrol" }, { name: "description", content: "Order limits, weekly limits and approval thresholds." }, { property: "og:title", content: "Spending rules — PayPatrol" }, { property: "og:description", content: "Versioned spending limits protected by recent sign-in." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Rules,
 });
 
@@ -64,6 +65,7 @@ function Rules() {
                   </label>
                 ))}
               </fieldset>
+              {isOwner && <div className="sm:col-span-2"><RecentSignin /></div>}
               {isOwner ? <Button type="submit" className="sm:w-fit">Save as new version</Button> : <p className="text-sm text-muted-foreground sm:col-span-2">Only owners can change spending rules.</p>}
             </fieldset>
           </form>

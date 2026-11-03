@@ -18,7 +18,7 @@ export const STATUS_META: Record<PurchaseStatus, { label: string; tone: Tone; ne
   blocked: { label: "Blocked", tone: "blocked", next: "Payment unavailable — see failed rule" },
   verification_required: { label: "Verification required", tone: "warning", next: "Independent reviewer must verify" },
   approval_required: { label: "Approval required", tone: "info", next: "Payer approval needed" },
-  cleared_for_checkout: { label: "Cleared for checkout", tone: "success", next: "Reserve budget; PayPal not connected" },
+  cleared_for_checkout: { label: "Cleared for checkout", tone: "success", next: "Checkout locked pending merchant verification" },
   payment_pending: { label: "Payment pending", tone: "info", next: "Awaiting PayPal outcome" },
   paid: { label: "Paid", tone: "success", next: "None" },
   failed: { label: "Failed", tone: "blocked", next: "Review failure" },

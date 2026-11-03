@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/evidence")({
-  head: () => ({ meta: [{ title: "Evidence history — PayPatrol" }, { name: "description", content: "Who requested, reviewed, changed or approved, and when." }] }),
+  head: () => ({ meta: [{ title: "Evidence history — PayPatrol" }, { name: "description", content: "Who requested, reviewed, changed or approved, and when." }, { property: "og:title", content: "Evidence history — PayPatrol" }, { property: "og:description", content: "PayPatrol request, review and control-change evidence." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Evidence,
 });
 

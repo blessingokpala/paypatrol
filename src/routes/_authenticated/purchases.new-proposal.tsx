@@ -19,6 +19,10 @@ export const Route = createFileRoute("/_authenticated/purchases/new-proposal")({
     meta: [
       { title: "Create a purchase request — PayPatrol" },
       { name: "description", content: "Ask the assistant for what you need, or pick an approved listing yourself. Both run the same checks." },
+      { property: "og:title", content: "Create a purchase request — PayPatrol" },
+      { property: "og:description", content: "Create PayPatrol requests from approved listings with shared payment checks." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: NewProposal,

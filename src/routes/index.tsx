@@ -53,7 +53,7 @@ function Index() {
             </li>
           ))}
         </ul>
-        <p className="mt-10 text-xs text-muted-foreground">Sandbox test mode. PayPal and AI are not connected yet. Demonstration data is fictional.</p>
+        <p className="mt-10 text-xs text-muted-foreground">Sandbox test mode. Gemini invoice reading is available. PayPal checkout remains locked pending merchant verification. Demonstration data is fictional.</p>
       </main>
     </div>
   );
