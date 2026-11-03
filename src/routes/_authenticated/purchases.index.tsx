@@ -31,7 +31,7 @@ function Purchases() {
   const here = useHere();
   const filter: "all" | "invoice" | "ai_proposal" = source ?? "all";
   const setFilter = (f: "all" | "invoice" | "ai_proposal") =>
-    navigate({ search: (prev) => ({ ...prev, source: f === "all" ? undefined : f }), replace: true });
+    navigate({ search: ({ source: _s, ...rest }) => (f === "all" ? rest : { ...rest, source: f }), replace: true });
   // Restore the scroll position saved when a request was opened from this exact view.
   useEffect(() => {
     if (q.isLoading) return;
@@ -111,7 +111,7 @@ function Purchases() {
           ))}
         </div>
         {status && (
-          <Button size="sm" variant="outline" onClick={() => navigate({ search: (prev) => ({ ...prev, status: undefined }), replace: true })}>
+          <Button size="sm" variant="outline" onClick={() => navigate({ search: ({ status: _st, ...rest }) => rest, replace: true })}>
             Showing: {STATUS_META[status as PurchaseStatus]?.label ?? status} — clear
           </Button>
         )}
