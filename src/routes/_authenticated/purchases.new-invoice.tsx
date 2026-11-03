@@ -31,13 +31,13 @@ function NewInvoice() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const minor = parseToMinor(f.amount);
-    if (minor === null) return toast.error("Enter the amount like 75.00");
+    if (minor === null) { toast.error("Enter the amount like 75.00"); return; }
     setBusy(true);
     let path: string | null = null;
     if (file) {
       path = `${orgId}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
       const up = await supabase.storage.from("invoices").upload(path, file);
-      if (up.error) { setBusy(false); return toast.error(`Upload failed: ${up.error.message}`); }
+      if (up.error) { setBusy(false); { toast.error(`Upload failed: ${up.error.message}`); return; } }
     }
     const { data, error } = await supabase.rpc("submit_invoice", {
       _org: orgId, _supplier: (f.supplier || null) as string, _invoice_ref: f.ref, _amount_minor: minor, _currency: f.currency,
@@ -45,7 +45,7 @@ function NewInvoice() {
       _storage_path: path as string, _file_name: (file?.name ?? null) as string,
     });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
     navigate({ to: "/purchases/$id", params: { id: data as string } });
   }

@@ -56,7 +56,7 @@ function Shell() {
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
+    navigate({ to: "/auth", search: {}, replace: true });
   }
 
   const nav = (
@@ -135,7 +135,7 @@ function Onboarding({ email }: { email: string }) {
     setBusy(true);
     const { error } = await supabase.rpc("create_organization", { _name: name, _with_demo: demo });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Organisation created");
     qc.invalidateQueries({ queryKey: ["memberships"] });
   }
