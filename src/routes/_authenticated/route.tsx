@@ -94,12 +94,18 @@ function Shell() {
               <FieldSelect
                 ariaLabel="Organisation"
                 value={org.orgId}
-                onChange={(v) => org.setOrgId(v)}
+                onChange={(v) => {
+                  if (v === org.orgId) return;
+                  // Drop the previous workspace's cached data, filters and selections.
+                  qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "memberships" });
+                  org.setOrgId(v);
+                  navigate({ to: "/overview" });
+                }}
                 options={org.orgs.map((o) => ({ value: o.id, label: o.name }))}
               />
             </div>
           ) : (
-            <span className="hidden text-sm font-medium sm:inline">{org.orgName}</span>
+            <span className="truncate text-sm font-medium" title={org.orgName}>{org.orgName}</span>
           )}
           <span className="hidden text-xs text-muted-foreground md:inline">{org.email}</span>
           <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sign out" className="px-2 sm:px-3">

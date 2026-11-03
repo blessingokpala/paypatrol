@@ -27,6 +27,7 @@ def rpc(name, body, session=None):
 created = rpc('create_organization', {'_name': 'Concurrent budget test — fictional', '_with_demo': True})
 assert created.ok, 'Could not create isolated test workspace'
 org = created.json()
+assert rpc('mark_test_workspace', {'_org': org, '_reason': 'concurrent_budget.py automated test'}).ok
 supplier = requests.get(url + '/suppliers', headers=headers, params={'org_id': 'eq.' + org, 'select': 'id'}, timeout=30).json()[0]['id']
 ids = []
 try:
