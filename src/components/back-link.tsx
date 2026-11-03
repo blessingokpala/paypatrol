@@ -1,4 +1,4 @@
-import { Link, useRouter, useSearch } from "@tanstack/react-router";
+import { Link, useLocation, useRouter, useSearch } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { returnLabel, safeReturn } from "@/lib/return-to";
 
@@ -29,7 +29,6 @@ export function BackLink({ to, label, optional = false }: { to: string; label: s
 
 /** Current in-app address (path + query) to pass as `from` on outgoing links. */
 export function useHere(): string {
-  const router = useRouter();
-  const l = router.state.location;
+  const l = useLocation();
   return `${l.pathname}${l.searchStr ?? ""}`;
 }
