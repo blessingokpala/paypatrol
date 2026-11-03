@@ -97,6 +97,7 @@
   --sidebar-accent-foreground: #173b73;
   --sidebar-border: #d8e1ec;
   --sidebar-ring: #2878d0;
+  --placeholder: #7d90aa;
 }
 
 @layer base {
@@ -113,5 +114,10 @@
   :focus-visible {
     outline: 3px solid var(--color-ring);
     outline-offset: 2px;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--placeholder);
+    opacity: 1;
   }
 }
