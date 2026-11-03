@@ -1125,12 +1125,72 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      active_policy_id: { Args: { _org: string }; Returns: string }
+      add_member_by_email: {
+        Args: {
+          _email: string
+          _org: string
+          _role: Database["public"]["Enums"]["member_role"]
+        }
+        Returns: undefined
+      }
+      approve_purchase: {
+        Args: { _note?: string; _pid: string; _version: number }
+        Returns: Database["public"]["Enums"]["purchase_status"]
+      }
+      approve_supplier_baseline: {
+        Args: { _supplier: string }
+        Returns: undefined
+      }
+      cancel_purchase: {
+        Args: { _pid: string; _reason: string }
+        Returns: undefined
+      }
+      create_organization: {
+        Args: { _name: string; _with_demo?: boolean }
+        Returns: string
+      }
+      create_supplier: {
+        Args: {
+          _channel: string
+          _channel_value: string
+          _email: string
+          _evidence: string
+          _merchant: string
+          _name: string
+          _org: string
+        }
+        Returns: string
+      }
+      decide_supplier_change: {
+        Args: { _approve: boolean; _cr: string; _note: string }
+        Returns: undefined
+      }
+      edit_purchase: {
+        Args: {
+          _amount_minor: number
+          _category: string
+          _currency: string
+          _invoice_ref: string
+          _pid: string
+          _recipient: string
+        }
+        Returns: Database["public"]["Enums"]["purchase_status"]
+      }
+      evaluate_purchase: {
+        Args: { _pid: string }
+        Returns: Database["public"]["Enums"]["purchase_status"]
+      }
       has_org_role: {
         Args: {
           _org: string
           _role: Database["public"]["Enums"]["member_role"]
         }
         Returns: boolean
+      }
+      invalidate_approvals: {
+        Args: { _pid: string; _reason: string }
+        Returns: number
       }
       is_org_member: { Args: { _org: string }; Returns: boolean }
       log_audit: {
@@ -1144,6 +1204,79 @@ export type Database = {
           _org: string
         }
         Returns: undefined
+      }
+      org_week_start: { Args: { _tz: string }; Returns: string }
+      purchase_digest: { Args: { _pid: string }; Returns: string }
+      recheck_purchase: {
+        Args: { _pid: string }
+        Returns: Database["public"]["Enums"]["purchase_status"]
+      }
+      record_verification: {
+        Args: {
+          _channel_value: string
+          _contacted_at: string
+          _cr: string
+          _evidence: string
+          _outcome: Database["public"]["Enums"]["verification_outcome"]
+          _person: string
+        }
+        Returns: string
+      }
+      release_reservation: { Args: { _pid: string }; Returns: undefined }
+      remove_member_role: {
+        Args: {
+          _org: string
+          _role: Database["public"]["Enums"]["member_role"]
+          _user: string
+        }
+        Returns: undefined
+      }
+      reserve_budget: { Args: { _pid: string }; Returns: string }
+      submit_ai_proposal: {
+        Args: {
+          _claimed_recipient?: string
+          _claimed_total_minor?: number
+          _fixture_label?: string
+          _is_test_fixture?: boolean
+          _listing: string
+          _org: string
+          _quantity: number
+        }
+        Returns: string
+      }
+      submit_invoice: {
+        Args: {
+          _amount_minor: number
+          _category: string
+          _contact: string
+          _currency: string
+          _description: string
+          _file_name: string
+          _invoice_ref: string
+          _message: string
+          _org: string
+          _recipient: string
+          _storage_path: string
+          _supplier: string
+        }
+        Returns: string
+      }
+      update_spending_policy: {
+        Args: {
+          _categories: string[]
+          _currency: string
+          _order: number
+          _org: string
+          _suppliers: string[]
+          _threshold: number
+          _timezone: string
+          _weekly: number
+        }
+        Returns: string
+      }
+      week_committed_minor: {
+        Args: { _exclude?: string; _org: string }
+        Returns: number
       }
     }
     Enums: {
