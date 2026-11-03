@@ -1,5 +1,40 @@
 # PayPatrol — Build Log
 
+
+## Owner setup guidance and capture checkpoint — 2026-11-03, 16:34 UTC
+
+- Owner reports signing back into PayPatrol. This is not recorded as successful supplier enrolment:
+  recent authentication must still be checked by the protected configure action within five minutes.
+  Exact screen: Team & integrations (/settings), PayPal Sandbox, represented supplier, Merchant ID,
+  app/CAD checkbox, Configure Sandbox supplier and confirmation dialog.
+- Published URL lookup returns none. No publication was requested: owner asked for instructions,
+  not deployment. Stable expected production callback after publishing:
+  https://project--9fbe09ce-4422-4eb4-b68f-8573208bce2d.lovable.app/api/public/paypal/webhook
+  This is NOT claimed reachable. Register in the same connected Sandbox app, selecting
+  PAYMENT.CAPTURE.COMPLETED, PAYMENT.CAPTURE.PENDING, PAYMENT.CAPTURE.DENIED. Issued
+  PAYPAL_WEBHOOK_ID must be collected securely after callback reachability; publish changes again
+  after storing it so the published server receives the configuration.
+- Hardened provider confirmation: known order ID must match the returned ID; validate actual
+  payee.merchant_id, CAD, CA$75 and immutable purchase snapshot before capture. Mismatch throws
+  before the capture POST. Capture POST response is now validated/persisted directly rather than
+  discarded in favour of a second GET, removing an unnecessary confirmation-failure window.
+- Webhook malformed input returns 400, invalid signature 401; transient processing failure returns
+  503 so PayPal can retry unfinished events. Public callback exceptions are signature-authenticated
+  (PayPal) and managed-bearer-authenticated (maintenance), not anonymous payment controls.
+- Remaining claimant-stall behavior is conservative: if the claimant stops before provider execution,
+  reconciliation does not start a replacement capture; budget remains reserved for investigation.
+  Automated safe recapture/release is intentionally not claimed.
+- User session was not injected into this sandbox. A self-account session lookup failed to identify
+  the requesting owner's account; no alternate account was selected and no recent-auth bypass made.
+  Current supplier success and buyer flow cannot be truthfully confirmed in this turn.
+- Real CA$75 checkout remains UNPERFORMED. No order/capture IDs or Paid result are invented.
+  User must enrol the supplier, publish/register webhook, securely save Webhook ID, publish changes,
+  then use Pay with PayPal Sandbox with the separate Personal buyer; verify CA$75 CAD and seller.
+- Outstanding: actual merchant match through first PayPal order; supplier recent-sign-in success;
+  SDK buyer rendering; real completed CAD capture; signed/replayed webhook and scheduled delivery;
+  capture concurrency/claimant stall; automatic expiry with uncertain execution; cross-org file
+  analysis denial with distinct authenticated users. Concurrent weekly-budget test already PASSED.
+
 ## Continued Sandbox implementation (2026-11-03, after owner CAD confirmation)
 
 ### Implemented, not yet a completed Sandbox transaction

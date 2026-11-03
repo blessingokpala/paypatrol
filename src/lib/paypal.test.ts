@@ -47,6 +47,15 @@ describe("authorised order comparison", () => {
     const { admin } = adminFixture();
     expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("PENDING"))).status).toBe("pending");
   });
+  it("a denied capture cannot mark Paid or write a confirmation", async () => {
+    const { rpc, admin } = adminFixture();
+    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("DENIED"))).status).toBe("pending");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("a database refusal cannot be reported as Paid", async () => {
+    const { rpc, admin } = adminFixture(); rpc.mockResolvedValue({ error: { message: "Snapshot mismatch" } });
+    await expect(recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder())).rejects.toThrow();
+  });
   it("a changed actual merchant never writes payment confirmation", async () => {
     const { rpc, admin } = adminFixture(); const raw = capturedOrder();
     const unit = raw.purchase_units[0]; if (unit) unit.payee.merchant_id = "22SVBX42QHT3U";
