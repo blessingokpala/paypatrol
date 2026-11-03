@@ -50,12 +50,12 @@ function Review() {
   const q = useReview(id);
   const refresh = useRefreshAll();
   const [editing, setEditing] = useState(false);
+  const readInvoice = useServerFn(extractInvoiceDetails);
+  const [reading, setReading] = useState(false);
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (q.error || !q.data) return <p className="text-sm text-blocked">Request not found or not available to you.</p>;
   const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs } = q.data;
-  const readInvoice = useServerFn(extractInvoiceDetails);
-  const [reading, setReading] = useState(false);
   const recipientDiffers = sv && p.requested_recipient && p.requested_recipient.trim().toLowerCase() !== sv.paypal_merchant_id.toLowerCase();
   const activeRes = res.find((r) => r.status === "active");
   const latestExtraction = exs[0];
