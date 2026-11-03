@@ -33,7 +33,7 @@ function Approvals() {
 
   async function approve(id: string, version: number) {
     const { error } = await supabase.rpc("approve_purchase", { _pid: id, _version: version, _note: notes[id] ?? "" });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Approved this exact version");
     refresh();
   }

@@ -33,7 +33,7 @@ function Index() {
         <Wordmark className="text-xl" />
         <div className="flex items-center gap-3">
           <SandboxBanner />
-          <Button asChild size="sm"><Link to="/auth" search={{ redirect: undefined }}>Sign in</Link></Button>
+          <Button asChild size="sm"><Link to="/auth">Sign in</Link></Button>
         </div>
       </header>
       <main className="mx-auto max-w-4xl px-6 py-14">
@@ -42,7 +42,7 @@ function Index() {
           PayPatrol checks invoices and purchase requests from people or AI, pauses payments when a supplier's payment details change until independently confirmed, and blocks purchases that break your spending rules before anything is sent through PayPal.
         </p>
         <div className="mt-8 flex gap-3">
-          <Button asChild><Link to="/auth" search={{ redirect: undefined }}>Open workspace</Link></Button>
+          <Button asChild><Link to="/auth">Open workspace</Link></Button>
         </div>
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {points.map((p) => (

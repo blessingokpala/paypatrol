@@ -30,7 +30,7 @@ function NewProposal() {
     setBusy(true);
     const { data, error } = await supabase.rpc("submit_ai_proposal", { _org: orgId, _listing: listing, _quantity: Number(qty) });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     refresh();
     navigate({ to: "/purchases/$id", params: { id: data as string } });
   }

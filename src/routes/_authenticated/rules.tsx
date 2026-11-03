@@ -30,13 +30,13 @@ function Rules() {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const w = parseToMinor(f.weekly), o = parseToMinor(f.order), t = parseToMinor(f.threshold);
-    if (w === null || o === null || t === null) return toast.error("Enter amounts like 150.00");
+    if (w === null || o === null || t === null) { toast.error("Enter amounts like 150.00"); return; }
     if (!confirm("Saving creates a new rules version and cancels approvals on all open requests. Continue?")) return;
     const { error } = await supabase.rpc("update_spending_policy", {
       _org: org.orgId, _currency: f.currency, _timezone: f.timezone, _weekly: w, _order: o, _threshold: t,
       _categories: f.categories.split(",").map((s) => s.trim()).filter(Boolean), _suppliers: f.suppliers,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("New rules version saved. Open requests were re-checked.");
     refresh();
   }

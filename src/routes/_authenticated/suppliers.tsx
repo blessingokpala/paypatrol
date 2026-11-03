@@ -24,7 +24,7 @@ function Suppliers() {
 
   async function approve(id: string) {
     const { error } = await supabase.rpc("approve_supplier_baseline", { _supplier: id });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Supplier approved");
     refresh();
   }
@@ -84,7 +84,7 @@ function AddSupplier({ onDone }: { onDone: () => void }) {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.rpc("create_supplier", { _org: orgId, _name: f.name, _merchant: f.merchant, _email: f.email, _channel: f.channel, _channel_value: f.value, _evidence: f.evidence });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Supplier proposed. A second person must approve it.");
     onDone();
   }

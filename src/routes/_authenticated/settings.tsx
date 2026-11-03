@@ -43,14 +43,14 @@ function Settings() {
   async function add(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.rpc("add_member_by_email", { _org: org.orgId, _email: email, _role: role });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Role added");
     setEmail("");
     qc.invalidateQueries();
   }
   async function remove(user: string, r: (typeof ROLES)[number]) {
     const { error } = await supabase.rpc("remove_member_role", { _org: org.orgId, _user: user, _role: r });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries();
   }
 

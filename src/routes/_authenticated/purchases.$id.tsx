@@ -55,14 +55,14 @@ function Review() {
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(ok);
     refresh();
   }
 
   const openDoc = async (path: string) => {
     const { data, error } = await supabase.storage.from("invoices").createSignedUrl(path, 120);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     window.open(data.signedUrl, "_blank", "noopener");
   };
 
@@ -192,9 +192,9 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const m = parseToMinor(f.amount);
-    if (m === null) return toast.error("Enter the amount like 75.00");
+    if (m === null) { toast.error("Enter the amount like 75.00"); return; }
     const { error } = await supabase.rpc("edit_purchase", { _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Saved as a new version. Earlier approvals no longer apply.");
     onDone();
   }
@@ -228,13 +228,13 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
       _cr: cr.id, _channel_value: f.channel_value, _person: f.person, _contacted_at: new Date(f.when).toISOString(),
       _outcome: f.outcome as "confirmed" | "denied" | "unreachable", _evidence: f.evidence,
     });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success("Verification recorded");
     onDone();
   }
   async function decide(approve: boolean) {
     const { error } = await supabase.rpc("decide_supplier_change", { _cr: cr.id, _approve: approve, _note: note });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     toast.success(approve ? "Change approved. New recipient stays unpayable until PayPal enrolment." : "Change rejected. Original supplier record retained.");
     onDone();
   }
