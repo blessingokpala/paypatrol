@@ -25,7 +25,11 @@ export async function sandboxRequest(token: string, path: string, method = "GET"
 }
 
 export async function reconcileSandboxOrder(admin: SupabaseClient<Database>, token: string, attempt: PaymentSnapshot, orderId: string) {
-  const order = validateOrder(await sandboxRequest(token, `/v2/checkout/orders/${encodeURIComponent(orderId)}`), attempt);
+  return recordVerifiedSandboxOrder(admin, attempt, orderId, await sandboxRequest(token, `/v2/checkout/orders/${encodeURIComponent(orderId)}`));
+}
+
+export async function recordVerifiedSandboxOrder(admin: SupabaseClient<Database>, attempt: PaymentSnapshot, orderId: string, raw: unknown) {
+  const order = validateOrder(raw, attempt, orderId);
   const capture = order.purchase_units[0]?.payments?.captures?.[0];
   if (capture && ["COMPLETED", "PENDING"].includes(capture.status)) {
     const { error } = await admin.rpc("record_sandbox_capture", { _attempt: attempt.id, _order: order.id, _capture: capture.id, _status: capture.status, _merchant: attempt.merchant_id, _amount: attempt.amount_minor, _currency: attempt.currency });

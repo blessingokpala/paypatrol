@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { merchantIdSchema, validateOrder, type PaymentSnapshot } from "./paypal-contract";
-import { sandboxToken, sandboxRequest, reconcileSandboxOrder } from "./paypal.server";
+import { sandboxToken, sandboxRequest, reconcileSandboxOrder, recordVerifiedSandboxOrder } from "./paypal.server";
 
 const purchaseInput = z.object({ purchaseId: z.string().uuid() });
 
@@ -81,15 +81,15 @@ export const captureSandboxOrder = createServerFn({ method: "POST" })
     const token = await sandboxToken(clientId, secret);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     try {
-      const order = validateOrder(await sandboxRequest(token, `/v2/checkout/orders/${stored.paypal_order_id}`), attempt);
+      const order = validateOrder(await sandboxRequest(token, `/v2/checkout/orders/${stored.paypal_order_id}`), attempt, stored.paypal_order_id);
       if (order.purchase_units[0]?.payments?.captures?.length || !attempt.execute_capture) return await reconcileSandboxOrder(supabaseAdmin, token, attempt, order.id);
       if (order.status !== "APPROVED") {
         const reset = await supabaseAdmin.rpc("reset_uncaptured_sandbox_attempt", { _attempt: attempt.id });
         if (reset.error) throw new Error("Uncaptured payment state could not be reset");
         return { status: "pending" as const, orderId: order.id, captureId: null };
       }
-      await sandboxRequest(token, `/v2/checkout/orders/${order.id}/capture`, "POST", {}, attempt.id);
-      return await reconcileSandboxOrder(supabaseAdmin, token, attempt, order.id);
+      const captured = await sandboxRequest(token, `/v2/checkout/orders/${order.id}/capture`, "POST", {}, attempt.id);
+      return await recordVerifiedSandboxOrder(supabaseAdmin, attempt, order.id, captured);
     } catch {
       await supabaseAdmin.rpc("mark_sandbox_uncertain", { _attempt: attempt.id });
       return { status: "pending" as const, orderId: stored.paypal_order_id, captureId: null };
@@ -131,7 +131,7 @@ export const cancelSandboxCheckout = createServerFn({ method: "POST" })
     const clientId = process.env["PAYPAL_CLIENT_ID"], secret = process.env["PAYPAL_CLIENT_SECRET"];
     if (!clientId || !secret) throw new Error("Sandbox credentials missing");
     const token = await sandboxToken(clientId, secret);
-    const verified = validateOrder(await sandboxRequest(token, `/v2/checkout/orders/${order.paypal_order_id}`), attempt as unknown as PaymentSnapshot);
+    const verified = validateOrder(await sandboxRequest(token, `/v2/checkout/orders/${order.paypal_order_id}`), attempt as unknown as PaymentSnapshot, order.paypal_order_id);
     if (!["CREATED", "PAYER_ACTION_REQUIRED"].includes(verified.status) || verified.purchase_units[0]?.payments?.captures?.length) throw new Error("Approved or uncertain payments keep their budget reserved. Check payment confirmation.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.rpc("cancel_uncaptured_sandbox_attempt", { _attempt: attempt.id });

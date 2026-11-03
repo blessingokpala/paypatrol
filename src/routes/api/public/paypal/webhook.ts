@@ -34,6 +34,9 @@ export const Route = createFileRoute("/api/public/paypal/webhook")({
       const finished = await supabaseAdmin.rpc("finish_sandbox_event", { _event: event.id });
       if (finished.error) return new Response("Event processing is pending", { status: 500 });
       return new Response("Accepted", { status: 200 });
-    } catch { return new Response("Webhook not confirmed", { status: 400 }); }
+    } catch (error) {
+      if (error instanceof z.ZodError || error instanceof SyntaxError) return new Response("Invalid event", { status: 400 });
+      return new Response("Webhook processing pending", { status: 503 });
+    }
   } } },
 });

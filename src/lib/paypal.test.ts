@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { authenticateSandbox } from "./paypal.server";
+import { authenticateSandbox, recordVerifiedSandboxOrder, reconcileSandboxOrder } from "./paypal.server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { validateOrder, type PaymentSnapshot } from "./paypal-contract";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -30,4 +32,45 @@ describe("authorised order comparison", () => {
   it("rejects CA$180 in place of CA$75", () => { const o = order(); const u = o.purchase_units[0]; if (u) u.amount.value = "180.00"; expect(() => validateOrder(o, attempt)).toThrow(); });
   it("rejects a stale purchase version", () => { const o = order(); const u = o.purchase_units[0]; if (u) u.invoice_id = "purchase-1-v1"; expect(() => validateOrder(o, attempt)).toThrow(); });
   it("rejects non-CAD currency", () => { const o = order(); const u = o.purchase_units[0]; if (u) u.amount.currency_code = "USD"; expect(() => validateOrder(o, attempt)).toThrow(); });
+  it("rejects a different provider order ID", () => expect(() => validateOrder(order(), attempt, "OTHER-ORDER")).toThrow());
+  const capturedOrder = (status = "COMPLETED", value = "75.00") => ({ ...order(), status: "COMPLETED", purchase_units: order().purchase_units.map(u => ({ ...u, payments: { captures: [{ id: "CAPTURE-1", status, amount: { currency_code: "CAD", value } }] } })) });
+  function adminFixture() {
+    const rpc = vi.fn().mockResolvedValue({ error: null });
+    return { rpc, admin: { rpc } as unknown as SupabaseClient<Database> };
+  }
+  it("records Paid only from a verified completed CA$75 capture", async () => {
+    const { rpc, admin } = adminFixture();
+    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder())).status).toBe("paid");
+    expect(rpc).toHaveBeenCalledWith("record_sandbox_capture", expect.objectContaining({ _capture: "CAPTURE-1", _amount: 7500, _currency: "CAD", _merchant: "L8SVBX42QHT3U", _status: "COMPLETED" }));
+  });
+  it("a pending capture never returns Paid", async () => {
+    const { admin } = adminFixture();
+    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("PENDING"))).status).toBe("pending");
+  });
+  it("a denied capture cannot mark Paid or write a confirmation", async () => {
+    const { rpc, admin } = adminFixture();
+    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("DENIED"))).status).toBe("pending");
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("a database refusal cannot be reported as Paid", async () => {
+    const { rpc, admin } = adminFixture(); rpc.mockResolvedValue({ error: { message: "Snapshot mismatch" } });
+    await expect(recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder())).rejects.toThrow();
+  });
+  it("a changed actual merchant never writes payment confirmation", async () => {
+    const { rpc, admin } = adminFixture(); const raw = capturedOrder();
+    const unit = raw.purchase_units[0]; if (unit) unit.payee.merchant_id = "22SVBX42QHT3U";
+    await expect(recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", raw)).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("a wrong capture total never writes payment confirmation", async () => {
+    const { rpc, admin } = adminFixture();
+    await expect(recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder("COMPLETED", "180.00"))).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("a provider timeout cannot record Paid or create a new order", async () => {
+    const { rpc, admin } = adminFixture(); const fetcher = vi.fn().mockRejectedValue(new Error("Timeout")); vi.stubGlobal("fetch", fetcher);
+    await expect(reconcileSandboxOrder(admin, "scripted-token", attempt, "ORDER-1")).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled(); expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0]?.[1].method).toBe("GET");
+  });
 });
