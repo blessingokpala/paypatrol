@@ -118,7 +118,7 @@ function Review() {
           {items.length > 0 && (
             <table className="mt-4 w-full text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1">Line</th><th>Qty</th><th className="text-right">Total</th></tr></thead>
-              <tbody>{items.map((i) => <tr key={i.id} className="border-t"><td className="py-1">{i.description}</td><td>{i.quantity}</td><td className="text-right">{formatMinor(i.line_total_minor, p.currency)}</td></tr>)}</tbody>
+              <tbody>{items.map((i) => <tr key={i.id} className="border-t"><td className="py-1">{i.description}{!i.listing_id && <span className="block text-xs text-muted-foreground">Summary total, not an itemised line. See what AI read below for the invoice's own lines.</span>}</td><td>{i.listing_id ? i.quantity : "—"}</td><td className="text-right">{formatMinor(i.line_total_minor, p.currency)}</td></tr>)}</tbody>
             </table>
           )}
         </Panel>

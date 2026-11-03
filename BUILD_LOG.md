@@ -323,7 +323,23 @@ https://developer.paypal.com/docs/api/webhooks/v1/
 
 **Tests actually run.**
 - Rolled-back probe (database): with the request set back to pending, the checker returned `verification_required` and the reservation insert was refused with "A supplier recipient change … Payment is held." All changes were undone.
-- Live reconciliation: 1 request superseded; purchase re-evaluated to `cleared_for_checkout` (amount CA$75, recipient matches v2).
+- Live reconciliation at 17:56 UTC: 1 request superseded; purchase re-evaluated to `cleared_for_checkout`. **This was later found to be wrong. See the follow-up below; the request was reopened.**
 - Not run: browser screenshot of the updated page; order creation/capture under the hold (covered by the same trigger, not exercised separately).
 
-**Line items (1 × CA$75 vs extracted 3 × CA$25).** Not a saving error in the amount, and not a summary the user chose. With no approved quote linked, invoice submission stores a single line: the description and the confirmed total. The extracted 3 × CA$25 remains in the AI evidence record linked to the purchase. Total and recipient are identical. Limitation: itemised extracted lines are not yet carried into the saved request.
+**Line items (1 × CA$75 vs extracted 3 × CA$25).** Not a saving error in the amount, and not a summary the user chose. With no approved quote linked, invoice submission stores one **summary-total line** (description + confirmed total), not an itemised line; the invoice itself listed 3 × CA$25. The page now labels it "Summary total, not an itemised line" and shows no quantity. The extracted 3 × CA$25 remains in the AI evidence record linked to the purchase. Total and recipient are identical. Limitation: itemised extracted lines are not yet carried into the saved request.
+
+## Follow-up — no self-clearing of supplier changes (2026-11-03 18:02 UTC)
+
+**Correction to the previous checkpoint.** The change request on PP-CHECKOUT-20261103 was proposed by the same person who submitted the invoice **and** who set up Sandbox supplier record v2 (the workspace has only one member, owner + preparer). Closing it as superseded let a requester clear their own change by replacing the supplier record. That closure was reversed with an audited reopening (`supplier_change_reopened`, reason recorded). The audit trail for the request now reads: detected → superseded → reopened. Status is back to **Verification required**.
+
+**Rule now enforced (migration 0015).** Automatic closure only happens when the replacement record was created and approved by someone other than the proposer and the purchase's submitter. A superseded request cannot later be approved or rejected; it can only be reopened through the audited path. Approving a properly verified change whose recipient the current record already lists confirms it without creating a duplicate, unenrolled record. The Sandbox baseline setup remains labelled in supplier record v2 ("Owner-authorised fictional baseline replacement for Sandbox account…") and audited as `sandbox_merchant_configured`. It is not treated as independent verification.
+
+**Tests actually run** (database, as the signed-in owner, all fully rolled back, no PayPal calls):
+- Order creation (`begin_sandbox_payment`, which runs before any PayPal call): refused with "Payment controls have not cleared this request"; 0 payment attempts before and after.
+- Direct attempt insert backstop: refused with "…awaiting verification. Payment is held."
+- Capture (`prepare_sandbox_capture` on a fixture order-ready attempt with a valid reservation): refused with "Current payment controls refuse capture: verification_required"; the attempt stayed `ordered`. This function runs before the server obtains a PayPal token.
+- Capture-transition trigger backstop: refused with the hold message.
+- Self-reconciliation: closed 0 requests. Self-approval by the submitter: refused with "The person who submitted this change cannot decide it".
+- Browser (preview, signed in as owner): page shows **Verification required**, finding `CHANGE_REQUEST_UNRESOLVED`, recipient comparison matches v2, and **no** Reserve budget or Pay with PayPal buttons.
+
+**Outstanding:** independent verification of this change by a second authorised person (none exists in the workspace yet); the CA$75 Sandbox checkout itself; the remaining items listed earlier.
