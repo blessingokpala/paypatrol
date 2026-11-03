@@ -1159,6 +1159,7 @@ export type Database = {
           change_request_id: string | null
           channel: string
           channel_value: string
+          check_kind: string
           contacted_at: string
           created_at: string
           evidence: string
@@ -1173,6 +1174,7 @@ export type Database = {
           change_request_id?: string | null
           channel: string
           channel_value: string
+          check_kind?: string
           contacted_at: string
           created_at?: string
           evidence: string
@@ -1187,6 +1189,7 @@ export type Database = {
           change_request_id?: string | null
           channel?: string
           channel_value?: string
+          check_kind?: string
           contacted_at?: string
           created_at?: string
           evidence?: string
@@ -1398,6 +1401,16 @@ export type Database = {
           _org: string
           _storage_path: string
           _uncertain: string[]
+        }
+        Returns: string
+      }
+      record_sandbox_account_check: {
+        Args: {
+          _business_account_seen: string
+          _cr: string
+          _evidence: string
+          _merchant_seen: string
+          _outcome: Database["public"]["Enums"]["verification_outcome"]
         }
         Returns: string
       }
