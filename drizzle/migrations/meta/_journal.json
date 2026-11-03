@@ -50,6 +50,13 @@
       "when": 1793713213788,
       "tag": "0006_ai_extraction_evidence_and_quote_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793713280876,
+      "tag": "0007_drop_stale_submit_invoice_overload",
+      "breakpoints": true
     }
   ]
 }

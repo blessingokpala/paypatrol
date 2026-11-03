@@ -1326,43 +1326,25 @@ export type Database = {
         }
         Returns: string
       }
-      submit_invoice:
-        | {
-            Args: {
-              _amount_minor: number
-              _category: string
-              _contact: string
-              _currency: string
-              _description: string
-              _file_name: string
-              _invoice_ref: string
-              _message: string
-              _org: string
-              _recipient: string
-              _storage_path: string
-              _supplier: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              _amount_minor: number
-              _category: string
-              _contact: string
-              _currency: string
-              _description: string
-              _file_name: string
-              _invoice_ref: string
-              _listing?: string
-              _message: string
-              _org: string
-              _quantity?: number
-              _recipient: string
-              _storage_path: string
-              _supplier: string
-            }
-            Returns: string
-          }
+      submit_invoice: {
+        Args: {
+          _amount_minor: number
+          _category: string
+          _contact: string
+          _currency: string
+          _description: string
+          _file_name: string
+          _invoice_ref: string
+          _listing?: string
+          _message: string
+          _org: string
+          _quantity?: number
+          _recipient: string
+          _storage_path: string
+          _supplier: string
+        }
+        Returns: string
+      }
       update_spending_policy: {
         Args: {
           _categories: string[]
