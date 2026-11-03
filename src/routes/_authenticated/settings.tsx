@@ -113,7 +113,7 @@ function Settings() {
                   >
                     {testing ? "Testing…" : "Test connection"}
                   </Button>
-                  {test && <ToneBadge tone={test.ok ? "success" : "warning"}>{test.ok ? "Connected" : "AI not connected"}</ToneBadge>}
+                  {test && <ToneBadge tone={test.ok ? "success" : "warning"}>{test.ok ? "Connection verified" : "AI not connected"}</ToneBadge>}
                 </div>
                 {test && <p className="text-xs text-muted-foreground">{test.text}</p>}
                 <p className="text-xs text-muted-foreground">This badge only appears after a real model request succeeds. A key being present is not a connection.</p>
