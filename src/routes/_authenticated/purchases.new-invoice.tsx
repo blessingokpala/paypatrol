@@ -19,6 +19,10 @@ export const Route = createFileRoute("/_authenticated/purchases/new-invoice")({
     meta: [
       { title: "Check an invoice — PayPatrol" },
       { name: "description", content: "Read an invoice with AI, confirm the details it found, then run payment checks." },
+      { property: "og:title", content: "Check an invoice — PayPatrol" },
+      { property: "og:description", content: "Review Gemini invoice readings before submitting a PayPatrol request." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: NewInvoice,

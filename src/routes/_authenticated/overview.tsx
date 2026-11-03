@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { FileText, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/overview")({
-  head: () => ({ meta: [{ title: "Overview — PayPatrol" }, { name: "description", content: "Budget, holds and approvals at a glance." }] }),
+  head: () => ({ meta: [{ title: "Overview — PayPatrol" }, { name: "description", content: "Budget, holds and approvals at a glance." }, { property: "og:title", content: "Overview — PayPatrol" }, { property: "og:description", content: "PayPatrol budget, holds and approvals at a glance." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Overview,
 });
 

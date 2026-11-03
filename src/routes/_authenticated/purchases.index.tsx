@@ -8,7 +8,7 @@ import { EmptyState, FixtureTag, PageHeader, StatusBadge } from "@/components/br
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/purchases/")({
-  head: () => ({ meta: [{ title: "Purchases — PayPatrol" }, { name: "description", content: "Invoices and AI purchase proposals in one list." }] }),
+  head: () => ({ meta: [{ title: "Purchases — PayPatrol" }, { name: "description", content: "Invoices and AI purchase proposals in one list." }, { property: "og:title", content: "Purchases — PayPatrol" }, { property: "og:description", content: "PayPatrol invoices, AI proposals and payment-check outcomes." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Purchases,
 });
 

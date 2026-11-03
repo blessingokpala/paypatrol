@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/suppliers")({
-  head: () => ({ meta: [{ title: "Suppliers — PayPatrol" }, { name: "description", content: "Approved recipients, trusted contacts and version history." }] }),
+  head: () => ({ meta: [{ title: "Suppliers — PayPatrol" }, { name: "description", content: "Approved recipients, trusted contacts and version history." }, { property: "og:title", content: "Suppliers — PayPatrol" }, { property: "og:description", content: "PayPatrol approved recipient records and trusted supplier contacts." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Suppliers,
 });
 

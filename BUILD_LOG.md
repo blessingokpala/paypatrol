@@ -1,5 +1,68 @@
 # PayPatrol — Build Log
 
+## PayPal Sandbox phase — partial checkpoint (2026-11-03)
+
+### Actual implementation and results
+- Secure form stored Sandbox Client ID and Client Secret. Real PayPal OAuth returned HTTP 200;
+  no token or credential was displayed, logged or returned to the browser. The owner-only settings
+  check now authenticates with PayPal and reports `PayPal Sandbox connected` only on success.
+- Signed-in browser check confirmed the connected badge, separate checkout lock and zero page errors.
+- The candidate merchant identifier supplied by the builder does not satisfy PayPal's documented
+  13-character merchant-ID pattern. OAuth returned no merchant identity. CAD receiving was not confirmed.
+  Supplier versions and historical invoice recipients remain unchanged. No enrolled merchant is claimed.
+- Migration 0009 adds a five-minute signed authentication-method timestamp requirement to spending-policy
+  changes and recipient-change approval. Token issue/refresh time is not used. UI offers password
+  reconfirmation; passwordless users must sign out/in. Existing roles and independent review remain required.
+- Added guards against changing trusted controls/purchases or releasing budget while a nonterminal
+  persisted attempt exists. Added 30-minute reservation expiry and safe cleanup during reservation requests.
+  Background expiry scheduling and the final payment lifecycle remain outstanding.
+
+### Executed tests, clearly distinguished
+- **Real concurrent backend requests:** `supabase/tests/concurrent_budget.py` used two separate HTTP
+  sessions and a barrier. With CA$100 remaining, two CA$80 requests raced: exactly one succeeded,
+  the other was refused, CA$280 total was reserved against CA$300, leaving CA$20. Test requests
+  were cancelled afterward. Fictional workspaces remain for audit; no real supplier was created.
+  The previously outstanding simultaneous-budget test is now executed and PASSED.
+- **Scripted authenticated backend inputs:** `supabase/tests/sandbox_checkpoint.py` passed normal
+  CA$75 clearance; recipient-only change -> verification_required without supplier mutation;
+  approved-recipient AI proposal CA$180 -> blocked; invoice injection cannot approve; missing amount
+  and currency -> needs_clarification; old authentication refuses a policy change and retains the old policy.
+- **Real Gemini plus browser:** uploaded a fictional PDF `PP-SANDBOX-CHECK-001`, called
+  `gemini-3.1-flash-lite` with the replacement secret, observed CA$75.00, CAD and original requested
+  recipient. Amount input stayed empty until `Use these values`; user-review action applied fields,
+  then submission created request `a5f6df42-ad97-4fa4-8750-a8060cd72433`. Read-back showed evidence,
+  separate request/supplier recipient comparison and cleared_for_checkout. No outage observed in this run.
+- **Scripted unit responses:** 3 Sandbox-auth tests and 7 existing Gemini schema/retry tests passed (10 total).
+- **Real PayPal payments:** NONE. Backend queries confirmed 0 PayPal orders and 0 captures.
+  No order/capture identifiers exist; nothing marked Paid.
+
+### Correction to the earlier phase-two report
+The earlier Block 4 SQL runner failed with a function-permission error; the prior report incorrectly
+described those checks as executed successfully. The runner is read-only. The new authenticated
+HTTP checks above independently executed the named outcomes, but do not retroactively validate
+the old SQL block. Cross-organisation file isolation was not rerun in this partial checkpoint.
+
+### Remaining / blocked
+- Correct Business merchant ID, confirmation that the credential app is linked to that same Business
+  account, and confirmation of CAD receiving are required before enrolment or any PayPal order.
+- Order creation/capture, SDK buyer checkout, stable logical-operation idempotency, authoritative
+  reconciliation and verified/deduplicated webhooks are NOT implemented or tested yet.
+- Recent-auth recipient approval success, attempt race/uncertain-outcome fixtures and background
+  reservation expiry still need execution. The stale-policy-auth denial was actually executed.
+- Cancellation/repeated-click/unauthorised/duplicate-webhook payment demonstrations require the
+  finished payment lifecycle; none are claimed as passed. No webhook URL has been deployed.
+- Buyer must use a separate Sandbox Personal account once controlled checkout is available;
+  no buyer credentials are requested in chat. No live endpoints or live transactions are used.
+- No per-request Gemini cost metering; billing tier remains unverified.
+
+### Tools and official references
+Secure secrets form; Lovable Database migration; authenticated REST tests; Playwright browser;
+Vitest; official PayPal SDK setup, Orders v2, Sandbox account and webhook documentation:
+https://developer.paypal.com/sdk/js/set-up
+https://developer.paypal.com/docs/api/orders/v2/
+https://developer.paypal.com/sandbox-testing/accounts
+https://developer.paypal.com/docs/api/webhooks/v1/
+
 ## Phase 2 verification checkpoint (2026-11-03)
 
 ### Key replacement
