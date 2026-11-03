@@ -31,7 +31,8 @@ export const Route = createFileRoute("/api/public/paypal/webhook")({
       if (error) return new Response("Could not record event", { status: 500 });
       if (!apply) return new Response("Already processed", { status: 200 });
       await reconcileSandboxOrder(supabaseAdmin, token, attempt as unknown as PaymentSnapshot, orderId);
-      await supabaseAdmin.rpc("finish_sandbox_event", { _event: event.id });
+      const finished = await supabaseAdmin.rpc("finish_sandbox_event", { _event: event.id });
+      if (finished.error) return new Response("Event processing is pending", { status: 500 });
       return new Response("Accepted", { status: 200 });
     } catch { return new Response("Webhook not confirmed", { status: 400 }); }
   } } },

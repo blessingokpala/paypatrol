@@ -1,5 +1,74 @@
 # PayPatrol — Build Log
 
+## Continued Sandbox implementation (2026-11-03, after owner CAD confirmation)
+
+### Implemented, not yet a completed Sandbox transaction
+- Owner confirmed CAD wallet balance CA$0.00. Removed possible field-label prefix from the candidate
+  Merchant ID in the authorised settings form; it satisfies the 13-character format.
+- Real OAuth succeeded. Identity endpoints returned account URIs, not a directly comparable merchant ID;
+  these responses are **not** claimed as merchant confirmation. Owner must confirm the account/app
+  association; the first controlled order must return the exact stored payee before any capture.
+- Migrations 0010–0012 add immutable attempt snapshots, one unresolved attempt per request, stable
+  distinct UUID create/capture keys, org/purchase locking, shared-checker reevaluation immediately
+  before capture, one SQL-claimed capture executor, authoritative completed-capture recording and
+  reservation consumption. Ordinary authenticated callers cannot write payment records or mark Paid.
+- Current SDK v6 core loads from the Sandbox host; buyer checkout uses
+  `createPayPalOneTimePaymentSession` and `start({presentationMode:'auto'}, orderPromise)`.
+  It sends only purchase identity to protected server functions, never trusted money/recipient fields.
+- Reconciliation reads the existing PayPal order; timeout/ambiguous capture preserves budget and prevents
+  another capture operation. No automatic fresh payment is started. Missing create responses may require
+  operator reconciliation after the bounded request-key window; they are not silently discarded.
+- Cancellation only releases a stored ordered attempt after canonical PayPal lookup confirms CREATED
+  or PAYER_ACTION_REQUIRED with no captures. APPROVED/uncertain orders retain budget; the SQL claim
+  prevents cancellation racing with local capture. PayPal has no order-void operation in this implementation.
+- Webhook route verifies signatures through PayPal, rejects unsigned calls, matches stored order/org,
+  deduplicates event IDs and retries unfinished events. It reconciles canonical provider data before marking
+  completion. Only minimal event/order/capture data is stored, not personal provider payloads.
+- Hourly managed maintenance job created for `/api/public/jobs/paypal-maintenance`; authenticates managed
+  callbacks, safely expires unused reservations and reconciles capturing/confirmation_pending attempts.
+  It is not delivery-verified: the public development host currently returns 404 and the editor preview
+  is access-protected. Published callback reachability is required. Hourly cadence means up to one hour
+  extra expiry/recovery delay (and about 30 seconds scheduled spread); budget stays conservative.
+- Both order creation and capture require webhook configuration; checkout remains locked while setup is incomplete.
+
+### Executed in this continuation
+- **Scripted unit tests:** 20 tests passed across PayPal order comparisons, Gemini schemas/retries, money
+  and app routing. Specific PayPal checks reject wrong merchant, CA$180 instead of CA$75, non-CAD currency
+  and stale purchase version; successful comparison binds all identifiers.
+- **Authenticated backend:** reran two separate-session simultaneous CA$80 reservations with CA$100
+  remaining: exactly one succeeded; CA$20 remained. Negative backend inputs held recipient changes,
+  blocked CA$180 and injected instructions, required clarification for missing money/currency, refused
+  held/blocked/cancelled starts and created no payment attempts. Signed-out start refused.
+- **Browser:** owner configuration with the managed test session correctly refused absent recent AMR
+  sign-in evidence. It was NOT configured, and no safeguard was bypassed. Screenshot confirmed refusal.
+- **Real Gemini/browser:** replacement key read a fictional CA$75 CAD invoice with corrected candidate
+  recipient. Amount input stayed empty until user-review action. Submitted request
+  `0300638e-c731-4c48-9ccf-259ab39673fb` reads back with original requested recipient and Verification
+  required against the still-fictional approved baseline. No model outage was observed.
+- **HTTP:** unsigned webhook -> 401; unauthenticated maintenance -> 401. Privileged config RPC and
+  direct Paid update denied to signed-in browser.
+- Latest automated preview build OK. No real PayPal order or capture was made; no transaction IDs exist.
+
+### Required next user actions / remaining verification
+1. Sign in again through PayPatrol (or confirm password in settings). Within five minutes open Team &
+   integrations, select the represented supplier, confirm Merchant ID and app/CAD checkbox, and press
+   Configure Sandbox supplier. This versions only the fictional baseline; historical requested recipients
+   are never rewritten. Real recipient changes still require independent verification.
+2. Publish when ready so `/api/public/paypal/webhook` and maintenance are publicly reachable.
+   In PayPal Developer → Apps & Credentials → Sandbox → the connected app → Webhooks → Add Webhook,
+   enter the published app URL plus `/api/public/paypal/webhook`; choose PAYMENT.CAPTURE.COMPLETED,
+   PAYMENT.CAPTURE.PENDING and PAYMENT.CAPTURE.DENIED. Save the issued Webhook ID securely as
+   PAYPAL_WEBHOOK_ID. No secret form was requested prematurely before a reachable callback existed.
+3. Then test a cleared CA$75 request with the separate Sandbox Personal buyer account. No buyer password
+   is requested in chat. The first order verifies actual payee/CAD through PayPal; only canonical completed
+   capture can produce Paid. Buyer login and capture are still UNPERFORMED.
+- SDK provider rendering, actual order/create/capture success, completed CAD payment, valid signed/replayed
+  webhook, callback delivery, failed capture/timeout fixtures, approved-recipient reauth success,
+  cross-org uploaded-file isolation and automatic expiry effects remain UNVERIFIED.
+- Internal duplicate claims prevent concurrent capture execution; end-to-end repeated-click and duplicate
+  notification tests still require provider setup. An unresolved provider denial conservatively remains
+  reserved for investigation; automatic definitive-denial release is not implemented.
+
 ## PayPal Sandbox phase — partial checkpoint (2026-11-03)
 
 ### Actual implementation and results
