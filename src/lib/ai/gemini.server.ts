@@ -7,7 +7,7 @@ import { extractionSchema, proposalSchema, type AiError, type AiOutcome, type Ex
 export const GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_TIMEOUT_MS = 90_000;
 
 const EXTRACTION_PROMPT = `You are a data extractor for an invoice review system. Extract ONLY what this document states.
 Never invent a value. If a value is absent or unreadable, put an empty string in its field and list the field name in missing_fields (absent) or uncertain_fields (present but hard to read).
@@ -88,6 +88,12 @@ function mapHttpError(status: number, body: string): AiError {
   return { code: "unavailable", message: `AI request failed (${status}). ${body.slice(0, 160)}` };
 }
 
+// Demand spikes are temporary: retry a couple of times before telling the user.
+const RETRY_STATUSES = new Set([500, 502, 503, 504]);
+const MAX_ATTEMPTS = 3;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function generate<T>(
   schema: unknown,
   prompt: string,
@@ -101,38 +107,50 @@ async function generate<T>(
   const parts = file
     ? [{ inline_data: { mime_type: file.mime, data: file.base64 } }, { text: prompt }]
     : [{ text: prompt }];
+  const body = JSON.stringify({
+    contents: [{ parts }],
+    generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: schema },
+  });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${ENDPOINT}/${GEMINI_MODEL}:generateContent`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: { "content-type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: schema },
-      }),
-    });
-    if (!res.ok) return { ok: false, error: mapHttpError(res.status, await res.text().catch(() => "")) };
-    const json = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) return { ok: false, error: { code: "bad_output", message: "The model returned no content." } };
-    let raw: unknown;
+  let lastError: AiError = { code: "unavailable", message: "AI is busy right now. Try again in a moment." };
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      raw = JSON.parse(text);
-    } catch {
-      return { ok: false, error: { code: "bad_output", message: "The model returned text instead of structured data." } };
+      const res = await fetch(`${ENDPOINT}/${GEMINI_MODEL}:generateContent`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "content-type": "application/json", "x-goog-api-key": key },
+        body,
+      });
+      if (!res.ok) {
+        lastError = mapHttpError(res.status, await res.text().catch(() => ""));
+        if (RETRY_STATUSES.has(res.status) && attempt < MAX_ATTEMPTS) {
+          await sleep(attempt * 2000);
+          continue;
+        }
+        return { ok: false, error: lastError };
+      }
+      const json = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+      const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) return { ok: false, error: { code: "bad_output", message: "The model returned no content." } };
+      let raw: unknown;
+      try {
+        raw = JSON.parse(text);
+      } catch {
+        return { ok: false, error: { code: "bad_output", message: "The model returned text instead of structured data." } };
+      }
+      const data = parse(raw);
+      if (data === null) return { ok: false, error: { code: "bad_output", message: "The model's answer did not match the required shape." } };
+      return { ok: true, model: GEMINI_MODEL, data };
+    } catch (e) {
+      if (controller.signal.aborted) return { ok: false, error: { code: "timeout", message: "AI took too long to answer." } };
+      return { ok: false, error: { code: "unavailable", message: `AI request failed: ${e instanceof Error ? e.message : "unknown error"}` } };
+    } finally {
+      clearTimeout(timer);
     }
-    const data = parse(raw);
-    if (data === null) return { ok: false, error: { code: "bad_output", message: "The model's answer did not match the required shape." } };
-    return { ok: true, model: GEMINI_MODEL, data };
-  } catch (e) {
-    if (controller.signal.aborted) return { ok: false, error: { code: "timeout", message: "AI took too long to answer." } };
-    return { ok: false, error: { code: "unavailable", message: `AI request failed: ${e instanceof Error ? e.message : "unknown error"}` } };
-  } finally {
-    clearTimeout(timer);
   }
+  return { ok: false, error: lastError };
 }
 
 export function extractInvoiceFromFile(base64: string, mime: string): Promise<AiOutcome<Extraction>> {
@@ -177,7 +195,7 @@ ${JSON.stringify(listings, null, 1)}`;
       const parsed = proposalSchema.safeParse(raw);
       return parsed.success ? parsed.data : null;
     },
-    30_000,
+    60_000,
   );
 }
 
@@ -191,6 +209,6 @@ export function pingGemini(): Promise<AiOutcome<{ status: string }>> {
       const o = raw as { status?: unknown };
       return typeof o?.status === "string" ? { status: o.status } : null;
     },
-    20_000,
+    60_000,
   );
 }

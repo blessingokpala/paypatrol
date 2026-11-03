@@ -113,10 +113,10 @@ function Settings() {
                   >
                     {testing ? "Testing…" : "Test connection"}
                   </Button>
-                  {test && <ToneBadge tone={test.ok ? "success" : "warning"}>{test.ok ? "Connected" : "AI not connected"}</ToneBadge>}
+                  {test && <ToneBadge tone={test.ok ? "success" : "warning"}>{test.ok ? "Connection verified" : "AI not connected"}</ToneBadge>}
                 </div>
                 {test && <p className="text-xs text-muted-foreground">{test.text}</p>}
-                <p className="text-xs text-muted-foreground">“Connected” appears only after a real model request succeeds. A key being present is not a connection.</p>
+                <p className="text-xs text-muted-foreground">This badge only appears after a real model request succeeds. A key being present is not a connection.</p>
               </li>
               <li className="flex items-start justify-between gap-3">
                 <div><p className="font-medium">PayPal Sandbox (Orders v2, JS SDK v6)</p><p className="text-xs text-muted-foreground">Only protected server functions will create and capture orders. Paid is set only after a server-confirmed completed capture.</p></div>
