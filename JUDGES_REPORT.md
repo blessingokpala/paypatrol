@@ -1,7 +1,7 @@
 # PayPatrol — Judges' Build Report
 
-Status as of 2026-11-03, 22:15 UTC. Sandbox test mode only. All supplier names, invoices and amounts are fictional.
-This report summarises the detailed, timestamped engineering log in `BUILD_LOG.md`. Where they differ, the newer entry wins. Earlier optimistic wording that was later corrected is flagged in section 5.
+Status as of 2026-11-03, 22:50 UTC. Sandbox test mode only. All supplier names, invoices and amounts are fictional.
+This report is a self-contained account of the current state. Supporting detail is in the timestamped engineering log, [BUILD_LOG.md](BUILD_LOG.md), linked per section below. Where they differ, the newer entry wins. Earlier optimistic wording that was later corrected is flagged in section 5.
 
 **Payment status, checked in the database when this report was written:** 0 PayPal orders, 0 captures, 0 verified PayPal notifications, 0 independent supplier verifications, 0 purchases marked Paid, 0 active budget reservations.
 
@@ -38,7 +38,7 @@ This report summarises the detailed, timestamped engineering log in `BUILD_LOG.m
 **Usability (latest)**
 - **Dropdowns and fields:** shared accessible dropdowns, Show/Hide password, required-field markers and inline amount errors.
 - **Leaving a form:** a warning appears if the form has unsaved entries.
-- **Purchases list:** status and source filters kept in the address, row selection and CSV export of summaries.
+- **Purchases list:** search across request titles, invoice references and supplier names; the All / Invoices / AI proposals tabs; Status, Supplier and submission-date filters; sorting by submission date or amount (newest first by default); a result count, removable filter chips, Clear all and a "No purchases match your search" empty state. Everything is kept in the address, so it survives opening a request, returning and refreshing. Search covers every request the signed-in person may see in the organisation, not just the rows on screen. Selection and Export selected cover only the matching rows and reset when search or filters change. On phones the filters fold behind a "Filters and sorting" button.
 - **Readable screens:** proposal summaries (proposed values kept separate from calculated ones), plain-language evidence history, findings and error messages. Stored records and technical CSV exports are unchanged.
 - **Overview cards** open matching views. Reserved now opens a dedicated "Reserved purchases" page (see section 6).
 - **Back links:** a shared back link above every drill-down, form and detail page. It returns to the actual originating view, keeps that view's filters, survives refresh and accepts only internal pages. On directly opened links it falls back to the parent page.
@@ -62,6 +62,16 @@ This report summarises the detailed, timestamped engineering log in `BUILD_LOG.m
 | Invoice auto-read, field filling, missing-information flags, keeping manual edits | Browser + real Gemini | Pass, after fixing a default-currency fill and a stuck submit check |
 | Overview → Blocked → request → Back to purchases → Back to overview, including refresh, direct links, rejected external `from`, scroll restore, phone width (390 px) | Browser | Pass |
 | Overview → Reserved (empty), Available, Awaiting verification, Pending approvals (empty); Evidence → request → back | Browser | Pass |
+| Purchases search, filters and sorting rules | Scripted (Vitest, `src/lib/purchase-filters.test.ts`) | 5 pass; 37 unit tests pass in total |
+| Overview → Blocked requests / Awaiting verification open Purchases with that status filter applied, with Back to overview | Browser | Pass (4 of 13 and 5 of 13 requests) |
+| Combined search + tab + status: "harbour" → 10, + Invoices → 4, "PP-CHECKOUT" + Verification required → 1 (the CA$75 request); chips and Clear all | Browser | Pass |
+| No match ("zzzz-nomatch") shows "No purchases match your search"; its clear button restores all 13 | Browser | Pass |
+| Sort amount high → low | Browser | Pass (CA$500, 500, 500, 180, 75, 75…) |
+| Select all on AI proposals (6), Export selected | Browser, downloaded file read back | CSV had exactly 6 rows, all AI proposals; switching to Invoices cleared the selection |
+| Open a request from a searched, sorted list, refresh the request, Back to purchases, refresh again | Browser | Pass: search, tab and sort restored |
+| Overview → Blocked → request → Back to purchases → Back to overview | Browser | Pass |
+| Keyboard-only dropdowns (Status and Sort filters, invoice Supplier, proposal listing, organisation switcher): Enter/Space/Arrow opens, arrows move, typing jumps, Enter selects, Escape closes without changing, focus returns to the dropdown, Tab moves on | Browser | Pass |
+| Phone layout at 390 px: Overview, Purchases, both creation forms, purchase details, Approvals, Suppliers, Spending rules, Evidence history, Team & integrations, Weekly budget, Reserved | Browser, page-width measurement + screenshots | **Failed first**: every page was 581 px wide because of the top bar, and Overview and Evidence history had extra overflow. Fixed; all now fit at 390 px. Wide tables scroll inside their own box. |
 
 ## 3. Scripted tests vs genuine PayPal Sandbox transactions
 
@@ -82,10 +92,21 @@ This report summarises the detailed, timestamped engineering log in `BUILD_LOG.m
   - Itemised invoice lines are not carried into the saved request; it stores a summary total. The lines stay in the AI evidence.
   - The recipient can come back with its label (e.g. "PayPal merchant ID: …"). It is kept exactly as read, and the reviewer must trim it.
 - **CA$25 test proposal:** Reserve and Pay are hidden for it in the interface only. The server does not block them.
-- **Not tested:** using the dropdowns with only a keyboard; full phone layouts beyond the one detail-page check at 390 px.
-- **Purchases list:** has no search, sorting or pages, so there are none to keep when you return. Filters and scroll position are kept.
+- **Phones:** checked at one width (390 px) in an automated browser, not on a physical phone or with a screen reader. On phones the organisation switcher shows a shortened name.
+- **Purchases list:** no pagination; all of the organisation's requests load at once, which suits demo volumes but not thousands of rows. The date filter uses the browser's local date.
+- **Readable screens:** the raw-data cleanup is complete in the standard interface, including Proposal content. Deliberate exceptions: the Evidence history CSV export (an authorised technical export) keeps original details, and a pasted invoice message is shown exactly as submitted.
 - **Audit log:** cannot prove the whole log was not rewritten, because no separately stored checkpoints exist.
 - **AI cost:** no per-request cost metering. The Gemini billing tier was not verified.
+
+## Supporting build-log entries
+
+- [Phase 2 verification checkpoint](BUILD_LOG.md#phase-2-verification-checkpoint-2026-11-03)
+- [PayPal Sandbox phase — partial checkpoint](BUILD_LOG.md#paypal-sandbox-phase--partial-checkpoint-2026-11-03)
+- [Invoice PP-CHECKOUT-20261103 consistency review](BUILD_LOG.md#checkpoint--invoice-pp-checkout-20261103-consistency-review-2026-11-03-1755-utc)
+- [No self-clearing of supplier changes](BUILD_LOG.md#follow-up--no-self-clearing-of-supplier-changes-2026-11-03-1802-utc)
+- [Usability verification checkpoint](BUILD_LOG.md#usability-verification-checkpoint--2026-11-03-21402200-utc)
+- [Navigation and overview drill-downs](BUILD_LOG.md#navigation-and-overview-drill-downs-2026-11-03-2215-utc)
+- [Purchases search, keyboard and phone checks](BUILD_LOG.md#purchases-search-keyboard-and-phone-checks-2026-11-03-2250-utc)
 
 ## 5. Corrections to earlier claims
 
