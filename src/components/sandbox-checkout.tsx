@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getCheckoutState, createSandboxOrder, captureSandboxOrder, reconcileSandboxPayment } from "@/lib/paypal.functions";
+import { getCheckoutState, createSandboxOrder, captureSandboxOrder, reconcileSandboxPayment, cancelSandboxCheckout } from "@/lib/paypal.functions";
 import { Button } from "@/components/ui/button";
 import { ToneBadge } from "@/components/brand";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ declare global { interface Window { paypal?: PayPalSdk } }
 
 export function SandboxCheckout({ purchaseId, onDone }: { purchaseId: string; onDone: () => void }) {
   const stateFn = useServerFn(getCheckoutState), createFn = useServerFn(createSandboxOrder), captureFn = useServerFn(captureSandboxOrder), reconcileFn = useServerFn(reconcileSandboxPayment);
+  const cancelFn = useServerFn(cancelSandboxCheckout);
   const state = useQuery({ queryKey: ["checkout", purchaseId], queryFn: () => stateFn({ data: { purchaseId } }), refetchInterval: 15000 });
   const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const paymentSession = useRef<Session | null>(null);
@@ -71,6 +72,12 @@ export function SandboxCheckout({ purchaseId, onDone }: { purchaseId: string; on
     <div className="flex flex-wrap gap-2">
       {!["paid", "failed", "cancelled"].includes(state.data.purchaseStatus) && !pending && <Button disabled={!ready || busy} onClick={checkout}>{busy ? "Opening PayPal…" : "Pay with PayPal Sandbox"}</Button>}
       {state.data.attempt && <Button variant="outline" disabled={busy} onClick={check}>Check payment confirmation</Button>}
+      {state.data.attempt?.status === "ordered" && <Button variant="outline" disabled={busy} onClick={async () => {
+        setBusy(true);
+        try { await cancelFn({ data: { purchaseId } }); setMessage("Checkout cancelled without a capture."); onDone(); void state.refetch(); }
+        catch { toast.error("Cancellation was not confirmed. Check the existing payment; budget remains reserved."); }
+        finally { setBusy(false); }
+      }}>Cancel uncaptured checkout</Button>}
     </div>
     {state.data.orderId && <p className="break-all font-mono text-xs text-muted-foreground">Sandbox order: {state.data.orderId}</p>}
     {message && <p className="text-sm">{message}</p>}

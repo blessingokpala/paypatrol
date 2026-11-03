@@ -112,3 +112,26 @@ export const reconcileSandboxPayment = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     return reconcileSandboxOrder(supabaseAdmin, token, raw as unknown as PaymentSnapshot, order.paypal_order_id);
   });
+
+export const cancelSandboxCheckout = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth]).inputValidator((input: { purchaseId: string }) => purchaseInput.parse(input))
+  .handler(async ({ data, context }) => {
+    const { data: attempts } = await context.supabase.from("payment_attempts").select("*").eq("purchase_id", data.purchaseId).order("created_at", { ascending: false }).limit(1);
+    const attempt = attempts?.[0];
+    if (!attempt) throw new Error("Payment not available");
+    const { data: owner } = await context.supabase.rpc("has_org_role", { _org: attempt.org_id, _role: "owner" });
+    const { data: payer } = await context.supabase.rpc("has_org_role", { _org: attempt.org_id, _role: "payer" });
+    if (!owner && !payer) throw new Error("Payer required");
+    if (attempt.status !== "ordered") throw new Error("Payment may be executing. Check its confirmation before cancelling.");
+    const { data: order } = await context.supabase.from("paypal_orders").select("paypal_order_id").eq("payment_attempt_id", attempt.id).single();
+    if (!order) throw new Error("Order is not confirmed");
+    const clientId = process.env["PAYPAL_CLIENT_ID"], secret = process.env["PAYPAL_CLIENT_SECRET"];
+    if (!clientId || !secret) throw new Error("Sandbox credentials missing");
+    const token = await sandboxToken(clientId, secret);
+    const verified = validateOrder(await sandboxRequest(token, `/v2/checkout/orders/${order.paypal_order_id}`), attempt as unknown as PaymentSnapshot);
+    if (!["CREATED", "PAYER_ACTION_REQUIRED", "APPROVED"].includes(verified.status) || verified.purchase_units[0]?.payments?.captures?.length) throw new Error("Payment outcome is uncertain. Budget remains reserved.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.rpc("cancel_uncaptured_sandbox_attempt", { _attempt: attempt.id });
+    if (error) throw new Error(error.message);
+    return { cancelled: true };
+  });
