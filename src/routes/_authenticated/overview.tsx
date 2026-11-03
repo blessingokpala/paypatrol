@@ -73,13 +73,13 @@ function Overview() {
               <span>AI extraction and proposals</span>
               {aiConnected ? <ToneBadge tone="success">AI connected · {ai.data?.model}</ToneBadge> : <ToneBadge tone="warning">AI not connected</ToneBadge>}
             </li>
-            <li className="flex items-center justify-between gap-2"><span>PayPal checkout</span><ToneBadge tone="warning">PayPal not connected</ToneBadge></li>
+            <li className="flex items-center justify-between gap-2"><span>PayPal checkout</span><ToneBadge tone="warning">Merchant verification required</ToneBadge></li>
           </ul>
           <p className="mt-4 text-xs text-muted-foreground">
             {aiConnected
               ? "AI reads attached invoices and can draft requests from approved listings. Every value is shown beside the document it came from and checked against approved records; nothing is approved or paid by AI."
               : "Invoice details are entered by hand. AI is not connected, so nothing is read from documents automatically."}
-            {" "}PayPal is not connected: no orders are created and no payment is shown as completed.
+            {" "}PayPal checkout is locked pending merchant verification: no orders are created and no payment is shown as completed.
           </p>
         </Panel>
       </div>

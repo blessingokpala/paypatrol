@@ -17,4 +17,5 @@
 - Budget reservations lock the organisation row before checking the weekly limit. Why: concurrent requests must not both pass.
 - PayPal and Gemini calls will live in protected `createServerFn` handlers using server-side secrets. Why: AI and browser code must never move money.
 - PayPal credential authentication uses a server-only helper and is independent of merchant enrolment and checkout availability. Why: accepted credentials do not prove recipient identity, currency capability or completed payment.
+- Sensitive control changes require a recent signed JWT authentication-method timestamp, never token issue time; the shared recent-sign-in control refreshes password authentication. Why: token refresh alone must not authorise trusted changes.
 - Payment-control tests live in `supabase/tests/payment_controls.sql` (run via the backend SQL runner; they roll back).

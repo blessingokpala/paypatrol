@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { RecentSignin } from "@/components/recent-signin";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
-  head: () => ({ meta: [{ title: "Request review — PayPatrol" }, { name: "description", content: "Compare a request against approved records." }] }),
+  head: () => ({ meta: [{ title: "Request review — PayPatrol" }, { name: "description", content: "Compare a request against approved records." }, { property: "og:title", content: "Request review — PayPatrol" }, { property: "og:description", content: "Invoice evidence, recipient comparison and payment controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Review,
 });
 
@@ -89,7 +90,7 @@ function Review() {
           {p.source === "invoice" ? (
             docs.length === 0 ? <p className="text-sm text-muted-foreground">No document attached.</p> : docs.map((d) => (
               <div key={d.id} className="space-y-3">
-                {d.storage_path && <Button variant="outline" size="sm" onClick={() => openDoc(d.storage_path!)}>Open {d.file_name ?? "document"}</Button>}
+                {d.storage_path && <Button variant="outline" size="sm" onClick={() => { if (d.storage_path) void openDoc(d.storage_path); }}>Open {d.file_name ?? "document"}</Button>}
                 {d.source_message ? <pre className="whitespace-pre-wrap rounded-md border bg-muted p-3 font-sans text-sm">{d.source_message}</pre> : <p className="text-sm text-muted-foreground">No message pasted.</p>}
                 <p className="text-xs text-muted-foreground">Untrusted content. Shown for comparison only.</p>
               </div>
@@ -210,7 +211,7 @@ function Review() {
           )}
           {activeRes && (
             <>
-              <p className="text-sm">Reserved {formatMinor(activeRes.amount_minor, activeRes.currency)} for v{activeRes.purchase_version}. <span className="font-semibold text-warning">PayPal not connected</span> — checkout is unavailable, no order has been created.</p>
+              <p className="text-sm">Reserved {formatMinor(activeRes.amount_minor, activeRes.currency)} for v{activeRes.purchase_version}. <span className="font-semibold text-warning">Checkout locked pending merchant verification</span> — no order has been created.</p>
               {org.has("payer", "owner") && <Button variant="outline" onClick={() => call(() => supabase.rpc("release_reservation", { _pid: p.id }), "Reservation released")}>Release reservation</Button>}
             </>
           )}
@@ -319,6 +320,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
             <div className="space-y-3">
               <h3 className="font-semibold">Decide</h3>
               <div className="space-y-1"><Label htmlFor="dn">Decision note</Label><Textarea id="dn" value={note} onChange={(e) => setNote(e.target.value)} /></div>
+              <RecentSignin />
               <div className="flex flex-wrap gap-2">
                 <Button variant="destructive" onClick={() => decide(false)}>Reject change, keep original</Button>
                 <Button variant="outline" onClick={() => decide(true)}>Approve change</Button>
