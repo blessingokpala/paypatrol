@@ -125,6 +125,7 @@ function Review() {
         </Panel>
       </div>
 
+      {p.source === "invoice" && (
       <Panel title="What AI read from the document" className="mt-6">
         {latestExtraction ? (
           <ExtractionView row={latestExtraction} />
@@ -155,6 +156,7 @@ function Review() {
           </div>
         )}
       </Panel>
+      )}
 
       <Panel title="Recipient comparison" className="mt-6">
         <div className="grid gap-4 sm:grid-cols-2">
