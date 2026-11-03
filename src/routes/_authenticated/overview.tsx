@@ -101,7 +101,7 @@ function Overview() {
   );
 }
 
-function Stat({ label, value, sub, tone, to, search }: { label: string; value: string; sub?: string | undefined; tone?: "warning" | "blocked"; to: string; search?: Record<string, string> }) {
+function Stat({ label, value, sub, tone, to, search }: { label: string; value: string; sub?: string | undefined; tone?: "warning" | "blocked" | undefined; to: string; search?: Record<string, string> | undefined }) {
   return (
     <Link
       to={to as "/budget"}
