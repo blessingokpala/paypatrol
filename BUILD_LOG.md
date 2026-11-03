@@ -343,3 +343,10 @@ https://developer.paypal.com/docs/api/webhooks/v1/
 - Browser (preview, signed in as owner): page shows **Verification required**, finding `CHANGE_REQUEST_UNRESOLVED`, recipient comparison matches v2, and **no** Reserve budget or Pay with PayPal buttons.
 
 **Outstanding:** independent verification of this change by a second authorised person (none exists in the workspace yet); the CA$75 Sandbox checkout itself; the remaining items listed earlier.
+
+## Checkpoint — labelled Sandbox account check (2026-11-03)
+- Harbourside Packaging Co. and its phone number are fictional. Added `record_sandbox_account_check` (migration 0017): a different change approver records the Merchant ID they read in PayPal Developer → Sandbox → Accounts for the connected app's Business account.
+- Stored with `check_kind = paypal_sandbox_account_check`; evidence is prefixed "SANDBOX ACCOUNT CHECK ONLY. No real supplier was contacted or verified."; audit records `real_supplier_contacted: false`, `independent_supplier_verification: false`.
+- Refused for: the request submitter, the change proposer, the person who set up the Sandbox supplier, and a "confirmed" result whose Merchant ID differs from either the configured Sandbox merchant or the requested recipient. Approval still needs a separate reviewer decision with recent sign-in.
+- Tests performed: none end-to-end yet. A rolled-back impersonation test could not run (SQL runner cannot assume the signed-in role). To be exercised by the partner's real account.
+- PP-CHECKOUT-20261103 confirmed still `verification_required`, change request `pending_verification`. No request, order or payment created.
