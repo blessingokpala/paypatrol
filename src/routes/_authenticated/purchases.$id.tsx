@@ -253,7 +253,38 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
 
 type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decision_note: string | null };
 type SV = { trusted_contact_channel: string; trusted_contact_value: string; paypal_merchant_id: string } | null;
-type VR = { id: string; channel: string; channel_value: string; person_contacted: string; contacted_at: string; outcome: string; evidence: string; reviewer_id: string };
+type VR = { id: string; channel: string; channel_value: string; person_contacted: string; contacted_at: string; outcome: string; evidence: string; reviewer_id: string; check_kind?: string };
+
+function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
+  const [f, setF] = useState({ merchant: "", account: "", outcome: "denied", notes: "" });
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const { error } = await supabase.rpc("record_sandbox_account_check", {
+      _cr: cr.id, _merchant_seen: f.merchant, _business_account_seen: f.account,
+      _outcome: f.outcome as "confirmed" | "denied" | "unreachable", _evidence: f.notes,
+    });
+    if (error) { toast.error(error.message); return; }
+    toast.success("Sandbox account check recorded. No real supplier was verified.");
+    onDone();
+  }
+  return (
+    <form onSubmit={submit} className="space-y-3 rounded-md border border-dashed p-3">
+      <h3 className="font-semibold">Sandbox account check (test only)</h3>
+      <p className="text-xs text-muted-foreground">This supplier and its phone number are fictional. Instead of calling, sign in to PayPal Developer, open Sandbox → Accounts, open the Business account linked to the connected app, and read its Merchant ID (Account ID) yourself. Type what you see; do not copy it from this request. This is recorded as a Sandbox account check only — not contact with, or verification of, a real supplier.</p>
+      <div className="space-y-1"><Label htmlFor="sb-m">Merchant ID shown in PayPal Developer</Label><Input id="sb-m" required value={f.merchant} onChange={(e) => setF({ ...f, merchant: e.target.value })} /></div>
+      <div className="space-y-1"><Label htmlFor="sb-a">Business Sandbox account email you opened</Label><Input id="sb-a" required value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} /></div>
+      <div className="space-y-1">
+        <Label htmlFor="sb-o">Result</Label>
+        <select id="sb-o" value={f.outcome} onChange={(e) => setF({ ...f, outcome: e.target.value })} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
+          <option value="denied">Does not match / not the connected app's account</option>
+          <option value="confirmed">Matches the requested recipient and connected app</option>
+        </select>
+      </div>
+      <div className="space-y-1"><Label htmlFor="sb-n">Notes</Label><Textarea id="sb-n" required value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="App name checked, where the ID was shown, CAD listed in wallet" /></div>
+      <Button type="submit">Record Sandbox account check</Button>
+    </form>
+  );
+}
 
 function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void }) {
   const org = useOrg();
@@ -289,8 +320,17 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
         <ul className="mt-3 space-y-2 text-sm">
           {verifs.map((v) => (
             <li key={v.id} className="rounded-md border p-3">
-              <ToneBadge tone={v.outcome === "confirmed" ? "success" : "blocked"}>{v.outcome === "confirmed" ? "Supplier confirmed" : v.outcome === "denied" ? "Supplier denied" : "Unreachable"}</ToneBadge>{" "}
-              {v.channel} {v.channel_value} · spoke to {v.person_contacted} at {new Date(v.contacted_at).toLocaleString("en-CA")} · recorded by {names[v.reviewer_id] ?? "reviewer"}
+              {v.check_kind === "paypal_sandbox_account_check" ? (
+                <>
+                  <ToneBadge tone={v.outcome === "confirmed" ? "success" : "blocked"}>{v.outcome === "confirmed" ? "Sandbox account check: Merchant ID matched" : "Sandbox account check: not confirmed"}</ToneBadge>{" "}
+                  Merchant ID seen <span className="font-mono">{v.channel_value}</span> · {v.person_contacted} · {new Date(v.contacted_at).toLocaleString("en-CA")} · recorded by {names[v.reviewer_id] ?? "reviewer"}
+                </>
+              ) : (
+                <>
+                  <ToneBadge tone={v.outcome === "confirmed" ? "success" : "blocked"}>{v.outcome === "confirmed" ? "Supplier confirmed" : v.outcome === "denied" ? "Supplier denied" : "Unreachable"}</ToneBadge>{" "}
+                  {v.channel} {v.channel_value} · spoke to {v.person_contacted} at {new Date(v.contacted_at).toLocaleString("en-CA")} · recorded by {names[v.reviewer_id] ?? "reviewer"}
+                </>
+              )}
               <p className="mt-1 text-muted-foreground">{v.evidence}</p>
             </li>
           ))}
@@ -303,6 +343,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
       )}
       {open && canReview && (
         <div className="mt-4 grid gap-6 lg:grid-cols-2">
+          <SandboxCheck cr={cr} onDone={onDone} />
           <form onSubmit={record} className="space-y-3">
             <h3 className="font-semibold">Record independent verification</h3>
             <p className="text-xs text-muted-foreground">Use only the trusted contact on record: <strong>{sv?.trusted_contact_channel} {sv?.trusted_contact_value}</strong>. Do not use the contact details in the request.</p>
