@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { OrgProvider, useMemberships, useOrg, errMsg } from "@/lib/org";
 import { SandboxBanner, Wordmark } from "@/components/brand";
+import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,16 +89,14 @@ function Shell() {
         <SandboxBanner />
         <div className="ml-auto flex items-center gap-3">
           {org.orgs.length > 1 ? (
-            <select
-              aria-label="Organisation"
-              className="rounded-md border bg-card px-2 py-1 text-sm"
-              value={org.orgId}
-              onChange={(e) => org.setOrgId(e.target.value)}
-            >
-              {org.orgs.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </select>
+            <div className="w-44">
+              <FieldSelect
+                ariaLabel="Organisation"
+                value={org.orgId}
+                onChange={(v) => org.setOrgId(v)}
+                options={org.orgs.map((o) => ({ value: o.id, label: o.name }))}
+              />
+            </div>
           ) : (
             <span className="hidden text-sm font-medium sm:inline">{org.orgName}</span>
           )}

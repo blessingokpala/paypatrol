@@ -8,6 +8,7 @@ import { getIntegrationStatus } from "@/lib/integrations.functions";
 import { testAiConnection } from "@/lib/ai/ai.functions";
 import { ROLE_LABELS } from "@/lib/status";
 import { PageHeader, Panel, ToneBadge } from "@/components/brand";
+import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,9 +93,12 @@ function Settings() {
               <div className="space-y-1"><Label htmlFor="m-email">Email of an existing account</Label><Input id="m-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
               <div className="space-y-1">
                 <Label htmlFor="m-role">Role</Label>
-                <select id="m-role" value={role} onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
-                  {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-                </select>
+                <FieldSelect
+                  id="m-role"
+                  value={role}
+                  onChange={(v) => setRole(v as (typeof ROLES)[number])}
+                  options={ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+                />
               </div>
               <Button type="submit">Add role</Button>
             </form>
@@ -140,10 +144,16 @@ function Settings() {
                    <Label htmlFor="sandbox-merchant">Sandbox Business Merchant ID</Label>
                    <Input id="sandbox-merchant" value={merchantId} onChange={e => setMerchantId(e.target.value.trim())} maxLength={13} />
                    <Label htmlFor="sandbox-supplier">Approved supplier represented by this Business account</Label>
-                   <select id="sandbox-supplier" className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm" value={supplierId} onChange={e => setSupplierId(e.target.value)}>
-                     <option value="">Select supplier</option>
-                     {(suppliers.data ?? []).filter(s => s.status === "active").map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                   </select>
+                   <FieldSelect
+                     id="sandbox-supplier"
+                     value={supplierId}
+                     onChange={setSupplierId}
+                     placeholder="Select supplier"
+                     options={[
+                       { value: "", label: "Select supplier" },
+                       ...(suppliers.data ?? []).filter(s => s.status === "active").map(s => ({ value: s.id, label: s.name })),
+                     ]}
+                   />
                    <label className="flex items-start gap-2 text-xs"><input type="checkbox" checked={cadConfirmed} onChange={e => setCadConfirmed(e.target.checked)} />I confirmed this is the connected app’s Business account and CAD is listed in its wallet.</label>
                    <RecentSignin />
                    <Button size="sm" disabled={!supplierId || !cadConfirmed || configuring} onClick={async () => {

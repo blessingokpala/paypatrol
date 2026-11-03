@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrg, useProfiles } from "@/lib/org";
 import { useRefreshAll, useSuppliers } from "@/lib/queries";
 import { EmptyState, PageHeader, Panel, ToneBadge } from "@/components/brand";
+import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -96,7 +97,12 @@ function AddSupplier({ onDone }: { onDone: () => void }) {
         <div className="space-y-1"><Label htmlFor="se">Billing email</Label><Input id="se" type="email" value={f.email} onChange={set("email")} /></div>
         <div className="grid grid-cols-[auto,1fr] gap-2">
           <div className="space-y-1"><Label htmlFor="sc">Trusted channel</Label>
-            <select id="sc" value={f.channel} onChange={set("channel")} className="h-9 rounded-md border border-input bg-card px-2 text-sm"><option value="phone">Phone</option><option value="email">Email</option><option value="in_person">In person</option></select>
+            <FieldSelect
+              id="sc"
+              value={f.channel}
+              onChange={(v) => setF({ ...f, channel: v })}
+              options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }, { value: "in_person", label: "In person" }]}
+            />
           </div>
           <div className="space-y-1"><Label htmlFor="sv">Trusted contact</Label><Input id="sv" required value={f.value} onChange={set("value")} /></div>
         </div>
