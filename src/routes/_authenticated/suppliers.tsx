@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,7 +26,7 @@ function Suppliers() {
 
   async function approve(id: string) {
     const { error } = await supabase.rpc("approve_supplier_baseline", { _supplier: id });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Supplier approved");
     refresh();
   }
@@ -43,14 +44,14 @@ function Suppliers() {
           {(q.data ?? []).map((s) => {
             const c = s.current;
             return (
-              <Panel key={s.id} title={s.name} actions={<ToneBadge tone={s.status === "active" ? "success" : "warning"}>{s.status === "active" ? "Approved" : s.status.replace("_", " ")}</ToneBadge>}>
+              <Panel key={s.id} title={s.name} actions={<ToneBadge tone={s.status === "active" ? "success" : "warning"}>{s.status === "active" ? "Approved" : humanize(s.status)}</ToneBadge>}>
                 {c && (
                   <dl className="grid gap-3 text-sm sm:grid-cols-3">
                     <div><dt className="text-muted-foreground">Approved recipient</dt><dd className="font-mono text-xs">{c.paypal_merchant_id}</dd></div>
                     <div><dt className="text-muted-foreground">Trusted contact</dt><dd>{c.trusted_contact_channel}: {c.trusted_contact_value}</dd></div>
-                    <div><dt className="text-muted-foreground">PayPal enrolment</dt><dd>{c.enrolment_status === "demo_fixture" ? <ToneBadge tone="neutral">Fictional demo record</ToneBadge> : c.enrolment_status === "enrolled" ? <ToneBadge tone="success">Enrolled</ToneBadge> : <ToneBadge tone="warning">{c.enrolment_status.replace("_", " ")} — unpayable</ToneBadge>}</dd></div>
+                    <div><dt className="text-muted-foreground">PayPal enrolment</dt><dd>{c.enrolment_status === "demo_fixture" ? <ToneBadge tone="neutral">Fictional demo record</ToneBadge> : c.enrolment_status === "enrolled" ? <ToneBadge tone="success">Enrolled</ToneBadge> : <ToneBadge tone="warning">{humanize(c.enrolment_status)} — unpayable</ToneBadge>}</dd></div>
                     <div className="sm:col-span-2"><dt className="text-muted-foreground">Verification evidence</dt><dd>{c.verification_evidence}</dd></div>
-                    <div><dt className="text-muted-foreground">Approver</dt><dd>{c.approved_by ? names[c.approved_by] ?? "—" : s.is_demo ? "Seeded demo record" : "Pending"}{c.approved_at ? ` · ${new Date(c.approved_at).toLocaleDateString("en-CA")}` : ""}</dd></div>
+                    <div><dt className="text-muted-foreground">Approver</dt><dd>{c.approved_by ? names[c.approved_by] ?? "Team member" : s.is_demo ? "Seeded demo record" : "Pending"}{c.approved_at ? ` · ${new Date(c.approved_at).toLocaleDateString("en-CA")}` : ""}</dd></div>
                   </dl>
                 )}
                 {s.status === "pending_approval" && org.has("owner", "change_approver") && (
@@ -64,7 +65,7 @@ function Suppliers() {
                     <thead className="text-left text-xs text-muted-foreground"><tr><th>Version</th><th>Recipient</th><th>Status</th><th>Enrolment</th><th>Approved by</th></tr></thead>
                     <tbody>
                       {s.versions.map((v) => (
-                        <tr key={v.id} className="border-t"><td className="py-1">v{v.version}</td><td className="font-mono text-xs">{v.paypal_merchant_id}</td><td>{v.status}</td><td>{v.enrolment_status.replace("_", " ")}</td><td>{v.approved_by ? names[v.approved_by] ?? "—" : "—"}</td></tr>
+                        <tr key={v.id} className="border-t"><td className="py-1">v{v.version}</td><td className="font-mono text-xs">{v.paypal_merchant_id}</td><td>{humanize(v.status)}</td><td>{humanize(v.enrolment_status)}</td><td>{v.approved_by ? names[v.approved_by] ?? "Team member" : "Not yet approved"}</td></tr>
                       ))}
                     </tbody>
                   </table>
@@ -85,7 +86,7 @@ function AddSupplier({ onDone }: { onDone: () => void }) {
   async function save(e: React.FormEvent) {
     e.preventDefault();
     const { error } = await supabase.rpc("create_supplier", { _org: orgId, _name: f.name, _merchant: f.merchant, _email: f.email, _channel: f.channel, _channel_value: f.value, _evidence: f.evidence });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Supplier proposed. A second person must approve it.");
     onDone();
   }

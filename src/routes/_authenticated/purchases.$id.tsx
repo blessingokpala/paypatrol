@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -68,14 +69,14 @@ function Review() {
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success(ok);
     refresh();
   }
 
   const openDoc = async (path: string) => {
     const { data, error } = await supabase.storage.from("invoices").createSignedUrl(path, 120);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     window.open(data.signedUrl, "_blank", "noopener");
   };
 
@@ -169,7 +170,7 @@ function Review() {
             {sv
               ? <p className="mt-1 font-mono text-sm">{sv.paypal_merchant_id}</p>
               : <p className="mt-1 text-sm italic text-muted-foreground">{p.supplier_id ? "Supplier record is loading." : "No approved supplier selected."}</p>}
-            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value} · enrolment: {sv.enrolment_status.replace("_", " ")}</p>}
+            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value} · enrolment: {humanize(sv.enrolment_status)}</p>}
           </div>
         </div>
         <p className="mt-3 text-sm">{!sv ? (p.supplier_id ? "Supplier record is loading." : "No approved supplier to compare against. Match this request to an approved supplier or add the supplier through verification.") : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
@@ -201,7 +202,7 @@ function Review() {
             {approvals.map((a) => (
               <li key={a.id} className="rounded-md border p-3">
                 <span className="font-semibold">{names[a.approver_id] ?? "Approver"}</span> approved v{a.purchase_version} · {formatMinor(a.amount_minor, a.currency)} to {a.recipient} · {new Date(a.created_at).toLocaleString("en-CA")}{" "}
-                {a.is_valid ? <ToneBadge tone="success">Valid</ToneBadge> : <ToneBadge tone="neutral">Invalidated: {a.invalidated_reason}</ToneBadge>}
+                {a.is_valid ? <ToneBadge tone="success">Valid</ToneBadge> : <ToneBadge tone="neutral">No longer valid: {humanize(a.invalidated_reason, "details changed")}</ToneBadge>}
               </li>
             ))}
           </ul>
@@ -240,7 +241,7 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
     const m = parseToMinor(f.amount);
     if (m === null) { toast.error("Enter the amount like 75.00"); return; }
     const { error } = await supabase.rpc("edit_purchase", { _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Saved as a new version. Earlier approvals no longer apply.");
     onDone();
   }
@@ -269,7 +270,7 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
       _cr: cr.id, _merchant_seen: f.merchant, _business_account_seen: f.account,
       _outcome: f.outcome as "confirmed" | "denied" | "unreachable", _evidence: f.notes,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Sandbox account check recorded. No real supplier was verified.");
     onDone();
   }
@@ -310,20 +311,20 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
       _cr: cr.id, _channel_value: f.channel_value, _person: f.person, _contacted_at: new Date(f.when).toISOString(),
       _outcome: f.outcome as "confirmed" | "denied" | "unreachable", _evidence: f.evidence,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Verification recorded");
     onDone();
   }
   async function decide(approve: boolean) {
     const { error } = await supabase.rpc("decide_supplier_change", { _cr: cr.id, _approve: approve, _note: note });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success(approve ? "Change approved. New recipient stays unpayable until PayPal enrolment." : "Change rejected. Original supplier record retained.");
     onDone();
   }
 
   return (
     <Panel title="Supplier payment-detail change" className="mt-6">
-      <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{cr.status.replaceAll("_", " ")}</strong></p>
+      <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{humanize(cr.status)}</strong></p>
       {cr.status === "superseded"
         ? <p className="mt-1 text-sm text-muted-foreground">Closed automatically, not approved: {cr.decision_note}</p>
         : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Decision by {names[cr.decided_by ?? ""] ?? "reviewer"}: {cr.decision_note}</p>}

@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, useNavigate, useBlocker } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -330,7 +331,7 @@ function NewInvoice() {
                 placeholder="Not matched to an approved supplier"
                 options={[
                   { value: "", label: "Not matched to an approved supplier" },
-                  ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.status !== "active" ? ` (${s.status.replace("_", " ")})` : ""}` })),
+                  ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.status !== "active" ? ` (${humanize(s.status)})` : ""}` })),
                 ]}
               />
               {extraction?.supplier_name && (

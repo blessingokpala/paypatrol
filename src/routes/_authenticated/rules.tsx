@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,7 +38,7 @@ function Rules() {
       _org: org.orgId, _currency: f.currency, _timezone: f.timezone, _weekly: w, _order: o, _threshold: t,
       _categories: f.categories.split(",").map((s) => s.trim()).filter(Boolean), _suppliers: f.suppliers,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("New rules version saved. Open requests were re-checked.");
     refresh();
   }

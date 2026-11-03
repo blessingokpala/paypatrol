@@ -1,3 +1,4 @@
+import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, redirect, Outlet, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -134,7 +135,7 @@ function Onboarding({ email }: { email: string }) {
     setBusy(true);
     const { error } = await supabase.rpc("create_organization", { _name: name, _with_demo: demo });
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Organisation created");
     qc.invalidateQueries({ queryKey: ["memberships"] });
   }
