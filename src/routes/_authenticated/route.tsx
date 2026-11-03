@@ -30,7 +30,7 @@ function AuthedLayout() {
   const q = useMemberships();
   if (q.isLoading) return <div className="p-10 text-sm text-muted-foreground">Loading workspace…</div>;
   if (q.error || !q.data) return <div className="p-10 text-sm text-blocked">Could not load your workspace: {errMsg(q.error)}</div>;
-  if (q.data.rows.length === 0) return <Onboarding email={q.data.user.email ?? ""} />;
+  if (!q.data.rows.some((r) => r.organizations && !(r.organizations as { is_test_workspace: boolean }).is_test_workspace)) return <Onboarding email={q.data.user.email ?? ""} />;
   return (
     <OrgProvider data={q.data}>
       <Shell />
