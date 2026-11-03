@@ -31,7 +31,7 @@ export function useMemberships() {
       if (!u.user) throw new Error("Not signed in");
       const { data, error } = await supabase
         .from("memberships")
-        .select("org_id, role, organizations(id, name)")
+        .select("org_id, role, organizations(id, name, is_test_workspace)")
         .eq("user_id", u.user.id);
       if (error) throw error;
       return { user: u.user, rows: data ?? [] };
@@ -42,7 +42,12 @@ export function useMemberships() {
 export function OrgProvider({ data, children }: { data: NonNullable<ReturnType<typeof useMemberships>["data"]>; children: ReactNode }) {
   const orgs = useMemo(() => {
     const m = new Map<string, string>();
-    for (const r of data.rows) if (r.organizations) m.set(r.org_id, (r.organizations as { name: string }).name);
+    // Server (RLS) already limits rows to the user's own memberships; test workspaces are
+    // excluded by their explicit classification, never by name.
+    for (const r of data.rows) {
+      const o = r.organizations as { name: string; is_test_workspace: boolean } | null;
+      if (o && !o.is_test_workspace) m.set(r.org_id, o.name);
+    }
     return [...m].map(([id, name]) => ({ id, name }));
   }, [data]);
   const [orgId, setOrgIdState] = useState(orgs[0]?.id ?? "");
