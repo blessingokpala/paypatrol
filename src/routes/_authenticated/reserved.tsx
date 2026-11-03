@@ -54,7 +54,7 @@ function ReservedPage() {
       ) : (
         <>
           <p className="mb-3 text-sm">Total reserved this week: <strong>{formatMinor(listed, b.currency)}</strong>{listed !== b.reserved_minor && <span className="ml-2 text-blocked">Does not match the overview total — refresh to update.</span>}</p>
-          <div className="overflow-x-auto rounded-lg border bg-card">
+          <div className="relative overflow-x-auto rounded-lg border bg-card">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left text-xs uppercase text-muted-foreground"><tr><th className="px-4 py-3">Purchase</th><th className="px-4 py-3">Supplier</th><th className="px-4 py-3 text-right">Reserved</th><th className="px-4 py-3">Reserved on</th><th className="px-4 py-3">Payment status</th></tr></thead>
               <tbody className="divide-y">

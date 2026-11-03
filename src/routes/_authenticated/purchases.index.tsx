@@ -230,7 +230,7 @@ function Purchases() {
             )}
             <span className="text-xs text-muted-foreground">Selection covers only the matching requests shown below and resets when search or filters change.</span>
           </div>
-          <div className="overflow-x-auto rounded-lg border bg-card">
+          <div className="relative overflow-x-auto rounded-lg border bg-card">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
