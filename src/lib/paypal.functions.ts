@@ -36,7 +36,7 @@ export const getCheckoutState = createServerFn({ method: "POST" })
     const { data: config } = await context.supabase.from("paypal_merchant_configs").select("merchant_id,supplier_id,cad_confirmed,order_validated_at").eq("org_id", purchase.org_id).maybeSingle();
     const { data: attempt } = await context.supabase.from("payment_attempts").select("id,status,purchase_id").eq("purchase_id", purchase.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     const { data: order } = attempt ? await context.supabase.from("paypal_orders").select("paypal_order_id").eq("payment_attempt_id", attempt.id).maybeSingle() : { data: null };
-    return { configured: Boolean(config?.cad_confirmed && config.merchant_id === purchase.requested_recipient && config.supplier_id === purchase.supplier_id), clientId: process.env["PAYPAL_CLIENT_ID"] ?? null, attempt, orderId: order?.paypal_order_id ?? null, purchaseStatus: purchase.status };
+    return { configured: Boolean(config?.cad_confirmed && config.merchant_id === purchase.requested_recipient && config.supplier_id === purchase.supplier_id && process.env["PAYPAL_WEBHOOK_ID"]), clientId: process.env["PAYPAL_CLIENT_ID"] ?? null, attempt, orderId: order?.paypal_order_id ?? null, purchaseStatus: purchase.status };
   });
 
 export const createSandboxOrder = createServerFn({ method: "POST" })
@@ -44,6 +44,7 @@ export const createSandboxOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const clientId = process.env["PAYPAL_CLIENT_ID"], secret = process.env["PAYPAL_CLIENT_SECRET"];
     if (!clientId || !secret) throw new Error("Sandbox credentials missing");
+    if (!process.env["PAYPAL_WEBHOOK_ID"]) throw new Error("Configure verified PayPal webhooks before creating an order");
     const { data: raw, error } = await context.supabase.rpc("begin_sandbox_payment", { _pid: data.purchaseId });
     if (error || !raw) throw new Error(error?.message ?? "Payment controls refused checkout");
     const attempt = raw as unknown as PaymentSnapshot;
@@ -66,6 +67,7 @@ export const createSandboxOrder = createServerFn({ method: "POST" })
 export const captureSandboxOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth]).inputValidator((input: { purchaseId: string }) => purchaseInput.parse(input))
   .handler(async ({ data, context }) => {
+    if (!process.env["PAYPAL_WEBHOOK_ID"]) throw new Error("Verified PayPal webhooks must be configured before capture");
     const { data: attempts } = await context.supabase.from("payment_attempts").select("*").eq("purchase_id", data.purchaseId).order("created_at", { ascending: false }).limit(1);
     const candidate = attempts?.[0];
     if (!candidate) throw new Error("No payment attempt exists");

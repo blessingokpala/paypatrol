@@ -135,6 +135,7 @@ function Settings() {
                  <p className="text-xs text-muted-foreground">{status.data?.checkoutEnabled ? `Sandbox supplier configured: ${status.data.merchant?.merchant_id}. ${status.data.merchant?.order_validated_at ? "PayPal order payee verified." : "PayPal order payee must be verified before capture."}` : "Checkout locked until an owner confirms the Sandbox supplier with recent sign-in."} A connection or order is not a completed payment.</p>
                  {status.data?.paypalCheck.connected ? <p className="text-xs text-muted-foreground">Authentication checked {new Date(status.data.paypalCheck.checkedAt).toLocaleString("en-CA")}. This is not payment confirmation.</p> : <p className="text-xs text-warning">{status.data?.paypalCheck.reason ?? (status.error ? "Could not verify the connection." : "Connection not verified.")}</p>}
                  <Button size="sm" variant="outline" disabled={status.isFetching} onClick={() => status.refetch()}>Check Sandbox connection</Button>
+                 <ToneBadge tone={status.data?.webhookConfigured ? "success" : "warning"}>{status.data?.webhookConfigured ? "Webhook configured" : "Webhook registration required"}</ToneBadge>
                  <div className="space-y-3 border-t pt-3">
                    <Label htmlFor="sandbox-merchant">Sandbox Business Merchant ID</Label>
                    <Input id="sandbox-merchant" value={merchantId} onChange={e => setMerchantId(e.target.value.trim())} maxLength={13} />

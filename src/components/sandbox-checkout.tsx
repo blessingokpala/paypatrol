@@ -64,7 +64,7 @@ export function SandboxCheckout({ purchaseId, onDone }: { purchaseId: string; on
   }
   if (state.isLoading) return <p className="text-sm text-muted-foreground">Checking Sandbox checkout…</p>;
   if (state.error) return <p className="text-sm text-warning">Checkout is unavailable for this account.</p>;
-  if (!state.data?.configured) return <p className="text-sm text-warning">Checkout locked: requested recipient must match the configured Sandbox supplier.</p>;
+  if (!state.data?.configured) return <p className="text-sm text-warning">Checkout locked: confirm the Sandbox supplier and configure verified webhooks first. The requested recipient must match.</p>;
   const pending = state.data.attempt && ["capturing", "confirmation_pending"].includes(state.data.attempt.status);
   return <div className="w-full space-y-3 border-t pt-4">
     <ToneBadge tone={state.data.purchaseStatus === "paid" ? "success" : "info"}>{state.data.purchaseStatus === "paid" ? "Sandbox payment completed" : "PayPal Sandbox checkout"}</ToneBadge>

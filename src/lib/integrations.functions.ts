@@ -23,6 +23,7 @@ export const getIntegrationStatus = createServerFn({ method: "POST" })
       paypalCheck: paypal,
       checkoutEnabled: Boolean(merchant?.cad_confirmed),
       merchant,
+      webhookConfigured: Boolean(process.env["PAYPAL_WEBHOOK_ID"]),
       gemini: Boolean(process.env["GEMINI_API_KEY"]),
     };
   });
