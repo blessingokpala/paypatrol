@@ -327,3 +327,74 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
     </Panel>
   );
 }
+
+type ExtractionRow = {
+  model: string;
+  created_at: string;
+  file_name: string | null;
+  extracted: unknown;
+  excerpts: unknown;
+  uncertain_fields: string[];
+  missing_fields: string[];
+};
+
+function ExtractionView({ row }: { row: ExtractionRow }) {
+  const e = row.extracted as Extraction;
+  const quotes = (row.excerpts ?? []) as Excerpt[];
+  const flag = (k: string) => (row.missing_fields?.includes(k) ? "missing" : row.uncertain_fields?.includes(k) ? "uncertain" : "ok");
+  const fields: [string, string, string][] = [
+    ["Supplier", e.supplier_name ?? "", "supplier_name"],
+    ["Invoice ref", e.invoice_reference ?? "", "invoice_reference"],
+    ["Invoice date", e.invoice_date ?? "", "invoice_date"],
+    ["Due date", e.due_date ?? "", "due_date"],
+    ["Buyer", e.buyer_name ?? "", "buyer_name"],
+    ["Subtotal", e.subtotal ?? "", "subtotal"],
+    ["Tax", e.tax ?? "", "tax"],
+    ["Shipping", e.shipping ?? "", "shipping"],
+    ["Total", e.total ?? "", "total"],
+    ["Currency", e.currency ?? "", "currency"],
+    ["Payment recipient", e.requested_payment_recipient ?? "", "requested_payment_recipient"],
+  ];
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">
+        Read by {row.model} on {new Date(row.created_at).toLocaleString("en-CA")}
+        {row.file_name ? ` · ${row.file_name}` : ""}
+      </p>
+      <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
+        {fields.map(([label, value, key]) => (
+          <div key={key} className="contents">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="flex flex-wrap items-center gap-2">
+              <span className={value ? "" : "italic text-muted-foreground"}>{value || "not stated"}</span>
+              {flag(key) === "missing" && <ToneBadge tone="warning">Missing — needs input</ToneBadge>}
+              {flag(key) === "uncertain" && <ToneBadge tone="warning">Hard to read</ToneBadge>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {(e.line_items?.length ?? 0) > 0 && (
+        <table className="w-full text-sm">
+          <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1">Line</th><th>Qty</th><th className="text-right">Unit</th><th className="text-right">Amount</th></tr></thead>
+          <tbody>{e.line_items.map((l, i) => <tr key={i} className="border-t"><td className="py-1">{l.description}</td><td>{l.quantity}</td><td className="text-right">{l.unit_price}</td><td className="text-right">{l.amount}</td></tr>)}</tbody>
+        </table>
+      )}
+      {e.payment_change_instructions && (
+        <div className="rounded-md border-2 border-warning bg-warning-soft p-3">
+          <p className="text-xs font-semibold uppercase text-warning">Document asks for payment details to change</p>
+          <blockquote className="mt-1 whitespace-pre-wrap text-sm">{e.payment_change_instructions}</blockquote>
+          <p className="mt-2 text-xs">Reported as evidence only. It has no authority over who gets paid.</p>
+        </div>
+      )}
+      {quotes.length > 0 && (
+        <details>
+          <summary className="cursor-pointer text-sm text-muted-foreground">Source quotes ({quotes.length})</summary>
+          <ul className="mt-2 space-y-1 text-xs">
+            {quotes.map((x, i) => <li key={i} className="text-muted-foreground"><span className="font-medium text-foreground">{x.field}</span> — “{x.quote}”{x.page ? ` (page ${x.page})` : ""}</li>)}
+          </ul>
+        </details>
+      )}
+      <p className="text-xs text-muted-foreground">AI output is untrusted. It cannot change spending rules, approve a request, confirm a supplier or move money.</p>
+    </div>
+  );
+}

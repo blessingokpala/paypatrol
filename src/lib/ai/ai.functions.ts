@@ -70,7 +70,7 @@ export const testAiConnection = createServerFn({ method: "POST" })
       _uncertain: [],
       _missing: [],
     });
-    return { ok: true as const, model: result.model, data: { at } };
+    return { ok: true as const, model: result.model, at };
   });
 
 // Read a private invoice document and return what it says. Nothing is applied

@@ -1,8 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useOrg } from "@/lib/org";
 import { useBudget, usePurchases } from "@/lib/queries";
 import { formatMinor } from "@/lib/money";
-import { EmptyState, FixtureTag, PageHeader, Panel, StatusBadge } from "@/components/brand";
+import { getAiStatus } from "@/lib/ai/ai.functions";
+import { EmptyState, FixtureTag, PageHeader, Panel, StatusBadge, ToneBadge } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { FileText, Sparkles } from "lucide-react";
 
@@ -20,6 +23,9 @@ function Overview() {
   const approvals = list.filter((p) => p.status === "approval_required");
   const blocked = list.filter((p) => p.status === "blocked");
   const b = budget.data;
+  const aiFn = useServerFn(getAiStatus);
+  const ai = useQuery({ queryKey: ["ai-status", orgId], enabled: Boolean(orgId), queryFn: () => aiFn({ data: { orgId } }) });
+  const aiConnected = Boolean(ai.data?.configured && ai.data?.lastRequestAt);
 
   return (
     <>
@@ -63,11 +69,17 @@ function Overview() {
         </Panel>
         <Panel title="Integrations">
           <ul className="space-y-3 text-sm">
-            <li className="flex justify-between gap-2"><span>AI extraction and proposals</span><span className="font-semibold text-warning">AI not connected</span></li>
-            <li className="flex justify-between gap-2"><span>PayPal checkout</span><span className="font-semibold text-warning">PayPal not connected</span></li>
+            <li className="flex items-center justify-between gap-2">
+              <span>AI extraction and proposals</span>
+              {aiConnected ? <ToneBadge tone="success">AI connected · {ai.data?.model}</ToneBadge> : <ToneBadge tone="warning">AI not connected</ToneBadge>}
+            </li>
+            <li className="flex items-center justify-between gap-2"><span>PayPal checkout</span><ToneBadge tone="warning">PayPal not connected</ToneBadge></li>
           </ul>
           <p className="mt-4 text-xs text-muted-foreground">
-            Invoice details are entered manually and AI proposals shown are scripted test fixtures. No PayPal orders are created and no payment is shown as completed.
+            {aiConnected
+              ? "AI reads attached invoices and can draft requests from approved listings. Every value is shown beside the document it came from and checked against approved records; nothing is approved or paid by AI."
+              : "Invoice details are entered by hand. AI is not connected, so nothing is read from documents automatically."}
+            {" "}PayPal is not connected: no orders are created and no payment is shown as completed.
           </p>
         </Panel>
       </div>
