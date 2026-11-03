@@ -127,6 +127,13 @@
       "when": 1793729654552,
       "tag": "0017_sandbox_account_check",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793750169187,
+      "tag": "0018_test_workspace_classification",
+      "breakpoints": true
     }
   ]
 }

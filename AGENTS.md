@@ -23,3 +23,4 @@
 - Sandbox webhook processing verifies with PayPal before scoped event recording, then reads the canonical order and applies only service-role payment RPCs. Why: notifications and browser callbacks cannot themselves establish payment truth.
 - Merchant configuration replaces only fictional supplier baselines through owner reauthentication; requested invoice recipients remain unchanged. Why: enrolment must not erase discrepancies or bypass independent real-recipient verification.
 - Payment-control tests live in `supabase/tests/payment_controls.sql` (run via the backend SQL runner; they roll back).
+- Automated test scripts must call `mark_test_workspace` right after creating a workspace; the switcher hides workspaces by the `is_test_workspace` flag, never by name. Why: test fixtures must not appear as real businesses.

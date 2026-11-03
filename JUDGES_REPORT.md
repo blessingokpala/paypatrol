@@ -125,3 +125,10 @@ This report is a self-contained account of the current state. Supporting detail 
 | Blocked requests | `purchases` table | Count of requests with status Blocked | Organisation, all outstanding | Purchases filtered to Blocked |
 
 All reads go through the signed-in user's permissions. Nothing is hardcoded, and no demonstration reservations were created.
+
+## Workspace switcher correction (3 Nov 2026)
+- Cause: `supabase/tests/concurrent_budget.py` (3 runs) and `sandbox_checkpoint.py` (2 runs) created isolated workspaces with the owner account (the only account), so the owner became their owner/preparer. They persisted (16:07–16:26 UTC).
+- Correction: migration 0018 adds explicit `is_test_workspace` classification; the five workspaces were classified by ID with an audit event each. Nothing was deleted or merged; their 36 purchases and 127 audit events remain. Scripts now classify their workspace immediately.
+- Switcher shows only non-test workspaces from the user's own memberships (server-enforced by access rules); with one workspace it shows the name only. Switching clears cached data and returns to Overview.
+- Verified: header showed "Ada's Grocery" with no dropdown even with a stale saved test workspace; Ada's Grocery still has 13 purchases, policy v1 (CA$300/week), merchant L8SVBX42QHT3U, and the CA$75 request PP-CHECKOUT-20261103 still `verification_required` with its change request pending.
+- Not tested: switching between two legitimate workspaces in the browser (no second real workspace exists).

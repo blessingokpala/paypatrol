@@ -30,7 +30,7 @@ function AuthedLayout() {
   const q = useMemberships();
   if (q.isLoading) return <div className="p-10 text-sm text-muted-foreground">Loading workspace…</div>;
   if (q.error || !q.data) return <div className="p-10 text-sm text-blocked">Could not load your workspace: {errMsg(q.error)}</div>;
-  if (q.data.rows.length === 0) return <Onboarding email={q.data.user.email ?? ""} />;
+  if (!q.data.rows.some((r) => r.organizations && !(r.organizations as { is_test_workspace: boolean }).is_test_workspace)) return <Onboarding email={q.data.user.email ?? ""} />;
   return (
     <OrgProvider data={q.data}>
       <Shell />
@@ -94,12 +94,18 @@ function Shell() {
               <FieldSelect
                 ariaLabel="Organisation"
                 value={org.orgId}
-                onChange={(v) => org.setOrgId(v)}
+                onChange={(v) => {
+                  if (v === org.orgId) return;
+                  // Drop the previous workspace's cached data, filters and selections.
+                  qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "memberships" });
+                  org.setOrgId(v);
+                  navigate({ to: "/overview" });
+                }}
                 options={org.orgs.map((o) => ({ value: o.id, label: o.name }))}
               />
             </div>
           ) : (
-            <span className="hidden text-sm font-medium sm:inline">{org.orgName}</span>
+            <span className="truncate text-sm font-medium" title={org.orgName}>{org.orgName}</span>
           )}
           <span className="hidden text-xs text-muted-foreground md:inline">{org.email}</span>
           <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sign out" className="px-2 sm:px-3">

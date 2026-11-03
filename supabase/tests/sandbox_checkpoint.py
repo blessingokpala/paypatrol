@@ -19,6 +19,7 @@ def rows(table, **params):
     assert r.ok
     return r.json()
 org = rpc('create_organization', {'_name': 'Sandbox safeguard checks — fictional', '_with_demo': True}).json()
+assert rpc('mark_test_workspace', {'_org': org, '_reason': 'sandbox_checkpoint.py automated test'}).ok
 supplier = rows('suppliers', org_id='eq.' + org, select='id,current_version_id')[0]
 baseline = supplier['current_version_id']
 ids = []
