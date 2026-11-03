@@ -19,4 +19,4 @@
 - Partner (Change approver) review of PP-CHECKOUT-20261103 supplier change — waiting on user; CA$75 request stays on hold
 - Real PayPal sandbox checkout + genuine signed webhook — after partner review
 - Cross-org invoice isolation re-test
-- [ ] Replace raw JSON/codes/nulls app-wide with readable summaries (proposal content, evidence, findings, errors); hide invoice-only fields on proposals
+- [x] Replace raw JSON/codes/nulls app-wide with readable summaries (proposal content, evidence, findings, errors); hide invoice-only fields on proposals

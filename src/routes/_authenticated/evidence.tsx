@@ -1,3 +1,4 @@
+import { humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -202,7 +203,7 @@ function FragmentRow({ r, isOpen, toggle, actor, pairs, reason }: { r: AuditRow;
         <td className="px-3 py-2">{actor}</td>
         <td className="px-3 py-2">{summarize(r)}</td>
         <td className="px-3 py-2">
-          {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} className="text-brand-bright underline">purchase</Link> : r.entity_type.replaceAll("_", " ")}
+          {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} className="text-brand-bright underline">Request</Link> : humanize(r.entity_type)}
           {r.entity_version ? ` v${r.entity_version}` : ""}
         </td>
         <td className="px-3 py-2">
@@ -220,7 +221,7 @@ function FragmentRow({ r, isOpen, toggle, actor, pairs, reason }: { r: AuditRow;
               <div>
                 <dt className="text-xs text-muted-foreground">Linked record</dt>
                 <dd>
-                  {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} className="text-brand-bright underline">Open request</Link> : r.entity_type.replaceAll("_", " ")}
+                  {r.entity_type === "purchase" && r.entity_id ? <Link to="/purchases/$id" params={{ id: r.entity_id }} className="text-brand-bright underline">Open request</Link> : humanize(r.entity_type)}
                   {r.entity_version ? ` v${r.entity_version}` : ""}
                 </dd>
               </div>
