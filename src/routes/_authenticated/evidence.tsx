@@ -28,7 +28,7 @@ type AuditRow = {
 };
 
 function statusLabel(s: unknown): string {
-  return typeof s === "string" ? (STATUS_META[s as PurchaseStatus]?.label ?? s.replaceAll("_", " ")) : "—";
+  return typeof s === "string" ? (STATUS_META[s as PurchaseStatus]?.label ?? s.replaceAll("_", " ")) : "Not recorded";
 }
 
 function money(minor: unknown, currency: unknown): string {
@@ -87,8 +87,20 @@ function summarize(r: AuditRow): string {
       return "PayPal Sandbox capture completed.";
     case "payment_capture_declined":
       return "PayPal Sandbox capture declined or denied. Budget stays reserved for review.";
-    default:
-      return `${r.action.replaceAll("_", " ")}.`;
+    case "budget_reserved":
+      return `Budget reserved${money(d["amount_minor"], d["currency"]) ? ` (${money(d["amount_minor"], d["currency"])})` : ""} for checkout.`;
+    case "organization_created":
+      return "Organisation created.";
+    case "policy_created":
+      return "Spending rules created (first version).";
+    case "supplier_baseline_seeded":
+      return "Fictional demonstration supplier record added.";
+    case "purchase.labelled_test_data":
+      return "Request labelled as test data. Status unchanged; not to be reserved or paid.";
+    default: {
+      const words = r.action.replace(/[._]+/g, " ").trim();
+      return `Recorded event: ${words.charAt(0).toUpperCase()}${words.slice(1)}. Full details are in the CSV export.`;
+    }
   }
 }
 
@@ -98,14 +110,14 @@ function beforeAfter(r: AuditRow): [string, string, string][] {
   const rows: [string, string, string][] = [];
   if (r.action === "status_changed") rows.push(["Status", statusLabel(d["from"]), statusLabel(d["to"])]);
   if (typeof d["approved_recipient"] === "string" || typeof d["requested_recipient"] === "string") {
-    rows.push(["Payment recipient", String(d["approved_recipient"] ?? "—"), String(d["requested_recipient"] ?? "—")]);
+    rows.push(["Payment recipient (approved record → requested)", String(d["approved_recipient"] ?? "Not provided"), String(d["requested_recipient"] ?? "Not provided")]);
   }
   return rows;
 }
 
 function reasonOf(r: AuditRow): string | null {
   const d = (r.details ?? {}) as Record<string, unknown>;
-  for (const k of ["reason", "decision_note", "note", "evidence"]) {
+  for (const k of ["reason", "decision_note", "note", "evidence", "label"]) {
     if (typeof d[k] === "string" && d[k]) return d[k] as string;
   }
   return null;

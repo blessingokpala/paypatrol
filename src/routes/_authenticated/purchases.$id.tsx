@@ -64,6 +64,7 @@ function Review() {
   const activeRes = res.find((r) => r.status === "active");
   const latestExtraction = exs[0];
   const firstDoc = docs[0];
+  const isTestData = p.is_test_fixture && (p.fixture_label ?? "").toLowerCase().includes("do not reserve or pay");
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
@@ -99,11 +100,7 @@ function Review() {
               </div>
             ))
           ) : (
-            <div className="space-y-2 text-sm">
-              <p>Submitted fields (as received):</p>
-              <pre className="whitespace-pre-wrap rounded-md border bg-muted p-3 text-xs">{JSON.stringify(p.ai_claims, null, 2)}</pre>
-              <p className="text-xs text-muted-foreground">These are the assistant's own claims. The server resolved price, total, currency and recipient from the approved listing and supplier record.</p>
-            </div>
+            <ProposalSummary claims={p.ai_claims} items={items} />
           )}
         </Panel>
 
@@ -113,16 +110,17 @@ function Review() {
               <dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name ?? "Not matched"}</dd>
               <dt className="text-muted-foreground">Amount</dt><dd className="font-semibold">{formatMinor(p.total_minor, p.currency)}</dd>
               <dt className="text-muted-foreground">Currency</dt><dd>{p.currency}</dd>
-              <dt className="text-muted-foreground">Invoice ref</dt><dd>{p.invoice_reference ?? "—"}</dd>
-              <dt className="text-muted-foreground">Category</dt><dd>{p.category ?? "—"}</dd>
+              {p.source === "invoice" && <><dt className="text-muted-foreground">Invoice reference</dt><dd>{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}</dd></>}
+              <dt className="text-muted-foreground">Category</dt><dd>{p.category || <span className="text-muted-foreground">Not provided</span>}</dd>
             </dl>
           )}
           {items.length > 0 && (
             <table className="mt-4 w-full text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-1">Line</th><th>Qty</th><th className="text-right">Total</th></tr></thead>
-              <tbody>{items.map((i) => <tr key={i.id} className="border-t"><td className="py-1">{i.description}{!i.listing_id && <span className="block text-xs text-muted-foreground">Summary total, not an itemised line. See what AI read below for the invoice's own lines.</span>}</td><td>{i.listing_id ? i.quantity : "—"}</td><td className="text-right">{formatMinor(i.line_total_minor, p.currency)}</td></tr>)}</tbody>
+              <tbody>{items.map((i) => <tr key={i.id} className="border-t"><td className="py-1">{i.description}{!i.listing_id && <span className="block text-xs text-muted-foreground">Summary total, not an itemised line. See what AI read below for the invoice's own lines.</span>}</td><td>{i.listing_id ? i.quantity : <span className="text-xs text-muted-foreground">Not itemised</span>}</td><td className="text-right">{formatMinor(i.line_total_minor, p.currency)}</td></tr>)}</tbody>
             </table>
           )}
+          {p.source !== "invoice" && <p className="mt-3 text-xs text-muted-foreground">Price and payment recipient were taken from the approved listing and supplier record.</p>}
         </Panel>
       </div>
 
@@ -214,7 +212,7 @@ function Review() {
               ? <p className="text-sm text-muted-foreground">You submitted this request, so a different payer must approve it.</p>
               : <Button asChild><Link to="/approvals">Review in Approvals</Link></Button>
           )}
-          {p.status === "cleared_for_checkout" && org.has("payer", "owner") && !activeRes && (
+          {p.status === "cleared_for_checkout" && org.has("payer", "owner") && !activeRes && !isTestData && (
             <Button onClick={() => call(() => supabase.rpc("reserve_budget", { _pid: p.id }), "Budget reserved")}>Reserve budget for checkout</Button>
           )}
           {activeRes && (
@@ -228,7 +226,8 @@ function Review() {
           )}
           <Button variant="ghost" onClick={() => call(() => supabase.rpc("recheck_purchase", { _pid: p.id }), "Checks re-run")}>Re-run checks</Button>
         </div>
-        {org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending", "paid"].includes(p.status) && <SandboxCheckout purchaseId={p.id} onDone={refresh} />}
+        {isTestData && p.status === "cleared_for_checkout" && <p className="mt-3 text-sm text-muted-foreground">Labelled as test data. Budget reservation and payment are not offered for this request.</p>}
+        {!isTestData && org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending", "paid"].includes(p.status) && <SandboxCheckout purchaseId={p.id} onDone={refresh} />}
       </Panel>
     </>
   );
@@ -463,6 +462,31 @@ function ExtractionView({ row }: { row: ExtractionRow }) {
         </details>
       )}
       <p className="text-xs text-muted-foreground">AI output is untrusted. It cannot change spending rules, approve a request, confirm a supplier or move money.</p>
+    </div>
+  );
+}
+
+/** Readable view of what the AI proposal itself claimed. Calculated values live in Request details. */
+function ProposalSummary({ claims, items }: { claims: unknown; items: { listing_id: string | null; description: string }[] }) {
+  const c = (claims && typeof claims === "object" ? claims : {}) as Record<string, unknown>;
+  const listingId = typeof c["listing_id"] === "string" ? c["listing_id"] : null;
+  const item = items.find((i) => i.listing_id && i.listing_id === listingId)?.description ?? (listingId ? "Approved listing (name unavailable)" : null);
+  const qty = typeof c["quantity"] === "number" ? String(c["quantity"]) : null;
+  const total = typeof c["claimed_total_minor"] === "number" ? formatMinor(c["claimed_total_minor"], typeof c["currency"] === "string" ? c["currency"] : "CAD") : null;
+  const recipient = typeof c["claimed_recipient"] === "string" && c["claimed_recipient"].trim() ? c["claimed_recipient"] : null;
+  const reasoning = typeof c["reasoning"] === "string" && c["reasoning"].trim() ? c["reasoning"] : null;
+  const ns = <span className="text-muted-foreground">Not supplied</span>;
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-muted-foreground">What the original proposal asked for:</p>
+      <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2">
+        <dt className="text-muted-foreground">Item</dt><dd>{item ?? ns}</dd>
+        <dt className="text-muted-foreground">Quantity</dt><dd>{qty ?? ns}</dd>
+        <dt className="text-muted-foreground">Proposed total</dt><dd>{total ?? ns}</dd>
+        <dt className="text-muted-foreground">Proposed payment recipient</dt><dd className={recipient ? "font-mono" : ""}>{recipient ?? ns}</dd>
+        {reasoning && <><dt className="text-muted-foreground">Assistant's explanation</dt><dd>{reasoning}</dd></>}
+      </dl>
+      <p className="text-xs text-muted-foreground">Proposed values are claims only. They never set the price, recipient or approval.</p>
     </div>
   );
 }
