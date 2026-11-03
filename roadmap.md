@@ -1,6 +1,7 @@
 # PayPal Sandbox phase
 - [x] Securely collect credentials and verify real Sandbox OAuth.
 - [ ] Confirm the app's Business merchant identity and CAD receiving; authorise supplier enrolment without changing historical requests.
+  - CAD wallet confirmed by the owner; validate candidate merchant with the accidental field-label prefix removed against the connected app.
 - [x] Add server-enforced recent reauthentication and unresolved-attempt edit/release guards.
 - [ ] Schedule safe background reservation expiry and test uncertain-attempt lifecycle (awaits payment lifecycle).
 - [ ] Implement persisted, idempotent order/capture/reconciliation and verified webhooks.
