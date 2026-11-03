@@ -46,6 +46,7 @@ function Purchases() {
   const here = useHere();
   const filter: "all" | "invoice" | "ai_proposal" = source ?? "all";
   const [text, setText] = useState(search.q ?? "");
+  const [showFilters, setShowFilters] = useState(false);
   useEffect(() => { setText(search.q ?? ""); }, [search.q]);
 
   type Key = "q" | "status" | "source" | "supplier" | "dfrom" | "dto" | "sort";
@@ -158,7 +159,7 @@ function Purchases() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Search requests, invoice references or suppliers"
-          className="bg-card placeholder:text-muted-foreground/70"
+          className="bg-card text-sm placeholder:text-muted-foreground/70"
         />
       </div>
 
@@ -172,7 +173,12 @@ function Purchases() {
         </div>
       </div>
 
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      {(() => { const n = [status, supplier, dfrom, dto].filter(Boolean).length + (sort !== "newest" ? 1 : 0); return (
+        <Button size="sm" variant="outline" className="mb-3 sm:hidden" aria-expanded={showFilters} aria-controls="purchase-filters" onClick={() => setShowFilters((v) => !v)}>
+          {showFilters ? "Hide filters" : "Filters and sorting"}{n ? ` (${n})` : ""}
+        </Button>
+      ); })()}
+      <div id="purchase-filters" className={`mb-3 grid-cols-2 gap-2 sm:grid sm:grid-cols-3 lg:grid-cols-5 ${showFilters ? "grid" : "hidden"}`}>
         <div className="col-span-2 sm:col-span-1">
           <Label htmlFor="f-status" className="mb-1 block text-xs text-muted-foreground">Status</Label>
           <FieldSelect id="f-status" value={status ?? ""} onChange={(v) => setParam("status", v)} placeholder="Any status"
