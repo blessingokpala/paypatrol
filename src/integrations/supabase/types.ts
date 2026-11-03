@@ -458,18 +458,21 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_test_workspace: boolean
           name: string
         }
         Insert: {
           created_at?: string
           created_by: string
           id?: string
+          is_test_workspace?: boolean
           name: string
         }
         Update: {
           created_at?: string
           created_by?: string
           id?: string
+          is_test_workspace?: boolean
           name?: string
         }
         Relationships: []
@@ -1379,6 +1382,10 @@ export type Database = {
         Returns: undefined
       }
       mark_sandbox_uncertain: { Args: { _attempt: string }; Returns: undefined }
+      mark_test_workspace: {
+        Args: { _org: string; _reason: string }
+        Returns: undefined
+      }
       org_budget_summary: { Args: { _org: string }; Returns: Json }
       org_week_start: { Args: { _tz: string }; Returns: string }
       prepare_sandbox_capture: { Args: { _attempt: string }; Returns: Json }
