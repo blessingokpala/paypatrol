@@ -31,7 +31,7 @@ supplier = requests.get(url + '/suppliers', headers=headers, params={'org_id': '
 ids = []
 try:
     for index, amount in enumerate([10000, 10000, 8000, 8000]):
-        response = rpc('submit_invoice', {'_org': org, '_supplier': supplier, '_invoice_ref': f'RACE-{index}', '_amount_minor': amount, '_currency': 'CAD', '_recipient': 'DEMO-MERCHANT-HARBOUR-001', '_category': 'office', '_title': 'Concurrent budget fixture'})
+        response = rpc('submit_invoice', {'_org': org, '_supplier': supplier, '_invoice_ref': f'RACE-{index}', '_amount_minor': amount, '_currency': 'CAD', '_recipient': 'DEMO-MERCHANT-HARBOUR-001', '_category': 'office', '_description': 'Concurrent budget fixture', '_contact': None, '_message': None, '_storage_path': None, '_file_name': None, '_listing': None, '_quantity': None})
         assert response.ok, 'Test invoice setup failed'
         ids.append(response.json())
     for pid in ids[:2]:
