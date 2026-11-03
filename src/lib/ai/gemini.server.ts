@@ -7,7 +7,7 @@ import { extractionSchema, proposalSchema, type AiError, type AiOutcome, type Ex
 export const GEMINI_MODEL = "gemini-3.1-flash-lite";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_TIMEOUT_MS = 90_000;
 
 const EXTRACTION_PROMPT = `You are a data extractor for an invoice review system. Extract ONLY what this document states.
 Never invent a value. If a value is absent or unreadable, put an empty string in its field and list the field name in missing_fields (absent) or uncertain_fields (present but hard to read).
@@ -177,7 +177,7 @@ ${JSON.stringify(listings, null, 1)}`;
       const parsed = proposalSchema.safeParse(raw);
       return parsed.success ? parsed.data : null;
     },
-    30_000,
+    60_000,
   );
 }
 
@@ -191,6 +191,6 @@ export function pingGemini(): Promise<AiOutcome<{ status: string }>> {
       const o = raw as { status?: unknown };
       return typeof o?.status === "string" ? { status: o.status } : null;
     },
-    20_000,
+    60_000,
   );
 }
