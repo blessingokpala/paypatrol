@@ -1448,6 +1448,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      reopen_change_request: {
+        Args: { _cr: string; _reason: string }
+        Returns: undefined
+      }
       require_recent_authentication: { Args: never; Returns: undefined }
       reserve_budget: { Args: { _pid: string }; Returns: string }
       reset_uncaptured_sandbox_attempt: {
