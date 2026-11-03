@@ -189,7 +189,7 @@ function NewInvoice() {
     });
     if (error) {
       setBusy(false);
-      toast.error(`Could not save: ${error.message}. Your entries are still here — try again.`);
+      toast.error(`Could not save: ${friendlyError(error, "Saving")} Your entries are still here — try again.`);
       return;
     }
     const purchaseId = data as string;
