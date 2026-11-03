@@ -16,6 +16,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { RecentSignin } from "@/components/recent-signin";
 import { SandboxCheckout } from "@/components/sandbox-checkout";
+import { BackLink } from "@/components/back-link";
+import { FieldSelect } from "@/components/field-select";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
   head: () => ({ meta: [{ title: "Request review — PayPatrol" }, { name: "description", content: "Compare a request against approved records." }, { property: "og:title", content: "Request review — PayPatrol" }, { property: "og:description", content: "Invoice evidence, recipient comparison and payment controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -78,7 +80,7 @@ function Review() {
 
   return (
     <>
-      <div className="mb-2 text-sm"><Link to="/purchases" className="text-brand-bright underline">← Purchases</Link></div>
+      <BackLink to="/purchases" label="Back to purchases" />
       <PageHeader
         title={p.title}
         description={`${p.source === "invoice" ? "Invoice" : "AI proposal"} · version ${p.version} · submitted by ${names[p.requested_by] ?? "a team member"} on ${new Date(p.created_at).toLocaleString("en-CA")}`}
@@ -127,6 +129,8 @@ function Review() {
       <Panel title="What AI read from the document" className="mt-6">
         {latestExtraction ? (
           <ExtractionView row={latestExtraction} />
+        ) : reading ? (
+          <p className="text-sm text-muted-foreground" aria-live="polite">Reading invoice…</p>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">No AI reading recorded for this request.</p>
@@ -156,17 +160,21 @@ function Review() {
       <Panel title="Recipient comparison" className="mt-6">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={recipientDiffers ? "rounded-md border-2 border-warning bg-warning-soft p-4" : "rounded-md border p-4"}>
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Requested in this request</p>
-            <p className="mt-1 font-mono text-sm">{p.requested_recipient ?? "—"}</p>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Recipient on this request</p>
+            {p.requested_recipient?.trim()
+              ? <p className="mt-1 font-mono text-sm">{p.requested_recipient}</p>
+              : <p className="mt-1 text-sm italic text-muted-foreground">No payment recipient provided.</p>}
             {p.requested_contact && <p className="mt-2 text-xs">Contact given: {p.requested_contact} <span className="text-warning">(not usable for verification)</span></p>}
           </div>
           <div className="rounded-md border bg-selected p-4">
             <p className="text-xs font-semibold uppercase text-muted-foreground">Approved supplier record {sv ? `v${sv.version}` : ""}</p>
-            <p className="mt-1 font-mono text-sm">{sv?.paypal_merchant_id ?? "No approved record"}</p>
+            {sv
+              ? <p className="mt-1 font-mono text-sm">{sv.paypal_merchant_id}</p>
+              : <p className="mt-1 text-sm italic text-muted-foreground">{p.supplier_id ? "Supplier record is loading." : "No approved supplier selected."}</p>}
             {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value} · enrolment: {sv.enrolment_status.replace("_", " ")}</p>}
           </div>
         </div>
-        <p className="mt-3 text-sm">{!sv ? "No approved supplier to compare against." : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
+        <p className="mt-3 text-sm">{!sv ? (p.supplier_id ? "Supplier record is loading." : "No approved supplier to compare against. Match this request to an approved supplier or add the supplier through verification.") : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
       </Panel>
 
       <Panel title="Findings and next actions" className="mt-6">
@@ -176,7 +184,6 @@ function Review() {
               <li key={f.id} className="rounded-md border p-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <ToneBadge tone={f.severity === "block" ? "blocked" : f.severity === "warning" ? "warning" : "info"}>{f.severity === "block" ? "Failed rule" : f.severity === "warning" ? "Hold" : "Note"}</ToneBadge>
-                  <code className="text-xs text-muted-foreground">{f.code}</code>
                 </div>
                 <p className="mt-2 text-sm">{f.message}</p>
                 {f.next_action && <p className="mt-1 text-sm text-muted-foreground"><span className="font-semibold text-foreground">Next:</span> {f.next_action}</p>}
