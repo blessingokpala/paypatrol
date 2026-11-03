@@ -57,6 +57,13 @@
       "when": 1793713280876,
       "tag": "0007_drop_stale_submit_invoice_overload",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793717945951,
+      "tag": "0008_missing_currency_needs_clarification",
+      "breakpoints": true
     }
   ]
 }
