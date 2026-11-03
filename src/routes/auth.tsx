@@ -6,7 +6,8 @@ import "@lovable.dev/cloud-auth-js/styles.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SandboxBanner, Wordmark } from "@/components/brand";
+import { SandboxBanner, Wordmark, Req } from "@/components/brand";
+import { PasswordInput } from "@/components/password-input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -97,8 +98,8 @@ function AuthPage() {
               <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" minLength={8} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Label htmlFor="password">Password<Req /></Label>
+              <PasswordInput id="password" minLength={8} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}</Button>
           </form>
