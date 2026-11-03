@@ -16,4 +16,5 @@
 - Approvals bind to a purchase digest (version, amount, currency, recipient, supplier and policy version); any change invalidates them. Why: approvals must apply only to what was seen.
 - Budget reservations lock the organisation row before checking the weekly limit. Why: concurrent requests must not both pass.
 - PayPal and Gemini calls will live in protected `createServerFn` handlers using server-side secrets. Why: AI and browser code must never move money.
+- PayPal credential authentication uses a server-only helper and is independent of merchant enrolment and checkout availability. Why: accepted credentials do not prove recipient identity, currency capability or completed payment.
 - Payment-control tests live in `supabase/tests/payment_controls.sql` (run via the backend SQL runner; they roll back).
