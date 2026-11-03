@@ -170,7 +170,7 @@ function Evidence() {
           Each entry is chained to the previous one by a fingerprint. Limitation: without separately stored checkpoints, the chain cannot prove that the whole log was not rewritten or that the latest entries were not removed. The CSV export keeps the full technical record, including fingerprints, for authorised review.
         </p>
       </details>
-      <div className="overflow-x-auto rounded-lg border bg-card">
+      <div className="relative overflow-x-auto rounded-lg border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-muted text-left text-xs uppercase text-muted-foreground"><tr><th className="px-3 py-2">When</th><th className="px-3 py-2">Who</th><th className="px-3 py-2">What</th><th className="px-3 py-2">Record</th><th className="px-3 py-2"><span className="sr-only">Details</span></th></tr></thead>
           <tbody className="divide-y">
