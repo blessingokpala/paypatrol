@@ -1441,6 +1441,10 @@ export type Database = {
       }
       require_recent_authentication: { Args: never; Returns: undefined }
       reserve_budget: { Args: { _pid: string }; Returns: string }
+      reset_uncaptured_sandbox_attempt: {
+        Args: { _attempt: string }
+        Returns: undefined
+      }
       submit_ai_proposal: {
         Args: {
           _claimed_recipient?: string
