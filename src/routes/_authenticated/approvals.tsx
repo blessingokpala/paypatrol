@@ -1,3 +1,4 @@
+import { fromSearch } from "@/lib/return-to";
 import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/approvals")({
+  validateSearch: fromSearch,
   head: () => ({ meta: [{ title: "Approvals — PayPatrol" }, { name: "description", content: "Approve exact request versions." }, { property: "og:title", content: "Approvals — PayPatrol" }, { property: "og:description", content: "Review approvals bound to exact PayPatrol request versions." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Approvals,
 });
@@ -49,7 +51,7 @@ function Approvals() {
             const sv = p.supplier_versions as { version: number; paypal_merchant_id: string } | null;
             const own = p.requested_by === org.userId;
             return (
-              <Panel key={p.id} title={p.title} actions={<Link to="/purchases/$id" params={{ id: p.id }} className="text-sm text-brand-bright underline">Full review</Link>}>
+              <Panel key={p.id} title={p.title} actions={<Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} className="text-sm text-brand-bright underline">Full review</Link>}>
                 {p.is_test_fixture && <div className="mb-2"><FixtureTag /></div>}
                 <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   <div><dt className="text-muted-foreground">Request version</dt><dd className="font-semibold">v{p.version}</dd></div>

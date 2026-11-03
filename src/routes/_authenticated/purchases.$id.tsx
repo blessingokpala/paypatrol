@@ -17,10 +17,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { RecentSignin } from "@/components/recent-signin";
 import { SandboxCheckout } from "@/components/sandbox-checkout";
-import { BackLink } from "@/components/back-link";
+import { BackLink, useHere } from "@/components/back-link";
+import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
+  validateSearch: fromSearch,
   head: () => ({ meta: [{ title: "Request review — PayPatrol" }, { name: "description", content: "Compare a request against approved records." }, { property: "og:title", content: "Request review — PayPatrol" }, { property: "og:description", content: "Invoice evidence, recipient comparison and payment controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Review,
 });

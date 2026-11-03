@@ -1,3 +1,4 @@
+import { fromSearch } from "@/lib/return-to";
 import { createFileRoute } from "@tanstack/react-router";
 import { useOrg } from "@/lib/org";
 import { useBudget, usePurchases } from "@/lib/queries";
@@ -10,6 +11,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/budget")({
+  validateSearch: fromSearch,
   head: () => ({ meta: [{ title: "Weekly budget — PayPatrol" }, { name: "description", content: "Weekly limit, spent, reserved and available budget." }, { property: "og:title", content: "Weekly budget — PayPatrol" }, { property: "og:description", content: "PayPatrol weekly budget breakdown." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: BudgetPage,
 });
@@ -61,7 +63,7 @@ function BudgetPage() {
               <ul className="divide-y">
                 {reservedPurchases.map((p) => (
                   <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                    <Link to="/purchases/$id" params={{ id: p.id }} className="font-medium text-brand-deep underline-offset-2 hover:underline">{p.title}</Link>
+                    <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} className="font-medium text-brand-deep underline-offset-2 hover:underline">{p.title}</Link>
                     <span className="flex items-center gap-3">
                       <span className="font-mono text-sm tabular-nums">{formatMinor(p.total_minor, p.currency)}</span>
                       <StatusBadge status={p.status} />

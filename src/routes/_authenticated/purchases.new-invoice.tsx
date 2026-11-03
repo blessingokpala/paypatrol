@@ -9,7 +9,8 @@ import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
 import { AI_ERROR_COPY, type AiError, type Extraction } from "@/lib/ai/schemas";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader, Panel, Req, RequiredNote, ToneBadge } from "@/components/brand";
-import { BackLink } from "@/components/back-link";
+import { BackLink, useHere } from "@/components/back-link";
+import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/purchases/new-invoice")({
+  validateSearch: fromSearch,
   head: () => ({
     meta: [
       { title: "Check an invoice — PayPatrol" },
@@ -197,7 +199,7 @@ function NewInvoice() {
       await supabase.rpc("link_extraction", { _extraction: result.extractionId, _purchase: purchaseId });
     }
     refresh();
-    navigate({ to: "/purchases/$id", params: { id: purchaseId } });
+    navigate({ to: "/purchases/$id", params: { id: purchaseId }, search: { from: "/purchases" } });
   }
 
   if (!canSubmit) return <p className="text-sm">Only request preparers or owners can submit invoices.</p>;
