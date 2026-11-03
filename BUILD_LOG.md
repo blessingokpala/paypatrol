@@ -298,3 +298,10 @@ https://developer.paypal.com/docs/api/webhooks/v1/
 - PayPal is not connected: no order creation, no capture, no webhook, and nothing is ever marked paid.
 - Model answers are not used to auto-approve anything; a human still confirms every value.
 - No per-request token/cost accounting beyond the stored model name and timestamp.
+
+## Webhook registration status (2026-11-03)
+- Registered in PayPal Sandbox by the owner (owner-reported). Events: capture completed, declined, denied, pending, refunded, reversed.
+- PAYPAL_WEBHOOK_ID saved as a secure secret. Live endpoint still answered "Webhook not configured" (503) right after saving; a republish is required for the live site to read it.
+- Handled (re-reads the PayPal order before any change): PAYMENT.CAPTURE.COMPLETED, PENDING, DENIED.
+- Acknowledged and ignored (no payment-status or budget change): DECLINED, REFUNDED, REVERSED, and any other type.
+- Genuine signed PayPal notification received and verified: NOT YET OBSERVED.
