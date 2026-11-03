@@ -27,6 +27,10 @@
 - User session was not injected into this sandbox. A self-account session lookup failed to identify
   the requesting owner's account; no alternate account was selected and no recent-auth bypass made.
   Current supplier success and buyer flow cannot be truthfully confirmed in this turn.
+- Executed scripted regression tests: 28 passed (16 PayPal, 7 Gemini, 4 money, 1 routing).
+  New checks cover differing order ID, completed CA$75/CAD capture, pending/denied captures,
+  wrong actual merchant, CA$180 capture, database refusal and provider timeout. These are fixtures,
+  not real PayPal responses. Latest automated app build OK.
 - Real CA$75 checkout remains UNPERFORMED. No order/capture IDs or Paid result are invented.
   User must enrol the supplier, publish/register webhook, securely save Webhook ID, publish changes,
   then use Pay with PayPal Sandbox with the separate Personal buyer; verify CA$75 CAD and seller.
