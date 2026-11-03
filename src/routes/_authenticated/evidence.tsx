@@ -96,7 +96,7 @@ function summarize(r: AuditRow): string {
 function beforeAfter(r: AuditRow): [string, string, string][] {
   const d = (r.details ?? {}) as Record<string, unknown>;
   const rows: [string, string, string][] = [];
-  if (r.action === "status_changed") rows.push(["Status", statusLabel(d["from"]), statusLabel(d["to"]))];
+  if (r.action === "status_changed") rows.push(["Status", statusLabel(d["from"]), statusLabel(d["to"])]);
   if (typeof d["approved_recipient"] === "string" || typeof d["requested_recipient"] === "string") {
     rows.push(["Payment recipient", String(d["approved_recipient"] ?? "—"), String(d["requested_recipient"] ?? "—")]);
   }
