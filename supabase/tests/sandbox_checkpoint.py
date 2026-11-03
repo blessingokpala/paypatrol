@@ -41,6 +41,15 @@ try:
     assert not rows('approvals', purchase_id='eq.' + injected['id'], select='id')
     assert invoice('DIRECT-NOCURRENCY', 7500, 'DEMO-MERCHANT-HARBOUR-001', currency='')['status'] == 'needs_clarification'
     assert invoice('DIRECT-NOAMOUNT', 0, 'DEMO-MERCHANT-HARBOUR-001')['status'] == 'needs_clarification'
+    for pid in [changed['id'], proposed, injected['id']]:
+        refused_checkout = rpc('begin_sandbox_payment', {'_pid':pid})
+        assert not refused_checkout.ok, 'Held or blocked purchase must not begin payment'
+        assert not rows('payment_attempts', purchase_id='eq.' + pid, select='id'), 'Refusal must create no payment attempt'
+    canceled = invoice('DIRECT-CANCELLED', 7500, 'DEMO-MERCHANT-HARBOUR-001')
+    assert rpc('cancel_purchase', {'_pid':canceled['id'], '_reason':'Test cancellation'}).ok
+    assert not rpc('begin_sandbox_payment', {'_pid':canceled['id']}).ok
+    anonymous = requests.post(url + '/rpc/begin_sandbox_payment', headers={'apikey':config['VITE_SUPABASE_PUBLISHABLE_KEY'].strip('"')}, json={'_pid':normal['id']}, timeout=30)
+    assert not anonymous.ok, 'Signed-out caller cannot begin checkout'
     policy = rows('spending_policies', org_id='eq.' + org, is_active='eq.true')[0]
     # Wait until this minted session's actual AMR authentication is older than 5 minutes.
     import base64
@@ -50,6 +59,6 @@ try:
     refused = rpc('update_spending_policy', {'_org': org, '_currency':'CAD', '_timezone':'America/Halifax', '_weekly':30000, '_order':15000, '_threshold':10000, '_categories':['office'], '_suppliers':[supplier['id']]})
     assert not refused.ok and 'Recent sign-in required' in refused.json().get('message','')
     assert rows('spending_policies', org_id='eq.' + org, is_active='eq.true')[0]['id'] == policy['id']
-    print('PASS scripted backend: CA$75 clear; recipient-only change verification; CA$180 proposal blocked; injected instructions powerless; missing currency/amount clarification; stale authentication blocks policy writes and preserves policy.')
+    print('PASS scripted backend: CA$75 clear; recipient-only verification; CA$180 blocked; injection powerless; missing fields clarification; blocked/held/cancelled/signed-out checkout refused with no attempts; old or absent authentication evidence refuses policy writes.')
 finally:
     for pid in ids: rpc('cancel_purchase', {'_pid':pid,'_reason':'Scripted safeguard check completed'})
