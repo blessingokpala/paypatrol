@@ -71,7 +71,7 @@ export const captureSandboxOrder = createServerFn({ method: "POST" })
     if (!candidate) throw new Error("No payment attempt exists");
     const { data: raw, error } = await context.supabase.rpc("prepare_sandbox_capture", { _attempt: candidate.id });
     if (error || !raw) throw new Error(error?.message ?? "Capture refused");
-    const attempt = raw as unknown as PaymentSnapshot;
+    const attempt = raw as unknown as PaymentSnapshot & { execute_capture: boolean };
     const { data: stored } = await context.supabase.from("paypal_orders").select("paypal_order_id").eq("payment_attempt_id", attempt.id).single();
     if (!stored) throw new Error("No verified PayPal order exists");
     const clientId = process.env["PAYPAL_CLIENT_ID"], secret = process.env["PAYPAL_CLIENT_SECRET"];
@@ -80,8 +80,11 @@ export const captureSandboxOrder = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     try {
       const order = validateOrder(await sandboxRequest(token, `/v2/checkout/orders/${stored.paypal_order_id}`), attempt);
-      if (order.purchase_units[0]?.payments?.captures?.length || attempt.status === "completed" || attempt.status === "confirmation_pending" || candidate.status === "capturing") return await reconcileSandboxOrder(supabaseAdmin, token, attempt, order.id);
-      if (order.status !== "APPROVED") throw new Error("Separate PayPal buyer approval is required");
+      if (order.purchase_units[0]?.payments?.captures?.length || !attempt.execute_capture) return await reconcileSandboxOrder(supabaseAdmin, token, attempt, order.id);
+      if (order.status !== "APPROVED") {
+        await supabaseAdmin.rpc("reset_uncaptured_sandbox_attempt", { _attempt: attempt.id });
+        return { status: "pending" as const, orderId: order.id, captureId: null };
+      }
       await sandboxRequest(token, `/v2/checkout/orders/${order.id}/capture`, "POST", {}, `capture-${attempt.idempotency_key}`);
       return await reconcileSandboxOrder(supabaseAdmin, token, attempt, order.id);
     } catch {

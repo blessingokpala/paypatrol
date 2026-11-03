@@ -17,10 +17,12 @@ export const getIntegrationStatus = createServerFn({ method: "POST" })
     const paypal = clientId && clientSecret
       ? await authenticateSandbox(clientId, clientSecret)
       : { connected: false as const, reason: "Sandbox credentials have not been configured." };
+    const { data: merchant } = await context.supabase.from("paypal_merchant_configs").select("merchant_id,cad_confirmed,order_validated_at").eq("org_id", data.orgId).maybeSingle();
     return {
       paypal: paypal.connected,
       paypalCheck: paypal,
-      checkoutEnabled: false,
+      checkoutEnabled: Boolean(merchant?.cad_confirmed),
+      merchant,
       gemini: Boolean(process.env["GEMINI_API_KEY"]),
     };
   });

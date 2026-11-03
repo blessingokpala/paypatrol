@@ -132,7 +132,7 @@ function Settings() {
                    <p className="font-medium">PayPal Sandbox</p>
                    {status.isFetching ? <ToneBadge tone="info">Checking authentication…</ToneBadge> : status.data?.paypal ? <ToneBadge tone="success">PayPal Sandbox connected</ToneBadge> : <ToneBadge tone="warning">PayPal not connected</ToneBadge>}
                  </div>
-                 <p className="text-xs text-muted-foreground">Checkout locked: Business merchant identity and CAD receiving are not yet verified. No order or payment has been created.</p>
+                 <p className="text-xs text-muted-foreground">{status.data?.checkoutEnabled ? `Sandbox supplier configured: ${status.data.merchant?.merchant_id}. ${status.data.merchant?.order_validated_at ? "PayPal order payee verified." : "PayPal order payee must be verified before capture."}` : "Checkout locked until an owner confirms the Sandbox supplier with recent sign-in."} A connection or order is not a completed payment.</p>
                  {status.data?.paypalCheck.connected ? <p className="text-xs text-muted-foreground">Authentication checked {new Date(status.data.paypalCheck.checkedAt).toLocaleString("en-CA")}. This is not payment confirmation.</p> : <p className="text-xs text-warning">{status.data?.paypalCheck.reason ?? (status.error ? "Could not verify the connection." : "Connection not verified.")}</p>}
                  <Button size="sm" variant="outline" disabled={status.isFetching} onClick={() => status.refetch()}>Check Sandbox connection</Button>
                  <div className="space-y-3 border-t pt-3">
