@@ -105,7 +105,7 @@ function Stat({ label, value, sub, tone, to, search }: { label: string; value: s
   return (
     <Link
       to={to as "/budget"}
-      search={search}
+      search={search ?? {}}
       className="block rounded-lg border bg-card p-4 transition-colors hover:border-brand-bright hover:bg-selected/40 focus-visible:outline-none"
       aria-label={`${label}: ${value}. Open details.`}
     >

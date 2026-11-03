@@ -97,7 +97,7 @@ function Settings() {
                   id="m-role"
                   value={role}
                   onChange={(v) => setRole(v as (typeof ROLES)[number])}
-                  options={ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] }))}
+                  options={ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] ?? r }))}
                 />
               </div>
               <Button type="submit">Add role</Button>
