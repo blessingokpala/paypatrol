@@ -1,12 +1,15 @@
 # PayPal Sandbox phase
 - [x] Securely collect credentials and verify real Sandbox OAuth.
 - [ ] Confirm the app's Business merchant identity and CAD receiving; authorise supplier enrolment without changing historical requests.
+  - CAD wallet confirmed; corrected candidate prefilled. Waiting for owner's recent sign-in and supplier configuration, then PayPal order payee verification.
 - [x] Add server-enforced recent reauthentication and unresolved-attempt edit/release guards.
-- [ ] Schedule safe background reservation expiry and test uncertain-attempt lifecycle (awaits payment lifecycle).
-- [ ] Implement persisted, idempotent order/capture/reconciliation and verified webhooks.
-- [ ] Add controlled buyer checkout with the current SDK.
+- [x] Implement persisted UUID-idempotent order/capture/reconciliation and signature-verifying webhook code.
+- [x] Add controlled buyer checkout using current SDK v6.
+- [ ] Activate and verify public webhook delivery and hourly maintenance (requires published callback URL and webhook registration).
+- [ ] Execute capture/uncertain-attempt/expiry/replay fixtures (waiting for owner configuration and provider callback setup).
 - [x] Execute separate-session concurrent CA$80/CA$100 budget test.
 - [x] Repeat real Gemini invoice upload/review/submission and scripted recipient/limit/injection/clarification checks.
-- [ ] Repeat cross-organisation file isolation and remaining payment-specific negative checks (awaits payment lifecycle).
+- [ ] Repeat cross-organisation file isolation and authenticated payer/capture race checks (waiting for required distinct account sessions).
+- [x] Verify blocked, held, cancelled and signed-out payment starts are refused without attempts; unsigned callbacks rejected.
 - [ ] Complete one real CA$75 Sandbox capture after merchant verification and buyer approval.
 - [x] Update the judges' build report with executed results and blockers, correcting the prior unexecuted SQL claim.

@@ -22,6 +22,8 @@ import { Route as AuthenticatedPurchasesIndexRouteImport } from './routes/_authe
 import { Route as AuthenticatedPurchasesIdRouteImport } from './routes/_authenticated/purchases.$id'
 import { Route as AuthenticatedPurchasesNewInvoiceRouteImport } from './routes/_authenticated/purchases.new-invoice'
 import { Route as AuthenticatedPurchasesNewProposalRouteImport } from './routes/_authenticated/purchases.new-proposal'
+import { Route as ApiPublicJobsPaypalMaintenanceRouteImport } from './routes/api/public/jobs/paypal-maintenance'
+import { Route as ApiPublicPaypalWebhookRouteImport } from './routes/api/public/paypal/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -91,6 +93,17 @@ const AuthenticatedPurchasesNewProposalRoute =
     path: '/purchases/new-proposal',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicJobsPaypalMaintenanceRoute =
+  ApiPublicJobsPaypalMaintenanceRouteImport.update({
+    id: '/api/public/jobs/paypal-maintenance',
+    path: '/api/public/jobs/paypal-maintenance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaypalWebhookRoute = ApiPublicPaypalWebhookRouteImport.update({
+  id: '/api/public/paypal/webhook',
+  path: '/api/public/paypal/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -105,6 +118,8 @@ export interface FileRoutesByFullPath {
   '/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
   '/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
   '/purchases/': typeof AuthenticatedPurchasesIndexRoute
+  '/api/public/jobs/paypal-maintenance': typeof ApiPublicJobsPaypalMaintenanceRoute
+  '/api/public/paypal/webhook': typeof ApiPublicPaypalWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -119,6 +134,8 @@ export interface FileRoutesByTo {
   '/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
   '/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
   '/purchases': typeof AuthenticatedPurchasesIndexRoute
+  '/api/public/jobs/paypal-maintenance': typeof ApiPublicJobsPaypalMaintenanceRoute
+  '/api/public/paypal/webhook': typeof ApiPublicPaypalWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -135,6 +152,8 @@ export interface FileRoutesById {
   '/_authenticated/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
   '/_authenticated/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
   '/_authenticated/purchases/': typeof AuthenticatedPurchasesIndexRoute
+  '/api/public/jobs/paypal-maintenance': typeof ApiPublicJobsPaypalMaintenanceRoute
+  '/api/public/paypal/webhook': typeof ApiPublicPaypalWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,6 +170,8 @@ export interface FileRouteTypes {
     | '/purchases/new-invoice'
     | '/purchases/new-proposal'
     | '/purchases/'
+    | '/api/public/jobs/paypal-maintenance'
+    | '/api/public/paypal/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -165,6 +186,8 @@ export interface FileRouteTypes {
     | '/purchases/new-invoice'
     | '/purchases/new-proposal'
     | '/purchases'
+    | '/api/public/jobs/paypal-maintenance'
+    | '/api/public/paypal/webhook'
   id:
     | '__root__'
     | '/'
@@ -180,12 +203,16 @@ export interface FileRouteTypes {
     | '/_authenticated/purchases/new-invoice'
     | '/_authenticated/purchases/new-proposal'
     | '/_authenticated/purchases/'
+    | '/api/public/jobs/paypal-maintenance'
+    | '/api/public/paypal/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicJobsPaypalMaintenanceRoute: typeof ApiPublicJobsPaypalMaintenanceRoute
+  ApiPublicPaypalWebhookRoute: typeof ApiPublicPaypalWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -281,6 +308,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPurchasesNewProposalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/jobs/paypal-maintenance': {
+      id: '/api/public/jobs/paypal-maintenance'
+      path: '/api/public/jobs/paypal-maintenance'
+      fullPath: '/api/public/jobs/paypal-maintenance'
+      preLoaderRoute: typeof ApiPublicJobsPaypalMaintenanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/paypal/webhook': {
+      id: '/api/public/paypal/webhook'
+      path: '/api/public/paypal/webhook'
+      fullPath: '/api/public/paypal/webhook'
+      preLoaderRoute: typeof ApiPublicPaypalWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -318,6 +359,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicJobsPaypalMaintenanceRoute: ApiPublicJobsPaypalMaintenanceRoute,
+  ApiPublicPaypalWebhookRoute: ApiPublicPaypalWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

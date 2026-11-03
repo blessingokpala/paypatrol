@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { RecentSignin } from "@/components/recent-signin";
+import { SandboxCheckout } from "@/components/sandbox-checkout";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
   head: () => ({ meta: [{ title: "Request review — PayPatrol" }, { name: "description", content: "Compare a request against approved records." }, { property: "og:title", content: "Request review — PayPatrol" }, { property: "og:description", content: "Invoice evidence, recipient comparison and payment controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -211,8 +212,8 @@ function Review() {
           )}
           {activeRes && (
             <>
-              <p className="text-sm">Reserved {formatMinor(activeRes.amount_minor, activeRes.currency)} for v{activeRes.purchase_version}. <span className="font-semibold text-warning">Checkout locked pending merchant verification</span> — no order has been created.</p>
-              {org.has("payer", "owner") && <Button variant="outline" onClick={() => call(() => supabase.rpc("release_reservation", { _pid: p.id }), "Reservation released")}>Release reservation</Button>}
+              <p className="text-sm">Reserved {formatMinor(activeRes.amount_minor, activeRes.currency)} for v{activeRes.purchase_version}. Uncertain payments keep their reserved budget.</p>
+              {org.has("payer", "owner") && p.status !== "payment_pending" && <Button variant="outline" onClick={() => call(() => supabase.rpc("release_reservation", { _pid: p.id }), "Reservation released")}>Release reservation</Button>}
             </>
           )}
           {!["paid", "payment_pending", "cancelled"].includes(p.status) && (
@@ -220,6 +221,7 @@ function Review() {
           )}
           <Button variant="ghost" onClick={() => call(() => supabase.rpc("recheck_purchase", { _pid: p.id }), "Checks re-run")}>Re-run checks</Button>
         </div>
+        {org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending", "paid"].includes(p.status) && <SandboxCheckout purchaseId={p.id} onDone={refresh} />}
       </Panel>
     </>
   );
