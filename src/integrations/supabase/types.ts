@@ -1205,6 +1205,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      org_budget_summary: { Args: { _org: string }; Returns: Json }
       org_week_start: { Args: { _tz: string }; Returns: string }
       purchase_digest: { Args: { _pid: string }; Returns: string }
       recheck_purchase: {
