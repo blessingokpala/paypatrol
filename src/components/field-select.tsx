@@ -31,7 +31,7 @@ export function FieldSelect({
     <Select
       value={value === "" ? NONE : value}
       onValueChange={(v) => onChange(v === NONE ? "" : v)}
-      disabled={disabled}
+      disabled={disabled ?? false}
     >
       <SelectTrigger id={id} aria-label={ariaLabel} className="bg-card [&>span]:pr-4">
         <SelectValue placeholder={placeholder} />
