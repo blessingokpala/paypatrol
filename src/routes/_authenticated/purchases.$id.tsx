@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
+import type { Excerpt, Extraction } from "@/lib/ai/schemas";
 import { useOrg, useProfiles } from "@/lib/org";
 import { useRefreshAll } from "@/lib/queries";
 import { formatMinor, minorToInput, parseToMinor } from "@/lib/money";
@@ -23,7 +26,7 @@ function useReview(id: string) {
     queryFn: async () => {
       const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name)").eq("id", id).single();
       if (error) throw error;
-      const [items, docs, findings, crs, approvals, res, sv] = await Promise.all([
+      const [items, docs, findings, crs, approvals, res, sv, exs] = await Promise.all([
         supabase.from("purchase_line_items").select("*").eq("purchase_id", id),
         supabase.from("invoice_documents").select("*").eq("purchase_id", id),
         supabase.from("findings").select("*").eq("purchase_id", id).eq("purchase_version", p.version).order("created_at"),
@@ -31,10 +34,11 @@ function useReview(id: string) {
         supabase.from("approvals").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
         supabase.from("budget_reservations").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
         p.supplier_version_id ? supabase.from("supplier_versions").select("*").eq("id", p.supplier_version_id).single() : Promise.resolve({ data: null }),
+        supabase.from("ai_extractions").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
       ]);
       const crIds = (crs.data ?? []).map((c) => c.id);
       const verifs = crIds.length ? await supabase.from("verification_records").select("*").in("change_request_id", crIds).order("created_at") : { data: [] };
-      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [] };
+      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [] };
     },
   });
 }
@@ -49,7 +53,9 @@ function Review() {
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (q.error || !q.data) return <p className="text-sm text-blocked">Request not found or not available to you.</p>;
-  const { p, items, docs, findings, crs, approvals, res, sv, verifs } = q.data;
+  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs } = q.data;
+  const readInvoice = useServerFn(extractInvoiceDetails);
+  const [reading, setReading] = useState(false);
   const recipientDiffers = sv && p.requested_recipient && p.requested_recipient.trim().toLowerCase() !== sv.paypal_merchant_id.toLowerCase();
   const activeRes = res.find((r) => r.status === "active");
 
@@ -90,7 +96,7 @@ function Review() {
             <div className="space-y-2 text-sm">
               <p>Submitted fields (as received):</p>
               <pre className="whitespace-pre-wrap rounded-md border bg-muted p-3 text-xs">{JSON.stringify(p.ai_claims, null, 2)}</pre>
-              <p className="text-xs text-muted-foreground">The server resolved price, total, currency and recipient from the approved listing and supplier record. No AI model is connected.</p>
+              <p className="text-xs text-muted-foreground">These are the assistant's own claims. The server resolved price, total, currency and recipient from the approved listing and supplier record.</p>
             </div>
           )}
         </Panel>
@@ -113,6 +119,33 @@ function Review() {
           )}
         </Panel>
       </div>
+
+      <Panel title="What AI read from the document" className="mt-6">
+        {exs.length > 0 ? (
+          <ExtractionView row={exs[0]} />
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">No AI reading recorded for this request.</p>
+            {docs[0]?.storage_path && org.has("preparer", "owner") && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={reading}
+                onClick={async () => {
+                  setReading(true);
+                  const out = await readInvoice({ data: { orgId: org.orgId, storagePath: docs[0].storage_path!, fileName: docs[0].file_name ?? "document" } });
+                  setReading(false);
+                  if (!out.ok) { toast.error(out.error.message); return; }
+                  await supabase.rpc("link_extraction", { _extraction: out.extractionId, _purchase: id });
+                  refresh();
+                }}
+              >
+                {reading ? "Reading…" : "Read this document with AI"}
+              </Button>
+            )}
+          </div>
+        )}
+      </Panel>
 
       <Panel title="Recipient comparison" className="mt-6">
         <div className="grid gap-4 sm:grid-cols-2">
