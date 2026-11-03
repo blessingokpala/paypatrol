@@ -67,7 +67,7 @@ function NewInvoice() {
 
   const dirty = edited.size > 0 || file !== null;
   useBlocker({
-    shouldBlockFn: () => dirty && !busy,
+    shouldBlockFn: () => dirty && !busy && !window.confirm("Leave this form? Your unsaved entries will be lost."),
     enableBeforeUnload: dirty && !busy,
   });
 
