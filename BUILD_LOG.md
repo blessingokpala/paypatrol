@@ -311,3 +311,19 @@ https://developer.paypal.com/docs/api/webhooks/v1/
 - Added PAYMENT.CAPTURE.DECLINED alongside DENIED: signature verified with PayPal → event matched to stored order/attempt → order re-read from PayPal → DENIED/DECLINED never marks Paid, never writes a capture confirmation, never releases the reservation (held for owner review). Duplicate events are deduplicated by event ID; a COMPLETED capture is never downgraded (SQL guard).
 - REFUNDED and REVERSED: explicitly unsupported in this demo — acknowledged (200) with no status or budget change. Refunds/reversals must be reconciled manually.
 - Tests performed: 18 scripted unit tests passed (incl. declined, denied, handled-event list). NOT performed: genuine signed PayPal notification receipt, duplicate/delayed real deliveries.
+
+## Checkpoint — invoice PP-CHECKOUT-20261103 consistency review (2026-11-03 17:55 UTC)
+
+**Finding.** The request was submitted at 16:27 UTC against supplier record v1 (fictional demo merchant `DEMO-MERCHANT-HARBOUR-001`), so a recipient-change request to `L8SVBX42QHT3U` was opened (`pending_verification`). At 17:03 UTC the owner, after recent sign-in, replaced the fictional baseline with approved record v2 = `L8SVBX42QHT3U` (Sandbox merchant configuration). Re-evaluation then cleared the purchase because its recipient matched v2, but the change request was never closed. It was therefore a **stale change request**, not an unresolved real-recipient discrepancy. No independent verification was ever recorded for it, and none has been fabricated.
+
+**Correction (migrations 0013–0014).**
+- New change-request status `superseded`. A server function closes only open requests whose base record was replaced by a later approved record that already lists the proposed recipient. It records a note and an audit event (`supplier_change_superseded`, `independent_verification_recorded: false`); the row and its history stay. It runs automatically whenever a supplier's current record changes.
+- Server-side hold: database triggers refuse a budget reservation, a payment attempt (order creation) and the move to capture while any change request on the purchase is open. The checker also adds `CHANGE_REQUEST_UNRESOLVED` and sets **Verification required** in that case, so status, findings and buttons agree.
+- The purchase page labels superseded requests "Closed automatically, not approved".
+
+**Tests actually run.**
+- Rolled-back probe (database): with the request set back to pending, the checker returned `verification_required` and the reservation insert was refused with "A supplier recipient change … Payment is held." All changes were undone.
+- Live reconciliation: 1 request superseded; purchase re-evaluated to `cleared_for_checkout` (amount CA$75, recipient matches v2).
+- Not run: browser screenshot of the updated page; order creation/capture under the hold (covered by the same trigger, not exercised separately).
+
+**Line items (1 × CA$75 vs extracted 3 × CA$25).** Not a saving error in the amount, and not a summary the user chose. With no approved quote linked, invoice submission stores a single line: the description and the confirmed total. The extracted 3 × CA$25 remains in the AI evidence record linked to the purchase. Total and recipient are identical. Limitation: itemised extracted lines are not yet carried into the saved request.

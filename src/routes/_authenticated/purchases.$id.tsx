@@ -282,7 +282,9 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
   return (
     <Panel title="Supplier payment-detail change" className="mt-6">
       <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{cr.status.replaceAll("_", " ")}</strong></p>
-      {cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Decision by {names[cr.decided_by ?? ""] ?? "reviewer"}: {cr.decision_note}</p>}
+      {cr.status === "superseded"
+        ? <p className="mt-1 text-sm text-muted-foreground">Closed automatically, not approved: {cr.decision_note}</p>
+        : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Decision by {names[cr.decided_by ?? ""] ?? "reviewer"}: {cr.decision_note}</p>}
       {verifs.length > 0 && (
         <ul className="mt-3 space-y-2 text-sm">
           {verifs.map((v) => (
