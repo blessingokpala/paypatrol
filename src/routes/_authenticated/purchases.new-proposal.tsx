@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useBlocker } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,9 @@ import { useListings, useRefreshAll } from "@/lib/queries";
 import { formatMinor } from "@/lib/money";
 import { proposePurchase } from "@/lib/ai/ai.functions";
 import { AI_ERROR_COPY, type AiError } from "@/lib/ai/schemas";
-import { PageHeader, Panel, ToneBadge } from "@/components/brand";
+import { PageHeader, Panel, Req, RequiredNote, ToneBadge } from "@/components/brand";
+import { BackLink } from "@/components/back-link";
+import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,20 +50,31 @@ function NewProposal() {
   const selected = (listings.data ?? []).find((l) => l.id === f.listing);
   const canSubmit = has("preparer", "owner");
 
+  const dirty = request.trim().length > 0 || f.listing !== "";
+  useBlocker({
+    shouldBlockFn: () => dirty && !busy && !asking,
+    enableBeforeUnload: dirty && !busy && !asking,
+  });
+
   async function askAssistant(e: React.FormEvent) {
     e.preventDefault();
+    if (asking) return;
     setAsking(true);
     setOutcome(null);
-    const out = (await ask({ data: { orgId, request } })) as AssistantResult;
-    setOutcome(out);
-    setAsking(false);
-    if (!out.ok) { toast.error(out.error.message || AI_ERROR_COPY[out.error.code]); return; }
-    refresh();
-    navigate({ to: "/purchases/$id", params: { id: out.purchaseId } });
+    try {
+      const out = (await ask({ data: { orgId, request } })) as AssistantResult;
+      setOutcome(out);
+      if (!out.ok) { toast.error(out.error.message || AI_ERROR_COPY[out.error.code]); return; }
+      refresh();
+      navigate({ to: "/purchases/$id", params: { id: out.purchaseId } });
+    } finally {
+      setAsking(false);
+    }
   }
 
   async function submitManual(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     if (!selected) { toast.error("Choose an approved listing."); return; }
     setBusy(true);
     const { data, error } = await supabase.rpc("submit_ai_proposal", {
@@ -71,8 +84,11 @@ function NewProposal() {
       _claimed_recipient: null as unknown as string,
       _claimed_total_minor: null as unknown as number,
     });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      setBusy(false);
+      toast.error(`Could not save: ${error.message}. Your entries are still here — try again.`);
+      return;
+    }
     refresh();
     navigate({ to: "/purchases/$id", params: { id: data as string } });
   }
@@ -81,6 +97,7 @@ function NewProposal() {
 
   return (
     <>
+      <BackLink to="/purchases" label="Back to purchases" />
       <PageHeader
         title="Create a purchase request"
         description="Ask the assistant in plain words, or pick an approved listing yourself. Either way the request is checked against approved records before anything is paid."
@@ -89,8 +106,9 @@ function NewProposal() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Panel title="Ask the assistant">
           <form onSubmit={askAssistant} className="space-y-4">
+            <RequiredNote />
             <div className="space-y-2">
-              <Label htmlFor="req">What do you need?</Label>
+              <Label htmlFor="req">What do you need?<Req /></Label>
               <Textarea
                 id="req"
                 rows={4}
@@ -119,18 +137,22 @@ function NewProposal() {
         <Panel title="Or choose an approved listing yourself">
           <form onSubmit={submitManual} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="listing">Approved listing</Label>
-              <select id="listing" value={f.listing} onChange={(e) => setF({ ...f, listing: e.target.value })} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
-                <option value="">Choose a listing</option>
-                {(listings.data ?? []).map((l) => (
-                  <option key={l.id} value={l.id}>{l.name} — {formatMinor(l.unit_price_minor, l.currency)} (limit {l.max_quantity})</option>
-                ))}
-              </select>
+              <Label htmlFor="listing">Approved listing<Req /></Label>
+              <FieldSelect
+                id="listing"
+                value={f.listing}
+                onChange={(v) => setF({ ...f, listing: v })}
+                placeholder="Choose a listing"
+                options={[
+                  { value: "", label: "Choose a listing" },
+                  ...(listings.data ?? []).map((l) => ({ value: l.id, label: `${l.name} — ${formatMinor(l.unit_price_minor, l.currency)} (limit ${l.max_quantity})` })),
+                ]}
+              />
             </div>
             {selected && (
               <div className="space-y-2">
-                <Label htmlFor="qty">Quantity (limit {selected.max_quantity})</Label>
-                <Input id="qty" type="number" min={1} max={selected.max_quantity} step={1} value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} />
+                <Label htmlFor="qty">Quantity (limit {selected.max_quantity})<Req /></Label>
+                <Input id="qty" type="number" min={1} max={selected.max_quantity} step={1} required value={f.quantity} onChange={(e) => setF({ ...f, quantity: e.target.value })} />
                 <p className="text-xs text-muted-foreground">
                   Total {formatMinor(selected.unit_price_minor * (Number(f.quantity) || 0), selected.currency)} · recipient {selected.suppliers?.name ?? "supplier on record"}
                 </p>

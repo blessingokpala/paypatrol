@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate, useBlocker } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useOrg } from "@/lib/org";
 import { useListings, useSuppliers, useRefreshAll } from "@/lib/queries";
@@ -7,7 +7,9 @@ import { formatMinor, parseToMinor } from "@/lib/money";
 import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
 import { AI_ERROR_COPY, type AiError, type Extraction } from "@/lib/ai/schemas";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader, Panel, ToneBadge } from "@/components/brand";
+import { PageHeader, Panel, Req, RequiredNote, ToneBadge } from "@/components/brand";
+import { BackLink } from "@/components/back-link";
+import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +34,16 @@ type ExtractResult =
   | { ok: true; model: string; extractionId: string; extraction: Extraction }
   | { ok: false; error: AiError };
 
+type Phase = "idle" | "uploading" | "reading" | "ready" | "failed";
+
+const PHASE_TEXT: Record<Phase, string | null> = {
+  idle: null,
+  uploading: "Uploading invoice…",
+  reading: "Reading invoice…",
+  ready: "Ready to review — check every field before submitting.",
+  failed: "Could not read invoice. You can enter every detail by hand.",
+};
+
 function NewInvoice() {
   const { orgId, has } = useOrg();
   const suppliers = useSuppliers(orgId);
@@ -41,24 +53,39 @@ function NewInvoice() {
   const readInvoice = useServerFn(extractInvoiceDetails);
 
   const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", contact: "", category: "packaging", description: "", message: "" });
+  const [edited, setEdited] = useState<Set<keyof typeof f>>(new Set());
   const [quote, setQuote] = useState({ listing: "", quantity: "1" });
   const [file, setFile] = useState<File | null>(null);
   const [path, setPath] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [reading, setReading] = useState(false);
+  const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [applied, setApplied] = useState(false);
+  const [amountError, setAmountError] = useState<string | null>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
+  const readSeq = useRef(0);
 
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
+  const dirty = edited.size > 0 || file !== null;
+  useBlocker({
+    shouldBlockFn: () => dirty && !busy,
+    enableBeforeUnload: dirty && !busy,
+  });
+
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setF({ ...f, [k]: e.target.value });
+    setEdited((prev) => new Set(prev).add(k));
+    if (k === "amount") setAmountError(null);
+  };
   const canSubmit = has("preparer", "owner");
   const extraction = result?.ok ? result.extraction : null;
   const supplierListings = (listings.data ?? []).filter((l) => !f.supplier || l.supplier_id === f.supplier);
   const selectedQuote = (listings.data ?? []).find((l) => l.id === quote.listing) ?? null;
+  const matchedSupplier = (suppliers.data ?? []).find((s) => s.id === f.supplier) ?? null;
 
   const flag = (field: string) =>
     extraction ? (extraction.missing_fields.includes(field) ? "missing" : extraction.uncertain_fields.includes(field) ? "uncertain" : "ok") : "ok";
 
-  async function ensureUploaded(): Promise<string | null> {
+  async function upload(): Promise<string | null> {
     if (path) return path;
     if (!file) return null;
     const objectPath = `${orgId}/${crypto.randomUUID()}-${file.name.replace(/[^\w.-]/g, "_")}`;
@@ -68,32 +95,60 @@ function NewInvoice() {
     return objectPath;
   }
 
-  async function readWithAI() {
-    if (!file) { toast.error("Choose the invoice file first."); return; }
-    setReading(true);
+  async function startRead(chosen: File) {
+    const seq = ++readSeq.current;
+    setPhase("uploading");
     setResult(null);
     setApplied(false);
-    const objectPath = await ensureUploaded();
-    if (!objectPath) { setReading(false); return; }
-    const out = (await readInvoice({ data: { orgId, storagePath: objectPath, fileName: file.name } })) as ExtractResult;
+    const objectPath = `${orgId}/${crypto.randomUUID()}-${chosen.name.replace(/[^\w.-]/g, "_")}`;
+    const up = await supabase.storage.from("invoices").upload(objectPath, chosen);
+    if (seq !== readSeq.current) return; // a newer file replaced this one
+    if (up.error) {
+      setPhase("failed");
+      toast.error(`Upload failed: ${up.error.message}`);
+      return;
+    }
+    setPath(objectPath);
+    setPhase("reading");
+    const out = (await readInvoice({ data: { orgId, storagePath: objectPath, fileName: chosen.name } })) as ExtractResult;
+    if (seq !== readSeq.current) return;
     setResult(out);
+    setPhase(out.ok ? "ready" : "failed");
     if (!out.ok) toast.error(out.error.message);
-    setReading(false);
+  }
+
+  function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
+    const chosen = e.target.files?.[0] ?? null;
+    setFile(chosen);
+    setPath(null);
+    setResult(null);
+    setApplied(false);
+    setPhase("idle");
+    if (chosen) void startRead(chosen);
   }
 
   function useExtracted() {
     if (!extraction) return;
-    const qty = extraction.line_items.reduce((n, l) => n + (Number.parseInt(l.quantity, 10) || 0), 0);
-    setF({
-      supplier: f.supplier,
+    const incoming = {
       ref: extraction.invoice_reference,
       amount: extraction.total,
       currency: extraction.currency || f.currency,
       recipient: extraction.requested_payment_recipient,
       contact: extraction.payment_change_instructions || f.contact,
-      category: f.category,
       description: extraction.line_items[0]?.description ?? f.description,
-      message: f.message,
+    };
+    const conflicts = (Object.keys(incoming) as (keyof typeof incoming)[]).filter(
+      (k) => edited.has(k) && f[k] !== incoming[k] && incoming[k],
+    );
+    if (conflicts.length > 0 && !window.confirm(`You edited ${conflicts.join(", ")} after the reading. Replace your edits with the values AI read?`)) {
+      return;
+    }
+    const qty = extraction.line_items.reduce((n, l) => n + (Number.parseInt(l.quantity, 10) || 0), 0);
+    setF({ ...f, ...incoming });
+    setEdited((prev) => {
+      const next = new Set(prev);
+      (Object.keys(incoming) as (keyof typeof incoming)[]).forEach((k) => next.delete(k));
+      return next;
     });
     if (qty > 0) setQuote((q) => ({ ...q, quantity: String(qty) }));
     setApplied(true);
@@ -103,7 +158,11 @@ function NewInvoice() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const minor = parseToMinor(f.amount);
-    if (minor === null) { toast.error("Enter the amount like 75.00"); return; }
+    if (minor === null) {
+      setAmountError("Enter the amount like 75.00");
+      amountRef.current?.focus();
+      return;
+    }
     if (applied && extraction) {
       const blocked = ["invoice_reference", "total", "currency", "requested_payment_recipient"].filter(
         (k) => extraction.missing_fields.includes(k) || extraction.uncertain_fields.includes(k),
@@ -117,7 +176,7 @@ function NewInvoice() {
       if (unresolved.length) { toast.error(`Fix these first: ${unresolved.join(", ")}`); return; }
     }
     setBusy(true);
-    const objectPath = file ? await ensureUploaded() : null;
+    const objectPath = file ? await upload() : null;
     if (file && !objectPath) { setBusy(false); return; }
     const { data, error } = await supabase.rpc("submit_invoice", {
       _org: orgId, _supplier: (f.supplier || null) as string, _invoice_ref: f.ref, _amount_minor: minor, _currency: f.currency,
@@ -125,8 +184,11 @@ function NewInvoice() {
       _storage_path: objectPath as string, _file_name: (file?.name ?? null) as string,
       _listing: (quote.listing || null) as string, _quantity: (quote.listing ? Number(quote.quantity) : null) as number,
     });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      setBusy(false);
+      toast.error(`Could not save: ${error.message}. Your entries are still here — try again.`);
+      return;
+    }
     const purchaseId = data as string;
     if (result?.ok) {
       await supabase.rpc("link_extraction", { _extraction: result.extractionId, _purchase: purchaseId });
@@ -139,9 +201,10 @@ function NewInvoice() {
 
   return (
     <>
+      <BackLink to="/purchases" label="Back to purchases" />
       <PageHeader
         title="Check an invoice"
-        description="Attach the invoice and let AI read it, or type the details yourself. Nothing is checked until you confirm what you see."
+        description="Attach the invoice and AI starts reading it straight away, or type the details yourself. Nothing is checked until you confirm what you see."
       />
       <form onSubmit={submit} className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-6">
@@ -149,18 +212,20 @@ function NewInvoice() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="file">Invoice file (PDF, PNG or JPEG — private)</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg"
-                  onChange={(e) => { setFile(e.target.files?.[0] ?? null); setPath(null); setResult(null); setApplied(false); }}
-                />
+                <Input id="file" type="file" accept=".pdf,.png,.jpg,.jpeg" onChange={onFileChosen} />
                 <p className="text-xs text-muted-foreground">Stored privately for your organisation only.</p>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" variant="outline" onClick={readWithAI} disabled={reading || !file}>
-                  {reading ? "Reading…" : "Read invoice with AI"}
-                </Button>
+              <div className="flex flex-wrap items-center gap-2" aria-live="polite">
+                {phase !== "idle" && (
+                  <ToneBadge tone={phase === "ready" ? "success" : phase === "failed" ? "warning" : "info"}>
+                    {PHASE_TEXT[phase]}
+                  </ToneBadge>
+                )}
+                {file && (phase === "failed" || phase === "ready") && (
+                  <Button type="button" variant="outline" size="sm" onClick={() => void startRead(file)}>
+                    Read again
+                  </Button>
+                )}
                 {result?.ok && <span className="text-xs text-muted-foreground">Model: {result.model}</span>}
               </div>
               <div className="space-y-2">
@@ -253,22 +318,40 @@ function NewInvoice() {
 
         <Panel title="Invoice details">
           <div className="space-y-4">
+            <RequiredNote />
             <div className="space-y-2">
-              <Label htmlFor="supplier">Supplier</Label>
-              <select id="supplier" value={f.supplier} onChange={set("supplier")} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
-                <option value="">Not matched to an approved supplier</option>
-                {(suppliers.data ?? []).map((s) => <option key={s.id} value={s.id}>{s.name}{s.status !== "active" ? ` (${s.status.replace("_", " ")})` : ""}</option>)}
-              </select>
+              <Label htmlFor="supplier">Approved supplier match</Label>
+              <FieldSelect
+                id="supplier"
+                value={f.supplier}
+                onChange={(v) => { setF({ ...f, supplier: v }); setEdited((prev) => new Set(prev).add("supplier")); }}
+                placeholder="Not matched to an approved supplier"
+                options={[
+                  { value: "", label: "Not matched to an approved supplier" },
+                  ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.status !== "active" ? ` (${s.status.replace("_", " ")})` : ""}` })),
+                ]}
+              />
+              {extraction?.supplier_name && (
+                <p className="text-xs text-muted-foreground">
+                  Supplier named on the invoice: <span className="font-medium text-foreground">{extraction.supplier_name}</span>
+                  {matchedSupplier ? ` — you matched it to the approved record “${matchedSupplier.name}”.` : " — choose the matching approved supplier yourself; AI never matches it for you."}
+                </p>
+              )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="ref">Invoice reference</Label><Input id="ref" value={f.ref} onChange={set("ref")} /></div>
               <div className="space-y-2"><Label htmlFor="cat">Category</Label><Input id="cat" value={f.category} onChange={set("category")} /></div>
-              <div className="space-y-2"><Label htmlFor="amt">Amount</Label><Input id="amt" inputMode="decimal" required value={f.amount} onChange={set("amount")} placeholder="75.00" /></div>
-              <div className="space-y-2"><Label htmlFor="cur">Currency</Label><Input id="cur" required maxLength={3} value={f.currency} onChange={set("currency")} /></div>
+              <div className="space-y-2">
+                <Label htmlFor="amt">Amount<Req /></Label>
+                <Input id="amt" ref={amountRef} inputMode="decimal" required value={f.amount} onChange={set("amount")} placeholder="75.00" aria-invalid={Boolean(amountError)} aria-describedby={amountError ? "amt-error" : undefined} />
+                {amountError && <p id="amt-error" className="text-xs text-blocked">{amountError}</p>}
+              </div>
+              <div className="space-y-2"><Label htmlFor="cur">Currency<Req /></Label><Input id="cur" required maxLength={3} value={f.currency} onChange={set("currency")} /></div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="rec">Payment recipient on the invoice (PayPal merchant ID)</Label>
               <Input id="rec" value={f.recipient} onChange={set("recipient")} />
+              <p className="text-xs text-muted-foreground">Kept exactly as the invoice states it. It is never replaced by the approved supplier record.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact">Contact details given in the invoice or message</Label>
@@ -278,10 +361,16 @@ function NewInvoice() {
 
             <div className="space-y-2 border-t pt-4">
               <Label htmlFor="quote">Approved quote to check against (optional)</Label>
-              <select id="quote" value={quote.listing} onChange={(e) => setQuote((q) => ({ ...q, listing: e.target.value }))} className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm">
-                <option value="">No approved quote linked</option>
-                {supplierListings.map((l) => <option key={l.id} value={l.id}>{l.name} — {formatMinor(l.unit_price_minor, l.currency)}</option>)}
-              </select>
+              <FieldSelect
+                id="quote"
+                value={quote.listing}
+                onChange={(v) => setQuote((q) => ({ ...q, listing: v }))}
+                placeholder="No approved quote linked"
+                options={[
+                  { value: "", label: "No approved quote linked" },
+                  ...supplierListings.map((l) => ({ value: l.id, label: `${l.name} — ${formatMinor(l.unit_price_minor, l.currency)}` })),
+                ]}
+              />
               {selectedQuote && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">

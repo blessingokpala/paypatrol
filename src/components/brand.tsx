@@ -95,3 +95,20 @@ export function FixtureTag({ label }: { label?: string | null }) {
 export function EmptyState({ children }: { children: ReactNode }) {
   return <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">{children}</p>;
 }
+
+/** Red asterisk marking a genuinely mandatory field. Pair with RequiredNote once per form. */
+export function Req() {
+  return (
+    <span className="text-destructive" aria-hidden>
+      {" *"}
+    </span>
+  );
+}
+
+export function RequiredNote() {
+  return (
+    <p className="text-xs text-muted-foreground">
+      <span className="text-destructive" aria-hidden>*</span> Required
+    </p>
+  );
+}

@@ -1,17 +1,21 @@
-# PayPal Sandbox phase
-- [x] Give exact recent-sign-in supplier action, publishing/webhook steps and separate Personal CA$75 checkout instructions; document no actual checkout yet.
-- [x] Validate known provider order identity and capture POST response; test mismatched merchant/amount and pending/denied/error confirmation without real payments.
-- [x] Securely collect credentials and verify real Sandbox OAuth.
-- [ ] Confirm the app's Business merchant identity and CAD receiving; authorise supplier enrolment without changing historical requests.
-  - CAD wallet confirmed; corrected candidate prefilled. Waiting for owner's recent sign-in and supplier configuration, then PayPal order payee verification.
-- [x] Add server-enforced recent reauthentication and unresolved-attempt edit/release guards.
-- [x] Implement persisted UUID-idempotent order/capture/reconciliation and signature-verifying webhook code.
-- [x] Add controlled buyer checkout using current SDK v6.
-- [ ] Activate and verify public webhook delivery and hourly maintenance (requires published callback URL and webhook registration).
-- [ ] Execute capture/uncertain-attempt/expiry/replay fixtures (waiting for owner configuration and provider callback setup).
-- [x] Execute separate-session concurrent CA$80/CA$100 budget test.
-- [x] Repeat real Gemini invoice upload/review/submission and scripted recipient/limit/injection/clarification checks.
-- [ ] Repeat cross-organisation file isolation and authenticated payer/capture race checks (waiting for required distinct account sessions).
-- [x] Verify blocked, held, cancelled and signed-out payment starts are refused without attempts; unsigned callbacks rejected.
-- [ ] Complete one real CA$75 Sandbox capture after merchant verification and buyer approval.
-- [x] Update the judges' build report with executed results and blockers, correcting the prior unexecuted SQL claim.
+# PayPatrol roadmap
+
+## Current: usability pass (13 items from brief)
+1. Fix AI proposal submit → 404 (navigate with returned id, keep form on error, prevent duplicates)
+2. Shared accessible dropdown component (supplier, listing, org, role) — palette, keyboard, alignment
+3. Auto-start invoice extraction after upload; populate form; keep extracted vs approved distinct; don't overwrite manual edits
+4. Extraction states (Uploading / Reading / Ready / Could not read); reuse saved extraction on detail page; bounded retries
+5. "Recipient on this request" wording; specific missing-value messages; never auto-fill from baseline
+6. Overview drill-downs: cards link to budget breakdown, reserved, verification, approvals, blocked; Needs action entries link to own request; compact integrations
+7. Consistent form/layout spacing; plain-language findings (codes internal only)
+8. Lighter placeholders; red asterisk on mandatory fields; inline errors + focus first invalid
+9. Back navigation on forms/detail pages; warn on unsaved changes
+10. Password show/hide toggles on auth + recent-sign-in
+11. Purchases table selection: header checkbox, count, clear, export selected summaries (no batch approval/payment)
+12. Evidence history: readable summaries instead of raw JSON; structured detail panel; keep audit records unchanged
+13. Verify workflows end-to-end; screenshots; report tested vs unfinished
+
+## Outstanding from earlier phases
+- Partner (Change approver) review of PP-CHECKOUT-20261103 supplier change — waiting on user; CA$75 request stays on hold
+- Real PayPal sandbox checkout + genuine signed webhook — after partner review
+- Cross-org invoice isolation re-test

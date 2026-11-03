@@ -61,7 +61,7 @@ function Approvals() {
                   <div><dt className="text-muted-foreground">Fingerprint</dt><dd className="font-mono text-xs">{p.digest?.slice(0, 12)}</dd></div>
                 </dl>
                 <ul className="mt-3 space-y-1 text-sm">
-                  {p.findings.map((f) => <li key={f.id}><ToneBadge tone="info">{f.code}</ToneBadge> {f.message}</li>)}
+                  {p.findings.map((f) => <li key={f.id}><ToneBadge tone="info">Note</ToneBadge> {f.message}</li>)}
                 </ul>
                 {org.has("payer", "owner") && (own ? (
                   <p className="mt-3 text-sm text-muted-foreground">You submitted this request. Another payer must approve it.</p>
