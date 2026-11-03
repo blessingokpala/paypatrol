@@ -56,7 +56,7 @@ export const createSandboxOrder = createServerFn({ method: "POST" })
     const order = validateOrder(await sandboxRequest(token, "/v2/checkout/orders", "POST", {
       intent: "CAPTURE", purchase_units: [{ reference_id: attempt.id, custom_id: attempt.digest, invoice_id: `${attempt.purchase_id}-v${attempt.purchase_version}`, payee: { merchant_id: attempt.merchant_id }, amount: { currency_code: attempt.currency, value } }],
       payment_source: { paypal: { experience_context: { shipping_preference: "NO_SHIPPING", user_action: "PAY_NOW" } } },
-    }, `create-${attempt.idempotency_key}`), attempt);
+    }, attempt.idempotency_key), attempt);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const saved = await supabaseAdmin.rpc("record_sandbox_order", { _attempt: attempt.id, _order: order.id, _status: order.status, _merchant: attempt.merchant_id, _amount: attempt.amount_minor, _currency: attempt.currency });
     if (saved.error) throw new Error("PayPal order confirmation could not be saved. Reconcile the existing attempt.");
@@ -85,7 +85,7 @@ export const captureSandboxOrder = createServerFn({ method: "POST" })
         await supabaseAdmin.rpc("reset_uncaptured_sandbox_attempt", { _attempt: attempt.id });
         return { status: "pending" as const, orderId: order.id, captureId: null };
       }
-      await sandboxRequest(token, `/v2/checkout/orders/${order.id}/capture`, "POST", {}, `capture-${attempt.idempotency_key}`);
+      await sandboxRequest(token, `/v2/checkout/orders/${order.id}/capture`, "POST", {}, attempt.id);
       return await reconcileSandboxOrder(supabaseAdmin, token, attempt, order.id);
     } catch {
       await supabaseAdmin.rpc("mark_sandbox_uncertain", { _attempt: attempt.id });

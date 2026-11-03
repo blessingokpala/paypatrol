@@ -6,6 +6,7 @@ import type { PaymentSnapshot } from "@/lib/paypal-contract";
 const eventSchema = z.object({ id: z.string().min(1).max(150), event_type: z.string().max(100), resource: z.object({ supplementary_data: z.object({ related_ids: z.object({ order_id: z.string().min(1).max(100) }) }).optional(), id: z.string().optional() }) });
 export const Route = createFileRoute("/api/public/paypal/webhook")({
   server: { handlers: { POST: async ({ request }) => {
+    if (!["paypal-auth-algo", "paypal-cert-url", "paypal-transmission-id", "paypal-transmission-sig", "paypal-transmission-time"].every(name => request.headers.get(name))) return new Response("Invalid signature", { status: 401 });
     const clientId = process.env["PAYPAL_CLIENT_ID"], secret = process.env["PAYPAL_CLIENT_SECRET"], webhookId = process.env["PAYPAL_WEBHOOK_ID"];
     if (!clientId || !secret || !webhookId) return new Response("Webhook not configured", { status: 503 });
     if (Number(request.headers.get("content-length") ?? 0) > 100000) return new Response("Too large", { status: 413 });
