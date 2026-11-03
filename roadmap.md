@@ -1,4 +1,5 @@
 # PayPal Sandbox phase
+- [ ] Guide signed-back-in owner through supplier configuration, publication/webhook registration and separate Personal CA$75 checkout; record actual read-back outcomes.
 - [x] Securely collect credentials and verify real Sandbox OAuth.
 - [ ] Confirm the app's Business merchant identity and CAD receiving; authorise supplier enrolment without changing historical requests.
   - CAD wallet confirmed; corrected candidate prefilled. Waiting for owner's recent sign-in and supplier configuration, then PayPal order payee verification.
