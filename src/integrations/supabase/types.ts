@@ -476,37 +476,64 @@ export type Database = {
       }
       payment_attempts: {
         Row: {
+          amount_minor: number | null
           created_at: string
           created_by: string | null
+          currency: string | null
+          digest: string | null
           error_detail: string | null
           id: string
           idempotency_key: string
+          merchant_id: string | null
+          operation_started_at: string
           org_id: string
+          policy_id: string | null
           purchase_id: string
           purchase_version: number
+          reservation_id: string | null
           status: string
+          supplier_version_id: string | null
+          updated_at: string
         }
         Insert: {
+          amount_minor?: number | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
+          digest?: string | null
           error_detail?: string | null
           id?: string
           idempotency_key: string
+          merchant_id?: string | null
+          operation_started_at?: string
           org_id: string
+          policy_id?: string | null
           purchase_id: string
           purchase_version: number
+          reservation_id?: string | null
           status?: string
+          supplier_version_id?: string | null
+          updated_at?: string
         }
         Update: {
+          amount_minor?: number | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
+          digest?: string | null
           error_detail?: string | null
           id?: string
           idempotency_key?: string
+          merchant_id?: string | null
+          operation_started_at?: string
           org_id?: string
+          policy_id?: string | null
           purchase_id?: string
           purchase_version?: number
+          reservation_id?: string | null
           status?: string
+          supplier_version_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -521,6 +548,13 @@ export type Database = {
             columns: ["purchase_id"]
             isOneToOne: false
             referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "budget_reservations"
             referencedColumns: ["id"]
           },
         ]
@@ -572,6 +606,54 @@ export type Database = {
             columns: ["paypal_order_row_id"]
             isOneToOne: false
             referencedRelation: "paypal_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paypal_merchant_configs: {
+        Row: {
+          authentication_checked_at: string
+          cad_confirmed: boolean
+          configured_at: string
+          configured_by: string
+          merchant_id: string
+          order_validated_at: string | null
+          org_id: string
+          supplier_id: string
+        }
+        Insert: {
+          authentication_checked_at?: string
+          cad_confirmed?: boolean
+          configured_at?: string
+          configured_by: string
+          merchant_id: string
+          order_validated_at?: string | null
+          org_id: string
+          supplier_id: string
+        }
+        Update: {
+          authentication_checked_at?: string
+          cad_confirmed?: boolean
+          configured_at?: string
+          configured_by?: string
+          merchant_id?: string
+          order_validated_at?: string | null
+          org_id?: string
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paypal_merchant_configs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paypal_merchant_configs_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1205,8 +1287,18 @@ export type Database = {
         Args: { _supplier: string }
         Returns: undefined
       }
+      begin_sandbox_payment: { Args: { _pid: string }; Returns: Json }
       cancel_purchase: {
         Args: { _pid: string; _reason: string }
+        Returns: undefined
+      }
+      configure_sandbox_merchant: {
+        Args: {
+          _actor: string
+          _merchant: string
+          _org: string
+          _supplier: string
+        }
         Returns: undefined
       }
       create_organization: {
@@ -1249,6 +1341,7 @@ export type Database = {
         Returns: Database["public"]["Enums"]["purchase_status"]
       }
       expire_safe_reservations: { Args: { _org: string }; Returns: number }
+      finish_sandbox_event: { Args: { _event: string }; Returns: undefined }
       has_org_role: {
         Args: {
           _org: string
@@ -1277,8 +1370,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_sandbox_uncertain: { Args: { _attempt: string }; Returns: undefined }
       org_budget_summary: { Args: { _org: string }; Returns: Json }
       org_week_start: { Args: { _tz: string }; Returns: string }
+      prepare_sandbox_capture: { Args: { _attempt: string }; Returns: Json }
       purchase_digest: { Args: { _pid: string }; Returns: string }
       recheck_purchase: {
         Args: { _pid: string }
@@ -1297,6 +1392,29 @@ export type Database = {
         }
         Returns: string
       }
+      record_sandbox_capture: {
+        Args: {
+          _amount: number
+          _attempt: string
+          _capture: string
+          _currency: string
+          _merchant: string
+          _order: string
+          _status: string
+        }
+        Returns: undefined
+      }
+      record_sandbox_order: {
+        Args: {
+          _amount: number
+          _attempt: string
+          _currency: string
+          _merchant: string
+          _order: string
+          _status: string
+        }
+        Returns: undefined
+      }
       record_verification: {
         Args: {
           _channel_value: string
@@ -1307,6 +1425,10 @@ export type Database = {
           _person: string
         }
         Returns: string
+      }
+      record_verified_sandbox_event: {
+        Args: { _event: string; _order: string; _type: string }
+        Returns: boolean
       }
       release_reservation: { Args: { _pid: string }; Returns: undefined }
       remove_member_role: {

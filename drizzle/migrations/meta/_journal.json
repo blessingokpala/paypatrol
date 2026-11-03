@@ -71,6 +71,13 @@
       "when": 1793722019256,
       "tag": "0009_recent_reauth_and_safe_reservation_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793722781709,
+      "tag": "0010_sandbox_payment_lifecycle",
+      "breakpoints": true
     }
   ]
 }
