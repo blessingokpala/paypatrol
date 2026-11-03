@@ -5,6 +5,7 @@ import { useOrg } from "@/lib/org";
 import { useBudget, usePurchases } from "@/lib/queries";
 import { formatMinor } from "@/lib/money";
 import { getAiStatus } from "@/lib/ai/ai.functions";
+import { getIntegrationStatus } from "@/lib/integrations.functions";
 import { EmptyState, FixtureTag, PageHeader, Panel, StatusBadge, ToneBadge } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { FileText, Sparkles } from "lucide-react";
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/overview")({
 });
 
 function Overview() {
-  const { orgId } = useOrg();
+  const { orgId, has } = useOrg();
   const budget = useBudget(orgId);
   const purchases = usePurchases(orgId);
   const list = purchases.data ?? [];
@@ -26,6 +27,8 @@ function Overview() {
   const aiFn = useServerFn(getAiStatus);
   const ai = useQuery({ queryKey: ["ai-status", orgId], enabled: Boolean(orgId), queryFn: () => aiFn({ data: { orgId } }) });
   const aiConnected = Boolean(ai.data?.configured && ai.data?.lastRequestAt);
+  const intFn = useServerFn(getIntegrationStatus);
+  const int = useQuery({ queryKey: ["integrations", orgId], enabled: has("owner"), queryFn: () => intFn({ data: { orgId } }) });
 
   return (
     <>
@@ -39,11 +42,12 @@ function Overview() {
           </>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Available this week" value={b ? formatMinor(b.available_minor, b.currency) : "—"} sub={b ? `of ${formatMinor(b.weekly_limit_minor, b.currency)} weekly limit` : undefined} />
-        <Stat label="Reserved" value={b ? formatMinor(b.reserved_minor, b.currency) : "—"} sub={b ? `Spent ${formatMinor(b.spent_minor, b.currency)} · week starts ${new Date(b.week_start).toLocaleDateString("en-CA", { timeZone: b.timezone })} (${b.timezone})` : undefined} />
-        <Stat label="Awaiting verification" value={String(verif.length)} sub="Changed payment details" tone="warning" />
-        <Stat label="Pending approvals" value={String(approvals.length)} sub={`${blocked.length} blocked`} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Stat to="/budget" label="Available this week" value={b ? formatMinor(b.available_minor, b.currency) : "—"} sub={b ? `of ${formatMinor(b.weekly_limit_minor, b.currency)} weekly limit` : undefined} />
+        <Stat to="/budget" label="Reserved" value={b ? formatMinor(b.reserved_minor, b.currency) : "—"} sub={b ? `Spent ${formatMinor(b.spent_minor, b.currency)} this week` : undefined} />
+        <Stat to="/purchases" search={{ status: "verification_required" }} label="Awaiting verification" value={String(verif.length)} sub="Changed payment details" tone="warning" />
+        <Stat to="/approvals" label="Pending approvals" value={String(approvals.length)} sub="Requests awaiting spending approval" />
+        <Stat to="/purchases" search={{ status: "blocked" }} label="Blocked requests" value={String(blocked.length)} sub="Failed a spending rule" tone={blocked.length ? "blocked" : undefined} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -67,19 +71,29 @@ function Overview() {
             </ul>
           )}
         </Panel>
-        <Panel title="Integrations">
+        <Panel title="Integrations" actions={<Link to="/settings" className="text-sm text-brand-bright underline-offset-2 hover:underline">Team & integrations</Link>}>
           <ul className="space-y-3 text-sm">
             <li className="flex items-center justify-between gap-2">
               <span>AI extraction and proposals</span>
               {aiConnected ? <ToneBadge tone="success">AI connected · {ai.data?.model}</ToneBadge> : <ToneBadge tone="warning">AI not connected</ToneBadge>}
             </li>
-            <li className="flex items-center justify-between gap-2"><span>PayPal checkout</span><ToneBadge tone="warning">Merchant verification required</ToneBadge></li>
+            <li className="flex items-center justify-between gap-2">
+              <span>PayPal checkout</span>
+              {!has("owner") ? (
+                <span className="text-xs text-muted-foreground">Visible to owners</span>
+              ) : int.isFetching ? (
+                <ToneBadge tone="info">Checking…</ToneBadge>
+              ) : int.data?.checkoutEnabled ? (
+                <ToneBadge tone="success">Sandbox supplier configured</ToneBadge>
+              ) : int.data?.paypal ? (
+                <ToneBadge tone="warning">Connected · supplier not configured</ToneBadge>
+              ) : (
+                <ToneBadge tone="warning">PayPal not connected</ToneBadge>
+              )}
+            </li>
           </ul>
           <p className="mt-4 text-xs text-muted-foreground">
-            {aiConnected
-              ? "AI reads attached invoices and can draft requests from approved listings. Every value is shown beside the document it came from and checked against approved records; nothing is approved or paid by AI."
-              : "Invoice details are entered by hand. AI is not connected, so nothing is read from documents automatically."}
-            {" "}PayPal checkout is locked pending merchant verification: no orders are created and no payment is shown as completed.
+            AI output and PayPal connections never approve, verify or pay by themselves. Details and checks live under Team & integrations.
           </p>
         </Panel>
       </div>
@@ -87,12 +101,17 @@ function Overview() {
   );
 }
 
-function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string | undefined; tone?: "warning" }) {
+function Stat({ label, value, sub, tone, to, search }: { label: string; value: string; sub?: string | undefined; tone?: "warning" | "blocked"; to: string; search?: Record<string, string> }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <Link
+      to={to as "/budget"}
+      search={search}
+      className="block rounded-lg border bg-card p-4 transition-colors hover:border-brand-bright hover:bg-selected/40 focus-visible:outline-none"
+      aria-label={`${label}: ${value}. Open details.`}
+    >
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={tone === "warning" ? "mt-1 text-2xl font-bold text-warning" : "mt-1 text-2xl font-bold"}>{value}</p>
+      <p className={tone === "warning" ? "mt-1 text-2xl font-bold text-warning" : tone === "blocked" ? "mt-1 text-2xl font-bold text-blocked" : "mt-1 text-2xl font-bold"}>{value}</p>
       {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
-    </div>
+    </Link>
   );
 }
