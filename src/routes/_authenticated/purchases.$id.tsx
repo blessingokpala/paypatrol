@@ -299,33 +299,79 @@ function Review() {
   );
 }
 
-function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currency: string; requested_recipient: string | null; invoice_reference: string | null; category: string | null }; onDone: () => void }) {
-  const [f, setF] = useState({ amount: minorToInput(p.total_minor), currency: p.currency, recipient: p.requested_recipient ?? "", ref: p.invoice_reference ?? "", category: p.category ?? "" });
+function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currency: string; requested_recipient: string | null; invoice_reference: string | null; category: string | null; invoice_date: string | null; due_date: string | null; buyer_name: string | null; subtotal_minor: number | null; tax_minor: number | null; shipping_minor: number | null }; onDone: () => void }) {
+  const [f, setF] = useState({
+    amount: minorToInput(p.total_minor), currency: p.currency, recipient: p.requested_recipient ?? "",
+    ref: p.invoice_reference ?? "", category: p.category ?? "",
+    invoiceDate: p.invoice_date ?? "", dueDate: p.due_date ?? "", buyer: p.buyer_name ?? "",
+    subtotal: p.subtotal_minor !== null ? minorToInput(p.subtotal_minor) : "",
+    tax: p.tax_minor !== null ? minorToInput(p.tax_minor) : "",
+    shipping: p.shipping_minor !== null ? minorToInput(p.shipping_minor) : "",
+    reason: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const money = (s: string) => (s.trim() === "" ? null : parseToMinor(s));
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     const m = parseToMinor(f.amount);
-    if (m === null) { toast.error("Enter the amount like 75.00"); return; }
-    const { error } = await supabase.rpc("edit_purchase", { _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category });
-    if (error) { toast.error(friendlyError(error)); return; }
+    if (m === null) { setError("Enter the amount like 75.00."); return; }
+    for (const [label, v] of [["Subtotal", f.subtotal], ["Tax", f.tax], ["Shipping", f.shipping]] as const) {
+      if (v.trim() !== "" && parseToMinor(v) === null) { setError(`Enter ${label.toLowerCase()} like 12.50, or leave it empty.`); return; }
+    }
+    if (!f.reason.trim()) { setError("A reason is required, so the team can see why this request changed."); return; }
+    setSaving(true);
+    const args = {
+      _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category,
+      _invoice_date: f.invoiceDate || null, _due_date: f.dueDate || null, _buyer: f.buyer,
+      _subtotal_minor: money(f.subtotal), _tax_minor: money(f.tax), _shipping_minor: money(f.shipping), _reason: f.reason.trim(),
+    };
+    const { error: rpcError } = await supabase.rpc("edit_purchase", args as unknown as Database["public"]["Functions"]["edit_purchase"]["Args"]);
+    setSaving(false);
+    if (rpcError) { setError(friendlyError(rpcError, "Saving")); return; }
     toast.success("Saved as a new version. Earlier approvals no longer apply.");
     onDone();
   }
-  const field = (k: keyof typeof f, label: string) => (
-    <div className="space-y-1"><Label htmlFor={`e-${k}`}>{label}</Label><Input id={`e-${k}`} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></div>
+  const field = (k: keyof typeof f, label: string, type = "text") => (
+    <div className="space-y-1"><Label htmlFor={`e-${k}`}>{label}</Label><Input id={`e-${k}`} type={type} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></div>
   );
   return (
     <form onSubmit={save} className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">{field("amount", "Amount")}{field("currency", "Currency")}{field("ref", "Invoice reference")}{field("category", "Category")}</div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {field("amount", "Amount")}{field("currency", "Currency")}{field("ref", "Invoice reference")}{field("category", "Category")}
+        {field("invoiceDate", "Invoice date", "date")}{field("dueDate", "Due date", "date")}{field("buyer", "Buyer")}
+        {field("subtotal", "Subtotal (optional)")}{field("tax", "Tax (optional)")}{field("shipping", "Shipping (optional)")}
+      </div>
       {field("recipient", "Recipient")}
-      <p className="text-xs text-warning">Changing amount, currency or recipient creates a new version and invalidates approvals.</p>
-      <div className="flex gap-2"><Button type="submit">Save new version</Button><Button type="button" variant="ghost" onClick={onDone}>Cancel</Button></div>
+      <div className="space-y-1">
+        <Label htmlFor="e-reason">Reason for this correction</Label>
+        <Textarea id="e-reason" required value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="Why is this changing? Recorded in Evidence history with your name." />
+      </div>
+      {error && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{error}</p>}
+      <p className="text-xs text-warning">Any change creates a new version and invalidates approvals. The uploaded document and the AI reading stay unchanged.</p>
+      <div className="flex gap-2"><Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save new version"}</Button><Button type="button" variant="ghost" onClick={onDone}>Cancel</Button></div>
     </form>
   );
 }
 
-type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decision_note: string | null };
+type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decision_note: string | null; base_version_id: string };
 type SV = { trusted_contact_channel: string; trusted_contact_value: string; paypal_merchant_id: string } | null;
 type VR = { id: string; channel: string; channel_value: string; person_contacted: string; contacted_at: string; outcome: string; evidence: string; reviewer_id: string; check_kind?: string };
+type Member = { user_id: string; role: string };
+
+function EligibleReviewers({ members, exclude, names, isOwner }: { members: Member[]; exclude: string; names: Record<string, string>; isOwner: boolean }) {
+  const eligible = [...new Set(members.filter((m) => (m.role === "change_approver" || m.role === "owner") && m.user_id !== exclude).map((m) => m.user_id))];
+  if (eligible.length > 0) return <p className="mt-1">Eligible reviewers: {eligible.map((id) => names[id] ?? "team member").join(", ")}.</p>;
+  return (
+    <p className="mt-1">
+      No eligible reviewer exists in this business yet.{" "}
+      {isOwner
+        ? <Link to="/settings" className="font-semibold underline underline-offset-2">Add a reviewer under Team &amp; integrations</Link>
+        : "Ask an owner to add a reviewer under Team & integrations."}
+    </p>
+  );
+}
 
 function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
   const [f, setF] = useState({ merchant: "", account: "", outcome: "denied", notes: "" });
