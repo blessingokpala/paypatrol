@@ -56,13 +56,6 @@ function Shell() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
 
-  async function signOut() {
-    await qc.cancelQueries();
-    qc.clear();
-    await supabase.auth.signOut();
-    navigate({ to: "/auth", search: {}, replace: true });
-  }
-
   const nav = (
     <nav aria-label="Main" className="flex flex-col gap-1">
       {NAV.map((n) => (
