@@ -155,6 +155,13 @@
       "when": 1793754743586,
       "tag": "0021_add_correction_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793754942300,
+      "tag": "0022_probe_signature_minimal",
+      "breakpoints": true
     }
   ]
 }
