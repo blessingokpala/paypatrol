@@ -1384,11 +1384,18 @@ export type Database = {
       edit_purchase: {
         Args: {
           _amount_minor: number
+          _buyer: string
           _category: string
           _currency: string
+          _due_date: string
+          _invoice_date: string
           _invoice_ref: string
           _pid: string
+          _reason: string
           _recipient: string
+          _shipping_minor: number
+          _subtotal_minor: number
+          _tax_minor: number
         }
         Returns: Database["public"]["Enums"]["purchase_status"]
       }
