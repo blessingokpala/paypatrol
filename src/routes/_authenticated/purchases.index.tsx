@@ -331,3 +331,189 @@ function Purchases() {
     </>
   );
 }
+
+/** Side panel explaining what holds a request and what the viewer may do next. Full-width on mobile. */
+function NextActionPanel({ p, here, onClose }: { p: Row; here: string; onClose: () => void }) {
+  const { has, userId } = useOrg();
+  const findings = useQuery({
+    queryKey: ["findings", p.id, p.version],
+    queryFn: async () => {
+      const { data } = await supabase.from("findings").select("*").eq("purchase_id", p.id).eq("purchase_version", p.version).order("created_at");
+      return data ?? [];
+    },
+  });
+  const status = p.status as PurchaseStatus;
+  const detail = { to: "/purchases/$id", params: { id: p.id }, search: { from: here } } as const;
+  return (
+    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={`Next action for ${p.title}`}>
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-foreground/30" onClick={onClose} />
+      <div className="absolute inset-0 overflow-y-auto bg-card p-6 sm:inset-y-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-md sm:border-l sm:shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">{p.title}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {formatMinor(p.total_minor, p.currency)} · {p.suppliers?.name ?? "Unmatched"} · submitted {new Date(p.created_at).toLocaleDateString("en-CA")}
+            </p>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose} aria-label="Close panel"><X className="h-4 w-4" /></Button>
+        </div>
+        <div className="mt-3"><StatusBadge status={p.status} /></div>
+        {status === "failed" && <p className="mt-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">A payment was attempted for this request and did not complete. Any reserved budget stays in place until the outcome is certain.</p>}
+        {status === "blocked" && <p className="mt-3 rounded-md border bg-muted p-3 text-sm">This request was stopped before any payment was attempted.</p>}
+        <h3 className="mt-4 text-xs font-semibold uppercase text-muted-foreground">What is holding it</h3>
+        {findings.isLoading ? <p className="mt-2 text-sm text-muted-foreground">Loading checks…</p> : (findings.data ?? []).length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No failed rules on the current version.</p>
+        ) : (
+          <ul className="mt-2 space-y-2">
+            {(findings.data ?? []).map((f) => (
+              <li key={f.id} className="rounded-md border p-3 text-sm">
+                <ToneBadge tone={f.severity === "block" ? "blocked" : f.severity === "warning" ? "warning" : "info"}>{f.severity === "block" ? "Failed rule" : f.severity === "warning" ? "Hold" : "Note"}</ToneBadge>
+                <p className="mt-1">{f.message}</p>
+                {f.next_action && <p className="mt-1 text-muted-foreground"><span className="font-semibold text-foreground">Next:</span> {f.next_action}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <h3 className="mt-4 text-xs font-semibold uppercase text-muted-foreground">What you can do</h3>
+        <div className="mt-2 flex flex-col items-start gap-2">
+          {status === "needs_clarification" && (has("preparer", "owner")
+            ? <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Open and complete missing details</Link></Button>
+            : <p className="text-sm text-muted-foreground">A request preparer or owner must complete the missing details.</p>)}
+          {status === "verification_required" && <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Open supplier-change review</Link></Button>}
+          {status === "approval_required" && (has("payer", "owner") && p.requested_by !== userId
+            ? <Button asChild size="sm"><Link to="/approvals" search={{ from: here }}>Review in Approvals</Link></Button>
+            : <p className="text-sm text-muted-foreground">A different team member with the payer or owner role must approve this exact version.</p>)}
+          {status === "cleared_for_checkout" && (has("payer", "owner")
+            ? <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Open checkout</Link></Button>
+            : <p className="text-sm text-muted-foreground">Only an owner or payer can reserve budget and pay.</p>)}
+          {(status === "payment_pending" || status === "failed") && <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Check payment confirmation</Link></Button>}
+          {status === "blocked" && (
+            <>
+              <Button asChild size="sm" variant="outline"><Link {...detail} onClick={() => rememberScroll(here)}>Open request</Link></Button>
+              {has("owner")
+                ? <Button asChild size="sm" variant="outline"><Link to="/rules">Review spending rules</Link></Button>
+                : <p className="text-sm text-muted-foreground">Only an owner can change the spending rules that stopped this request.</p>}
+            </>
+          )}
+          {status === "draft" && <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Open the request</Link></Button>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function whyNotApprove(p: Row, userId: string): string {
+  if (p.status !== "approval_required") return `not awaiting spending approval (${STATUS_META[p.status as PurchaseStatus]?.label ?? p.status})`;
+  if (p.requested_by === userId) return "you submitted it, so a different payer must approve it";
+  if (p.is_test_fixture) return "labelled test data";
+  return "";
+}
+function whyNotReject(p: Row): string {
+  if (p.status === "payment_pending") return "payment outcome is uncertain — never cancelled in bulk";
+  if (["paid", "failed", "cancelled"].includes(p.status)) return `already ${(STATUS_META[p.status as PurchaseStatus]?.label ?? p.status).toLowerCase()}`;
+  return "";
+}
+
+/** Controlled batch review: approve or reject only genuinely eligible requests, re-validated by the server. */
+function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose, onDone }: {
+  kind: "review" | "approve" | "reject"; rows: Row[]; approvable: Row[]; rejectable: Row[]; userId: string; here: string;
+  onClose: () => void; onDone: () => void;
+}) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [results, setResults] = useState<{ id: string; title: string; ok: boolean; message: string }[] | null>(null);
+
+  async function runApprove() {
+    setBusy(true);
+    const out: NonNullable<typeof results> = [];
+    for (const p of approvable) {
+      const { error } = await supabase.rpc("approve_purchase", { _pid: p.id, _version: p.version, _note: note || undefined });
+      out.push({ id: p.id, title: p.title, ok: !error, message: error ? friendlyError(error, "Approval") : "Approved" });
+    }
+    setResults(out);
+    setBusy(false);
+  }
+  async function runReject() {
+    if (!note.trim()) return;
+    setBusy(true);
+    const out: NonNullable<typeof results> = [];
+    for (const p of rejectable) {
+      const { error } = await supabase.rpc("cancel_purchase", { _pid: p.id, _reason: note.trim() });
+      out.push({ id: p.id, title: p.title, ok: !error, message: error ? friendlyError(error, "Rejection") : "Rejected (cancelled)" });
+    }
+    setResults(out);
+    setBusy(false);
+  }
+
+  const eligible = kind === "approve" ? approvable : rejectable;
+  const excluded = rows.filter((r) => !eligible.some((a) => a.id === r.id));
+  const why = (p: Row) => (kind === "approve" ? whyNotApprove(p, userId) : whyNotReject(p));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center" role="dialog" aria-modal="true"
+      aria-label={kind === "review" ? "Review selected" : kind === "approve" ? "Approve eligible requests" : "Reject eligible requests"}>
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-foreground/30" onClick={onClose} />
+      <div className="relative max-h-full w-full overflow-y-auto bg-card p-6 sm:max-w-lg sm:rounded-lg sm:border sm:shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-lg font-semibold">
+            {kind === "review" ? `Review ${rows.length} selected` : kind === "approve" ? "Approve eligible requests" : "Reject eligible requests"}
+          </h2>
+          <Button size="sm" variant="ghost" onClick={onClose} aria-label="Close dialog"><X className="h-4 w-4" /></Button>
+        </div>
+
+        {results ? (
+          <>
+            <ul className="mt-4 space-y-2 text-sm">
+              {results.map((r) => (
+                <li key={r.id} className="rounded-md border p-3">
+                  <span className="font-medium">{r.title}</span> — {r.ok ? <ToneBadge tone="success">{r.message}</ToneBadge> : <ToneBadge tone="blocked">{r.message}</ToneBadge>}
+                </li>
+              ))}
+            </ul>
+            <Button className="mt-4" onClick={onDone}>Done</Button>
+          </>
+        ) : kind === "review" ? (
+          <ul className="mt-4 space-y-2 text-sm">
+            {rows.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
+                <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} onClick={() => { rememberScroll(here); onClose(); }} className="font-medium text-brand-deep underline-offset-2 hover:underline">{p.title}</Link>
+                <StatusBadge status={p.status} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {kind === "approve"
+                ? "Approval applies only to the exact current version of each request. Spending limits, supplier holds and missing information are re-checked when each approval runs — selecting a request never overrides them."
+                : "Rejection cancels the request and keeps its history. Requests with an uncertain payment outcome are never included."}
+            </p>
+            <h3 className="mt-4 text-xs font-semibold uppercase text-muted-foreground">Eligible ({eligible.length})</h3>
+            <ul className="mt-2 space-y-1 text-sm">
+              {eligible.map((p) => <li key={p.id}>{p.title} — {formatMinor(p.total_minor, p.currency)}</li>)}
+              {eligible.length === 0 && <li className="text-muted-foreground">None of the selected requests are eligible.</li>}
+            </ul>
+            {excluded.length > 0 && (
+              <>
+                <h3 className="mt-4 text-xs font-semibold uppercase text-muted-foreground">Excluded ({excluded.length})</h3>
+                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                  {excluded.map((p) => <li key={p.id}>{p.title} — {why(p)}</li>)}
+                </ul>
+              </>
+            )}
+            <div className="mt-4 space-y-1">
+              <Label htmlFor="batch-note">{kind === "approve" ? "Note (optional)" : "Reason for rejection (required)"}</Label>
+              <Textarea id="batch-note" value={note} onChange={(e) => setNote(e.target.value)} />
+            </div>
+            <div className="mt-4 flex gap-2">
+              {kind === "approve"
+                ? <Button disabled={busy || eligible.length === 0} onClick={runApprove}>{busy ? "Approving…" : `Approve ${eligible.length} request${eligible.length === 1 ? "" : "s"}`}</Button>
+                : <Button variant="destructive" disabled={busy || eligible.length === 0 || !note.trim()} onClick={runReject}>{busy ? "Rejecting…" : `Reject ${eligible.length} request${eligible.length === 1 ? "" : "s"}`}</Button>}
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
