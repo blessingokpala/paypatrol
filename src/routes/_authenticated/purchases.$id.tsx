@@ -124,15 +124,52 @@ function Review() {
           )}
         </Panel>
 
+        <div id="request-details">
         <Panel title="Request details" actions={!editing && org.has("preparer", "owner") && p.source === "invoice" && !["paid", "payment_pending", "cancelled", "failed"].includes(p.status) ? <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Correct details</Button> : null}>
           {editing ? <EditForm p={p} onDone={() => { setEditing(false); refresh(); }} /> : (
+            <>
             <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name ?? "Not matched"}</dd>
-              <dt className="text-muted-foreground">Amount</dt><dd className="font-semibold">{formatMinor(p.total_minor, p.currency)}</dd>
-              <dt className="text-muted-foreground">Currency</dt><dd>{p.currency}</dd>
-              {p.source === "invoice" && <><dt className="text-muted-foreground">Invoice reference</dt><dd>{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}</dd></>}
+              <dt className="text-muted-foreground">Amount</dt><dd className="flex flex-wrap items-center gap-2 font-semibold">{formatMinor(p.total_minor, p.currency)}{moneyFromUser(p.total_minor, ex?.total) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+              <dt className="text-muted-foreground">Currency</dt><dd className="flex flex-wrap items-center gap-2">{p.currency}{fromUser(p.currency, ex?.currency) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+              {p.source === "invoice" && <><dt className="text-muted-foreground">Invoice reference</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_reference, ex?.invoice_reference) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></>}
               <dt className="text-muted-foreground">Category</dt><dd>{p.category || <span className="text-muted-foreground">Not provided</span>}</dd>
+              {p.source === "invoice" && (
+                <>
+                  <dt className="text-muted-foreground">Invoice date</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_date, ex?.invoice_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Due date</dt><dd className="flex flex-wrap items-center gap-2">{p.due_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.due_date, ex?.due_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Buyer</dt><dd className="flex flex-wrap items-center gap-2">{p.buyer_name || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.buyer_name, ex?.buyer_name) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Subtotal</dt><dd className="flex flex-wrap items-center gap-2">{p.subtotal_minor !== null ? formatMinor(p.subtotal_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.subtotal_minor, ex?.subtotal) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Tax</dt><dd className="flex flex-wrap items-center gap-2">{p.tax_minor !== null ? formatMinor(p.tax_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.tax_minor, ex?.tax) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Shipping</dt><dd className="flex flex-wrap items-center gap-2">{p.shipping_minor !== null ? formatMinor(p.shipping_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.shipping_minor, ex?.shipping) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                </>
+              )}
             </dl>
+            {amountDiffersFromExtraction && (
+              <p className="mt-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
+                The AI reading of the document says {formatMinor(exTotalMinor, p.currency)}, but this request currently says {formatMinor(p.total_minor, p.currency)}.
+                {edits.length > 0 && <> Last changed by {names[edits[edits.length - 1]!.actor_id ?? ""] ?? "a team member"} on {new Date(edits[edits.length - 1]!.created_at).toLocaleString("en-CA")}.</>}
+                {" "}Correcting the request never changes the uploaded document.
+              </p>
+            )}
+            {edits.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Correction history</p>
+                <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                  {edits.map((a) => {
+                    const d = a.details as { changed?: string[]; reason?: string; previous_version?: number };
+                    return (
+                      <li key={a.id}>
+                        v{d.previous_version ?? "?"} → v{a.entity_version ?? "?"} by {names[a.actor_id ?? ""] ?? "a team member"} on {new Date(a.created_at).toLocaleString("en-CA")}
+                        {d.changed?.length ? ` — changed ${d.changed.map((c) => humanize(c)).join(", ")}` : ""}
+                        {d.reason ? ` — reason: “${d.reason}”` : " — no reason recorded (before reasons were required)"}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            </>
           )}
           {items.length > 0 && (
             <table className="mt-4 w-full text-sm">
