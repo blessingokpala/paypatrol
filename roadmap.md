@@ -1,19 +1,18 @@
 # PayPatrol roadmap
 
 ## Done this turn (preview only, not yet published)
-- Restored compilation of the purchase detail page; correction form calls the deployed 13-arg `edit_purchase` (schema-cache error fixed at the cause)
-- Full correction workflow: all invoice fields, required reason, inline errors preserving entries, "Provided by user" / "Not found in document" / "Required before proceeding" wording, discrepancy note, correction history
-- Reviewer requirement: exact warning copy, eligible reviewers from real memberships, owner link to Team & integrations; demo suppliers show only the Sandbox account check
-- Two supplier-change records labelled current-version vs earlier history; holds still enforced
-- Extraction auto-fills untouched fields on new invoices; manual edits protected by confirmation; "Add supplier" inline pending-supplier flow with Sandbox limitation note
-- Purchases list: Next-action side panel (status, holds, amounts, role-aware actions, mobile full-width) and controlled batch Review/Export/Approve-eligible/Reject-eligible
-- Verified in browser with real backend + real Gemini reading; 45/45 tests, typecheck clean, build OK; BUILD_LOG.md updated
+- Batch decisions verified end-to-end: self/stale/blocked approvals refused server-side; mixed selection shows eligible/excluded; real 3-request batch rejection persisted after refresh
+- Fixed two defects: rejection now requires a reason server-side and refuses repeat cancellations (migration 0025); cancelling an uncaptured checkout returns the request to checkout instead of cancelling it (migration 0026)
+- Genuine Sandbox orders created twice (06Y50592YD2069013, 4BA55974F2783102M — CA$25 CAD, correct merchant); budget reserved once per checkout, released on cancel, no double-counting
+- Webhook endpoint re-verified on the published URL: 401 unsigned, 400 malformed, 401 fake signature
+- 45/45 unit tests, all 4 payment_controls.sql blocks, typecheck, build OK; BUILD_LOG.md and JUDGES_REPORT.md updated
 
-## Open
+## Open — need a human
+- [ ] Buyer approval in the PayPal popup needs the owner's Sandbox Personal login → then capture, Paid state, and genuine signed webhook can be verified (CA$25 request PP-PAYMENT-TEST-001 is ready at cleared_for_checkout)
+- [ ] Independent batch approval needs the partner's account (self-approval refused by design)
 - [ ] Publish this round (user decision)
-- [ ] Batch approve/reject execution itself untested (no eligible rows existed); eligibility display verified
-- [ ] CA$80 request (PP-CHECKOUT-20261103) stays on independent-verification hold until partner's Sandbox account check; no payment created
 
 ## Standing constraints
 - Payment-control writes only via SECURITY DEFINER RPCs; minor units; server recomputes totals
-- Never fabricate extraction/payment results; Sandbox only
+- Never fabricate extraction/payment results; Sandbox only; no credentials in chat/logs
+- CA$80 PP-CHECKOUT-20261103 stays on independent-verification hold; no payment on it

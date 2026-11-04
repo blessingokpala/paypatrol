@@ -1,4 +1,5 @@
 -- PayPatrol payment-control tests.
+-- edit_purchase calls use the 13-argument form (migration 0023): reason is required.
 -- Run each DO block with the backend SQL runner. Every block ends by raising
 -- 'RESULTS: ...' on purpose, so all test data is rolled back. Every line must read PASS
 -- (or show the expected status values).
@@ -43,7 +44,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
   v_st := public.approve_purchase(v_p2,1,'ok'); res := res || 'after approve=' || v_st || '; ';
   perform set_config('request.jwt.claims', json_build_object('sub',a,'role','authenticated')::text, true);
-  v_st := public.edit_purchase(v_p2, 12500, 'CAD', 'DEMO-MERCHANT-HARBOUR-001', 'INV-120', 'packaging');
+  v_st := public.edit_purchase(v_p2, 12500, 'CAD', 'DEMO-MERCHANT-HARBOUR-001', 'INV-120', 'packaging', null, null, null, null, null, null, 'test correction');
   select count(*) into v_n from public.approvals where purchase_id=v_p2 and is_valid;
   res := res || 'after edit=' || v_st || ' valid approvals=' || v_n || '; ';
   perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
@@ -130,7 +131,7 @@ begin
   res := res || 'OVERLIMIT findings=' || v_n || '; ';
 
   -- correcting the request keeps the quote link
-  perform public.edit_purchase(v_p, v_price, 'CAD', v_rec, 'INV-Q3', 'packaging');
+  perform public.edit_purchase(v_p, v_price, 'CAD', v_rec, 'INV-Q3', 'packaging', null, null, null, null, null, null, 'test correction');
   select count(*) into v_n from public.purchase_line_items where purchase_id = v_p and listing_id = v_listing;
   res := res || 'quote line after edit=' || v_n || '; ';
 

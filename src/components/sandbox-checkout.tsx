@@ -74,7 +74,7 @@ export function SandboxCheckout({ purchaseId, onDone }: { purchaseId: string; on
       {state.data.attempt && <Button variant="outline" disabled={busy} onClick={check}>Check payment confirmation</Button>}
       {state.data.attempt?.status === "ordered" && <Button variant="outline" disabled={busy} onClick={async () => {
         setBusy(true);
-        try { await cancelFn({ data: { purchaseId } }); setMessage("Checkout cancelled without a capture."); onDone(); void state.refetch(); }
+        try { await cancelFn({ data: { purchaseId } }); setMessage("Checkout cancelled without a capture. The request is back at checkout and can be paid again."); onDone(); void state.refetch(); }
         catch { toast.error("Cancellation was not confirmed. Check the existing payment; budget remains reserved."); }
         finally { setBusy(false); }
       }}>Cancel uncaptured checkout</Button>}
