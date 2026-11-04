@@ -281,8 +281,8 @@ function NewInvoice() {
                   <div key={key} className="contents">
                     <dt className="text-muted-foreground">{label}</dt>
                     <dd className="flex flex-wrap items-center gap-2">
-                      <span className={value ? "" : "italic text-muted-foreground"}>{value || "not stated"}</span>
-                      {flag(key) === "missing" && <ToneBadge tone="warning">Missing — needs your input</ToneBadge>}
+                      <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not found in document"}</span>
+                      {flag(key) === "missing" && <ToneBadge tone="warning">{["total", "currency", "requested_payment_recipient", "invoice_reference"].includes(key) ? "Required before proceeding" : "Optional — not found in document"}</ToneBadge>}
                       {flag(key) === "uncertain" && <ToneBadge tone="warning">Hard to read — check it</ToneBadge>}
                     </dd>
                   </div>
