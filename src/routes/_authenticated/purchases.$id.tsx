@@ -536,6 +536,9 @@ type ExtractionRow = {
   missing_fields: string[];
 };
 
+// Only these missing values actually block the checks; the rest are optional context.
+const REQUIRED_EXTRACTION_KEYS = new Set(["total", "currency", "requested_payment_recipient", "invoice_reference"]);
+
 function ExtractionView({ row }: { row: ExtractionRow }) {
   const e = row.extracted as Extraction;
   const quotes = (row.excerpts ?? []) as Excerpt[];
