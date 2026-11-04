@@ -398,3 +398,10 @@ Browser (Playwright, signed in as the owner account) unless noted. Real Gemini (
 - Keyboard-only dropdowns passed (open, move, type-ahead, select, Escape, focus return, Tab).
 - Phone width 390 px: top bar overflowed on every page (581 px); Overview list and Evidence table also overflowed. Fixed; all 11 pages measured at 390 px.
 - No reservations, orders, captures or Paid states created. CA$75 request still Verification required with no Reserve/Pay buttons.
+
+## Header redesign and notifications — 2026-11-04 00:20 UTC
+- White checkmark, larger logo; Sandbox badge moved to a sidebar-footer "Sandbox · Test money" pill plus a compact phone-width header pill.
+- Business selector container (shop icon, border, pale blue); dropdown only with multiple legitimate workspaces.
+- Avatar account menu (email, roles, owner-only Team & integrations / Spending rules links, Sign out).
+- Notification bell + panel derived from real purchases and supplier change requests; priorities urgent/action/update from explicit rules; per-user read state in new `notification_reads` table (RLS: own rows, member orgs); dedupe by stable key; 7-day window for informational events.
+- Pale blue canvas gradient into the header. 8 new unit tests (45 total pass); typecheck clean; browser-verified panel, links, mark-all-read persistence, keyboard, 390 px mobile.
