@@ -65,12 +65,26 @@ function Review() {
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (q.error || !q.data) return <p className="text-sm text-blocked">Request not found or not available to you.</p>;
-  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs } = q.data;
+  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs, members, audits } = q.data;
   const recipientDiffers = sv && p.requested_recipient && p.requested_recipient.trim().toLowerCase() !== sv.paypal_merchant_id.toLowerCase();
   const activeRes = res.find((r) => r.status === "active");
   const latestExtraction = exs[0];
   const firstDoc = docs[0];
   const isTestData = p.is_test_fixture && (p.fixture_label ?? "").toLowerCase().includes("do not reserve or pay");
+  const isDemo = Boolean((p.suppliers as { is_demo?: boolean } | null)?.is_demo);
+  const edits = audits.filter((a) => a.action === "purchase_edited");
+  const ex = (latestExtraction?.extracted ?? null) as Extraction | null;
+  // A value counts as user-provided when the request holds a value the AI reading did not supply or read differently.
+  const fromUser = (current: string | null | undefined, extracted: string | undefined) =>
+    Boolean(current && current.trim() && (extracted === undefined || extracted.trim() === "" || extracted.trim() !== current.trim()));
+  const moneyFromUser = (currentMinor: number | null | undefined, extracted: string | undefined) => {
+    if (currentMinor === null || currentMinor === undefined) return false;
+    const parsed = extracted ? parseToMinor(extracted) : null;
+    return parsed === null || parsed !== currentMinor;
+  };
+  const exTotalMinor = ex?.total ? parseToMinor(ex.total) : null;
+  const amountDiffersFromExtraction = exTotalMinor !== null && exTotalMinor !== p.total_minor;
+  const eligibleReviewers = [...new Set(members.filter((m) => (m.role === "change_approver" || m.role === "owner") && m.user_id !== p.requested_by).map((m) => m.user_id))];
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
