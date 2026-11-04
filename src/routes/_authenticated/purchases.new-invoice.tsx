@@ -66,6 +66,7 @@ function NewInvoice() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [applied, setApplied] = useState(false);
+  const [addSupplier, setAddSupplier] = useState(false);
   const [amountError, setAmountError] = useState<string | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const readSeq = useRef(0);
@@ -334,7 +335,7 @@ function NewInvoice() {
               <FieldSelect
                 id="supplier"
                 value={f.supplier}
-                onChange={(v) => { setF({ ...f, supplier: v }); setEdited((prev) => new Set(prev).add("supplier")); }}
+                onChange={(v) => { setF({ ...f, supplier: v }); markEdited("supplier"); }}
                 placeholder="Not matched to an approved supplier"
                 options={[
                   { value: "", label: "Not matched to an approved supplier" },
@@ -346,6 +347,20 @@ function NewInvoice() {
                   Supplier named on the invoice: <span className="font-medium text-foreground">{extraction.supplier_name}</span>
                   {matchedSupplier ? ` — you matched it to the approved record “${matchedSupplier.name}”.` : " — choose the matching approved supplier yourself; AI never matches it for you."}
                 </p>
+              )}
+              {has("owner", "change_approver") && (
+                <div>
+                  <Button type="button" size="sm" variant="ghost" aria-expanded={addSupplier} onClick={() => setAddSupplier((v) => !v)}>
+                    {addSupplier ? "Close add supplier" : "Add supplier"}
+                  </Button>
+                  {addSupplier && (
+                    <AddSupplierInline
+                      orgId={orgId}
+                      suggestion={{ name: extraction?.supplier_name ?? "", merchant: extraction?.requested_payment_recipient ?? "" }}
+                      onCreated={(id) => { refresh(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); }}
+                    />
+                  )}
+                </div>
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
