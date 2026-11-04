@@ -57,6 +57,8 @@ function NewInvoice() {
 
   const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", contact: "", category: "packaging", description: "", message: "" });
   const [edited, setEdited] = useState<Set<keyof typeof f>>(new Set());
+  const editedRef = useRef<Set<keyof typeof f>>(new Set());
+  const markEdited = (k: keyof typeof f) => { editedRef.current = new Set(editedRef.current).add(k); setEdited(new Set(editedRef.current)); };
   const [quote, setQuote] = useState({ listing: "", quantity: "1" });
   const [file, setFile] = useState<File | null>(null);
   const [path, setPath] = useState<string | null>(null);
@@ -76,7 +78,7 @@ function NewInvoice() {
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setF({ ...f, [k]: e.target.value });
-    setEdited((prev) => new Set(prev).add(k));
+    markEdited(k);
     if (k === "amount") setAmountError(null);
   };
   const canSubmit = has("preparer", "owner");
@@ -117,7 +119,8 @@ function NewInvoice() {
     if (seq !== readSeq.current) return;
     setResult(out);
     setPhase(out.ok ? "ready" : "failed");
-    if (!out.ok) toast.error(out.error.message);
+    if (out.ok) applyExtracted(true, out.extraction);
+    else toast.error(out.error.message);
   }
 
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
@@ -130,32 +133,34 @@ function NewInvoice() {
     if (chosen) void startRead(chosen);
   }
 
-  function useExtracted() {
-    if (!extraction) return;
+  // auto=true fills only fields the user has not touched; auto=false (the button) asks before replacing manual edits.
+  function applyExtracted(auto: boolean, ex: Extraction) {
     const incoming = {
-      ref: extraction.invoice_reference,
-      amount: extraction.total,
-      currency: extraction.currency,
-      recipient: extraction.requested_payment_recipient,
-      contact: extraction.payment_change_instructions || f.contact,
-      description: extraction.line_items[0]?.description ?? f.description,
+      ref: ex.invoice_reference,
+      amount: ex.total,
+      currency: ex.currency,
+      recipient: ex.requested_payment_recipient,
+      contact: ex.payment_change_instructions,
+      description: ex.line_items[0]?.description ?? "",
     };
-    const conflicts = (Object.keys(incoming) as (keyof typeof incoming)[]).filter(
-      (k) => edited.has(k) && f[k] !== incoming[k] && incoming[k],
-    );
-    if (conflicts.length > 0 && !window.confirm(`You edited ${conflicts.join(", ")} after the reading. Replace your edits with the values AI read?`)) {
+    const keys = (Object.keys(incoming) as (keyof typeof incoming)[]).filter((k) => Boolean(incoming[k]));
+    const conflicts = keys.filter((k) => editedRef.current.has(k) && f[k] !== incoming[k]);
+    if (!auto && conflicts.length > 0 && !window.confirm(`You edited ${conflicts.join(", ")} after the reading. Replace your edits with the values AI read?`)) {
       return;
     }
-    const qty = extraction.line_items.reduce((n, l) => n + (Number.parseInt(l.quantity, 10) || 0), 0);
-    setF({ ...f, ...incoming });
-    setEdited((prev) => {
-      const next = new Set(prev);
-      (Object.keys(incoming) as (keyof typeof incoming)[]).forEach((k) => next.delete(k));
+    const applyKeys = auto ? keys.filter((k) => !editedRef.current.has(k)) : keys;
+    if (applyKeys.length === 0) return;
+    setF((prev) => {
+      const next = { ...prev };
+      for (const k of applyKeys) next[k] = incoming[k] as string;
       return next;
     });
+    editedRef.current = new Set([...editedRef.current].filter((k) => !applyKeys.includes(k as keyof typeof incoming)));
+    setEdited(new Set(editedRef.current));
+    const qty = ex.line_items.reduce((n, l) => n + (Number.parseInt(l.quantity, 10) || 0), 0);
     if (qty > 0) setQuote((q) => ({ ...q, quantity: String(qty) }));
     setApplied(true);
-    toast.success("Extracted values filled in. Check every field before submitting.");
+    toast.success(auto ? "Extracted values filled into the empty fields. Check every field before submitting." : "Extracted values filled in. Check every field before submitting.");
   }
 
   async function submit(e: React.FormEvent) {
@@ -253,7 +258,7 @@ function NewInvoice() {
             <Panel
               title="What AI read from the document"
               actions={
-                <Button type="button" size="sm" variant="outline" onClick={useExtracted}>
+                <Button type="button" size="sm" variant="outline" onClick={() => extraction && applyExtracted(false, extraction)}>
                   {applied ? "Filled in again" : "Use these values"}
                 </Button>
               }
