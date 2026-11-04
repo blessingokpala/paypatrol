@@ -323,6 +323,11 @@ function Purchases() {
           </div>
         </>
       )}
+      {panelFor && <NextActionPanel p={panelFor} here={here} onClose={() => setPanelFor(null)} />}
+      {batch && (
+        <BatchDialog kind={batch} rows={visibleSelected} approvable={approvable} rejectable={rejectable} userId={userId} here={here}
+          onClose={() => setBatch(null)} onDone={() => { setBatch(null); setSelected(new Set()); refresh(); }} />
+      )}
     </>
   );
 }
