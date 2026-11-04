@@ -1,18 +1,16 @@
 # PayPatrol roadmap
 
-## Done previously (preview only, not yet published)
-- Correction workflow, reviewer requirement, supplier-change history labels, extraction auto-fill, Next-action panel, batch Review/Export/Approve-eligible/Reject-eligible
-- 45/45 tests, typecheck clean, build OK
+## Done this turn (preview only, not yet published)
+- Batch decisions verified end-to-end: self/stale/blocked approvals refused server-side; mixed selection shows eligible/excluded; real 3-request batch rejection persisted after refresh
+- Fixed two defects: rejection now requires a reason server-side and refuses repeat cancellations (migration 0025); cancelling an uncaptured checkout returns the request to checkout instead of cancelling it (migration 0026)
+- Genuine Sandbox orders created twice (06Y50592YD2069013, 4BA55974F2783102M — CA$25 CAD, correct merchant); budget reserved once per checkout, released on cancel, no double-counting
+- Webhook endpoint re-verified on the published URL: 401 unsigned, 400 malformed, 401 fake signature
+- 45/45 unit tests, all 4 payment_controls.sql blocks, typecheck, build OK; BUILD_LOG.md and JUDGES_REPORT.md updated
 
-## Open — release blockers (this turn)
-- [ ] 1. Verify batch approval/rejection end-to-end in the real interface (persist after refresh, reason required, mixed selections, blocked cannot bypass, unauthorised/self-approval refused, stale-version approvals rejected, no duplicate decisions, no auto budget reservation)
-- [ ] 2. Genuine PayPal Sandbox payment: new labelled test request (NOT the CA$80 "TEST" request — preserve its hold), checks → approval → reserve once → real Sandbox order → buyer approval → validated capture → Paid only on authoritative confirmation → reservation consumed once → consistent after refresh
-- [ ] 3. Webhook processing & recovery: genuine webhook signature verification, idempotency, redirect alone cannot mark Paid, cancelled-checkout recovery, declined/pending states, refresh safety, mismatch prevents capture
-- [ ] 4. Evidence report: tested version (preview/published), batch results, order/capture IDs, final status/budget, webhook results, incomplete items; update BUILD_LOG.md and testing guide
-
-## Blockers anticipated
-- Sandbox buyer approval needs the user's separate Sandbox Personal account login (human action)
-- Independent approval/Change approver may require the partner's account (human action)
+## Open — need a human
+- [ ] Buyer approval in the PayPal popup needs the owner's Sandbox Personal login → then capture, Paid state, and genuine signed webhook can be verified (CA$25 request PP-PAYMENT-TEST-001 is ready at cleared_for_checkout)
+- [ ] Independent batch approval needs the partner's account (self-approval refused by design)
+- [ ] Publish this round (user decision)
 
 ## Standing constraints
 - Payment-control writes only via SECURITY DEFINER RPCs; minor units; server recomputes totals
