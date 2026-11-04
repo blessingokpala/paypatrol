@@ -405,3 +405,29 @@ Browser (Playwright, signed in as the owner account) unless noted. Real Gemini (
 - Avatar account menu (email, roles, owner-only Team & integrations / Spending rules links, Sign out).
 - Notification bell + panel derived from real purchases and supplier change requests; priorities urgent/action/update from explicit rules; per-user read state in new `notification_reads` table (RLS: own rows, member orgs); dedupe by stable key; 7-day window for informational events.
 - Pale blue canvas gradient into the header. 8 new unit tests (45 total pass); typecheck clean; browser-verified panel, links, mark-all-read persistence, keyboard, 390 px mobile.
+
+## Readiness review — 2026-11-04 01:00 UTC
+
+Scope: full 8-area readiness review before partner testing. Browser checks signed in as the owner account unless noted.
+
+**Fixes shipped this checkpoint**
+- Password recovery added (was missing): "Forgot password?" on the sign-in page sends a reset link; new `/reset-password` page validates the link, sets a new password (min 8, confirmed twice) and signs the person in. Invalid/expired links show a clear message with a path back to sign-in.
+- Test-fixture payment guard (migration 0020): `reserve_budget` and `begin_sandbox_payment` now refuse demonstration requests on the server ("Demonstration requests cannot be reserved or paid"). Previously the CA$25 fixture was protected only by hidden buttons.
+- Request pages now tell non-payers explicitly: "Only an owner or payer can reserve budget and pay this request."
+
+**Verified this checkpoint**
+- Forgot password: reset-link confirmation shown after submitting the account email (browser).
+- Reset password page: without a valid token shows "invalid or has expired" (browser). A full real-email reset was not performed (no second mailbox).
+- Sign-out: account menu → Sign out lands on /auth; /overview afterwards redirects to /auth?redirect=/overview (browser).
+- Test-fixture guard: authenticated owner calls to `reserve_budget` and `begin_sandbox_payment` on the CA$25 fixture both refused with the new message; no reservation or attempt created (browser, real backend).
+- Adding a member with an unregistered email fails cleanly: "No account exists for that email. Ask them to sign up first." (browser, real backend).
+- Business isolation: a probe workspace + purchase owned by a non-member fake user was invisible to the signed-in owner (empty results via the data API with the owner's token); probe rows deleted afterwards. Anonymous access: purchases and organisations return permission denied; AI extractions return zero rows.
+- Maintenance job: hourly schedule `paypal-sandbox-safe-maintenance` is registered and active against `/api/public/jobs/paypal-maintenance` (reservation expiry + uncertain-payment reconciliation). An actual scheduled firing has not been observed yet.
+- PayPal configuration state: merchant L8SVBX42QHT3U, CAD confirmed, credential authentication checked 2026-11-03 17:03 UTC; no order validated yet (none created). 0 payment attempts, 0 orders, 0 captures, 0 webhook events.
+- 45/45 unit tests pass; typecheck clean; build OK.
+
+**Not done / remaining**
+- Partner registration and join cannot be completed without the partner's own email account; the add-member path is verified up to that point.
+- Full two-user business-isolation test needs the partner's account; single-user isolation and anonymous denial verified.
+- Real email round-trips (signup confirmation, password reset delivery) not performed.
+- CA$75 checkout still awaits the partner's independent Sandbox account check.
