@@ -1,20 +1,42 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { BackLink, useHere } from "@/components/back-link";
 import { fromSearch, rememberScroll, takeScroll } from "@/lib/return-to";
 import { useOrg } from "@/lib/org";
-import { usePurchases } from "@/lib/queries";
+import { usePurchases, useRefreshAll } from "@/lib/queries";
 import { formatMinor } from "@/lib/money";
+import { friendlyError } from "@/lib/friendly";
 import { STATUS_META, type PurchaseStatus } from "@/lib/status";
 import { applyPurchaseFilters, isDate, SORTS, type PurchaseFilters, type PurchaseSort } from "@/lib/purchase-filters";
-import { EmptyState, FixtureTag, PageHeader, StatusBadge } from "@/components/brand";
+import { EmptyState, FixtureTag, PageHeader, StatusBadge, ToneBadge } from "@/components/brand";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+type Row = {
+  id: string; title: string; invoice_reference: string | null; total_minor: number; currency: string;
+  source: string; status: string; created_at: string; version: number; requested_by: string;
+  is_test_fixture: boolean; supplier_id: string | null; suppliers: { name: string } | null;
+};
+
+// Descriptive next-action labels; null means there is nothing to do.
+const NEXT_ACTION: Partial<Record<PurchaseStatus, string>> = {
+  draft: "Complete the request",
+  needs_clarification: "Complete missing details",
+  blocked: "Review the failed rule",
+  verification_required: "Review supplier change",
+  approval_required: "Review spending approval",
+  cleared_for_checkout: "Complete merchant setup",
+  payment_pending: "Check payment confirmation",
+  failed: "Review failed payment",
+};
 
 const STATUS_KEYS = Object.keys(STATUS_META) as PurchaseStatus[];
 const SORT_KEYS = SORTS.map((s) => s.value) as string[];
@@ -37,8 +59,9 @@ export const Route = createFileRoute("/_authenticated/purchases/")({
 });
 
 function Purchases() {
-  const { orgId } = useOrg();
+  const { orgId, has, userId } = useOrg();
   const q = usePurchases(orgId);
+  const refresh = useRefreshAll();
   const search = Route.useSearch();
   const { status, source, supplier, dfrom, dto } = search;
   const sort = search.sort ?? "newest";
