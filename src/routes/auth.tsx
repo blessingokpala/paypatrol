@@ -33,12 +33,13 @@ function safePath(p?: string) {
 function AuthPage() {
   const { redirect } = Route.useSearch();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
