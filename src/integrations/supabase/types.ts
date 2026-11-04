@@ -832,12 +832,15 @@ export type Database = {
       purchases: {
         Row: {
           ai_claims: Json | null
+          buyer_name: string | null
           category: string | null
           created_at: string
           currency: string
           digest: string | null
+          due_date: string | null
           fixture_label: string | null
           id: string
+          invoice_date: string | null
           invoice_reference: string | null
           is_test_fixture: boolean
           org_id: string
@@ -845,10 +848,13 @@ export type Database = {
           requested_by: string
           requested_contact: string | null
           requested_recipient: string | null
+          shipping_minor: number | null
           source: Database["public"]["Enums"]["purchase_source"]
           status: Database["public"]["Enums"]["purchase_status"]
+          subtotal_minor: number | null
           supplier_id: string | null
           supplier_version_id: string | null
+          tax_minor: number | null
           title: string
           total_minor: number
           updated_at: string
@@ -856,12 +862,15 @@ export type Database = {
         }
         Insert: {
           ai_claims?: Json | null
+          buyer_name?: string | null
           category?: string | null
           created_at?: string
           currency: string
           digest?: string | null
+          due_date?: string | null
           fixture_label?: string | null
           id?: string
+          invoice_date?: string | null
           invoice_reference?: string | null
           is_test_fixture?: boolean
           org_id: string
@@ -869,10 +878,13 @@ export type Database = {
           requested_by: string
           requested_contact?: string | null
           requested_recipient?: string | null
+          shipping_minor?: number | null
           source: Database["public"]["Enums"]["purchase_source"]
           status?: Database["public"]["Enums"]["purchase_status"]
+          subtotal_minor?: number | null
           supplier_id?: string | null
           supplier_version_id?: string | null
+          tax_minor?: number | null
           title: string
           total_minor?: number
           updated_at?: string
@@ -880,12 +892,15 @@ export type Database = {
         }
         Update: {
           ai_claims?: Json | null
+          buyer_name?: string | null
           category?: string | null
           created_at?: string
           currency?: string
           digest?: string | null
+          due_date?: string | null
           fixture_label?: string | null
           id?: string
+          invoice_date?: string | null
           invoice_reference?: string | null
           is_test_fixture?: boolean
           org_id?: string
@@ -893,10 +908,13 @@ export type Database = {
           requested_by?: string
           requested_contact?: string | null
           requested_recipient?: string | null
+          shipping_minor?: number | null
           source?: Database["public"]["Enums"]["purchase_source"]
           status?: Database["public"]["Enums"]["purchase_status"]
+          subtotal_minor?: number | null
           supplier_id?: string | null
           supplier_version_id?: string | null
+          tax_minor?: number | null
           title?: string
           total_minor?: number
           updated_at?: string
@@ -1366,11 +1384,18 @@ export type Database = {
       edit_purchase: {
         Args: {
           _amount_minor: number
+          _buyer: string
           _category: string
           _currency: string
+          _due_date: string
+          _invoice_date: string
           _invoice_ref: string
           _pid: string
+          _reason: string
           _recipient: string
+          _shipping_minor: number
+          _subtotal_minor: number
+          _tax_minor: number
         }
         Returns: Database["public"]["Enums"]["purchase_status"]
       }

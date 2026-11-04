@@ -31,9 +31,9 @@ function useReview(id: string) {
   return useQuery({
     queryKey: ["review", id],
     queryFn: async () => {
-      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name)").eq("id", id).single();
+      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name, is_demo)").eq("id", id).single();
       if (error) throw error;
-      const [items, docs, findings, crs, approvals, res, sv, exs] = await Promise.all([
+      const [items, docs, findings, crs, approvals, res, sv, exs, members, audits] = await Promise.all([
         supabase.from("purchase_line_items").select("*").eq("purchase_id", id),
         supabase.from("invoice_documents").select("*").eq("purchase_id", id),
         supabase.from("findings").select("*").eq("purchase_id", id).eq("purchase_version", p.version).order("created_at"),
@@ -42,10 +42,12 @@ function useReview(id: string) {
         supabase.from("budget_reservations").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
         p.supplier_version_id ? supabase.from("supplier_versions").select("*").eq("id", p.supplier_version_id).single() : Promise.resolve({ data: null }),
         supabase.from("ai_extractions").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
+        supabase.from("memberships").select("user_id, role").eq("org_id", p.org_id),
+        supabase.from("audit_events").select("*").eq("entity_type", "purchase").eq("entity_id", id).order("created_at"),
       ]);
       const crIds = (crs.data ?? []).map((c) => c.id);
       const verifs = crIds.length ? await supabase.from("verification_records").select("*").in("change_request_id", crIds).order("created_at") : { data: [] };
-      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [] };
+      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [], members: members.data ?? [], audits: audits.data ?? [] };
     },
   });
 }
@@ -63,12 +65,26 @@ function Review() {
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (q.error || !q.data) return <p className="text-sm text-blocked">Request not found or not available to you.</p>;
-  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs } = q.data;
+  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs, members, audits } = q.data;
   const recipientDiffers = sv && p.requested_recipient && p.requested_recipient.trim().toLowerCase() !== sv.paypal_merchant_id.toLowerCase();
   const activeRes = res.find((r) => r.status === "active");
   const latestExtraction = exs[0];
   const firstDoc = docs[0];
   const isTestData = p.is_test_fixture && (p.fixture_label ?? "").toLowerCase().includes("do not reserve or pay");
+  const isDemo = Boolean((p.suppliers as { is_demo?: boolean } | null)?.is_demo);
+  const edits = audits.filter((a) => a.action === "purchase_edited");
+  const ex = (latestExtraction?.extracted ?? null) as Extraction | null;
+  // A value counts as user-provided when the request holds a value the AI reading did not supply or read differently.
+  const fromUser = (current: string | null | undefined, extracted: string | undefined) =>
+    Boolean(current && current.trim() && (extracted === undefined || extracted.trim() === "" || extracted.trim() !== current.trim()));
+  const moneyFromUser = (currentMinor: number | null | undefined, extracted: string | undefined) => {
+    if (currentMinor === null || currentMinor === undefined) return false;
+    const parsed = extracted ? parseToMinor(extracted) : null;
+    return parsed === null || parsed !== currentMinor;
+  };
+  const exTotalMinor = ex?.total ? parseToMinor(ex.total) : null;
+  const amountDiffersFromExtraction = exTotalMinor !== null && exTotalMinor !== p.total_minor;
+  const eligibleReviewers = [...new Set(members.filter((m) => (m.role === "change_approver" || m.role === "owner") && m.user_id !== p.requested_by).map((m) => m.user_id))];
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
@@ -108,15 +124,52 @@ function Review() {
           )}
         </Panel>
 
+        <div id="request-details">
         <Panel title="Request details" actions={!editing && org.has("preparer", "owner") && p.source === "invoice" && !["paid", "payment_pending", "cancelled", "failed"].includes(p.status) ? <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Correct details</Button> : null}>
           {editing ? <EditForm p={p} onDone={() => { setEditing(false); refresh(); }} /> : (
+            <>
             <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2 text-sm">
               <dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name ?? "Not matched"}</dd>
-              <dt className="text-muted-foreground">Amount</dt><dd className="font-semibold">{formatMinor(p.total_minor, p.currency)}</dd>
-              <dt className="text-muted-foreground">Currency</dt><dd>{p.currency}</dd>
-              {p.source === "invoice" && <><dt className="text-muted-foreground">Invoice reference</dt><dd>{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}</dd></>}
+              <dt className="text-muted-foreground">Amount</dt><dd className="flex flex-wrap items-center gap-2 font-semibold">{formatMinor(p.total_minor, p.currency)}{moneyFromUser(p.total_minor, ex?.total) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+              <dt className="text-muted-foreground">Currency</dt><dd className="flex flex-wrap items-center gap-2">{p.currency}{fromUser(p.currency, ex?.currency) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+              {p.source === "invoice" && <><dt className="text-muted-foreground">Invoice reference</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_reference, ex?.invoice_reference) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></>}
               <dt className="text-muted-foreground">Category</dt><dd>{p.category || <span className="text-muted-foreground">Not provided</span>}</dd>
+              {p.source === "invoice" && (
+                <>
+                  <dt className="text-muted-foreground">Invoice date</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_date, ex?.invoice_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Due date</dt><dd className="flex flex-wrap items-center gap-2">{p.due_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.due_date, ex?.due_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Buyer</dt><dd className="flex flex-wrap items-center gap-2">{p.buyer_name || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.buyer_name, ex?.buyer_name) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Subtotal</dt><dd className="flex flex-wrap items-center gap-2">{p.subtotal_minor !== null ? formatMinor(p.subtotal_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.subtotal_minor, ex?.subtotal) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Tax</dt><dd className="flex flex-wrap items-center gap-2">{p.tax_minor !== null ? formatMinor(p.tax_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.tax_minor, ex?.tax) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <dt className="text-muted-foreground">Shipping</dt><dd className="flex flex-wrap items-center gap-2">{p.shipping_minor !== null ? formatMinor(p.shipping_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.shipping_minor, ex?.shipping) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                </>
+              )}
             </dl>
+            {amountDiffersFromExtraction && (
+              <p className="mt-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
+                The AI reading of the document says {formatMinor(exTotalMinor, p.currency)}, but this request currently says {formatMinor(p.total_minor, p.currency)}.
+                {edits.length > 0 && <> Last changed by {names[edits[edits.length - 1]!.actor_id ?? ""] ?? "a team member"} on {new Date(edits[edits.length - 1]!.created_at).toLocaleString("en-CA")}.</>}
+                {" "}Correcting the request never changes the uploaded document.
+              </p>
+            )}
+            {edits.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Correction history</p>
+                <ul className="mt-1 space-y-1 text-xs text-muted-foreground">
+                  {edits.map((a) => {
+                    const d = a.details as { changed?: string[]; reason?: string; previous_version?: number };
+                    return (
+                      <li key={a.id}>
+                        v{d.previous_version ?? "?"} → v{a.entity_version ?? "?"} by {names[a.actor_id ?? ""] ?? "a team member"} on {new Date(a.created_at).toLocaleString("en-CA")}
+                        {d.changed?.length ? ` — changed ${d.changed.map((c) => humanize(c)).join(", ")}` : ""}
+                        {d.reason ? ` — reason: “${d.reason}”` : " — no reason recorded (before reasons were required)"}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+            </>
           )}
           {items.length > 0 && (
             <table className="mt-4 w-full text-sm">
