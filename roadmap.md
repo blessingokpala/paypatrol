@@ -9,8 +9,10 @@
 
 ## Open — need a human
 - [ ] Buyer approval in the PayPal popup needs the owner's Sandbox Personal login → then capture, Paid state, and genuine signed webhook can be verified (CA$25 request PP-PAYMENT-TEST-001 is ready at cleared_for_checkout)
-- [ ] Independent batch approval needs the partner's account (self-approval refused by design)
-- [ ] Publish this round (user decision)
+- [ ] Independent approval: partner (Payer role) approves labelled CA$135 Kraft bags test request (a7ec5854…) — approval unverified until then
+- [ ] Owner completes CA$25 checkout on PP-PAYMENT-TEST-001, then verify capture/Paid/budget/webhook/evidence
+- [ ] Next brief (uploaded): centred Next-action modal, decision-first request page, limit explanations, revise quantity, provenance labels
+- [x] Published this round
 
 ## Standing constraints
 - Payment-control writes only via SECURITY DEFINER RPCs; minor units; server recomputes totals
