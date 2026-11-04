@@ -449,3 +449,29 @@ Scope: full 8-area readiness review before partner testing. Browser checks signe
 **Checks:** 45/45 unit tests pass; typecheck clean; production build OK.
 
 **Remaining:** batch approve/reject execution tested for eligibility display only (no eligible approval rows existed to execute); publish pending — changes are in preview only until published.
+
+## 2026-11-04 — Release blockers: batch decisions, genuine Sandbox order, cancel recovery
+
+**Batch approval and rejection (real backend + real interface, Ada's Grocery):**
+- Six labelled fixtures (`BATCH-TEST-*`) created: self-approval CA$120 (approval_required), over-limit CA$200 (blocked), missing-recipient (needs_clarification), three rejectable.
+- Server refusals verified: self-approval ("The requester cannot approve their own request"), stale-version approval, blocked-request approval — all refused, no approval rows created, no budget reserved. Approval never reserves budget (no reservation rows for any fixture).
+- **Two real defects found and fixed (migration 0025):** `cancel_purchase` accepted an empty reason and allowed re-cancelling an already-cancelled request. It now requires a non-empty reason and refuses terminal requests. Re-tested: empty and whitespace-only reasons refused, request unchanged; rejection with reason succeeds; repeat click refused ("already cancelled"); status persists as cancelled.
+- Interface: with a mixed selection, "Approve eligible (0)" was correctly disabled (all fixtures self-submitted); the Reject dialog listed 3 eligible and 3 excluded with per-row reasons ("already cancelled"); the confirm button stayed disabled until a reason was entered. A real batch rejection of 3 requests completed, showed per-row results, and persisted after refresh (all `cancelled` in the database).
+
+**Genuine PayPal Sandbox activity (test money only):**
+- New labelled request `PP-PAYMENT-TEST-001` (CA$25, recipient L8SVBX42QHT3U, Harbourside fictional supplier) cleared all checks to `cleared_for_checkout` with no approval needed (under the CA$100 threshold) and no verification hold (recipient matches approved supplier v2).
+- Real checkout run in the browser: budget reserved exactly once (CA$25, one active reservation), one payment attempt created, and a **genuine Sandbox order `06Y50592YD2069013`** created at PayPal (PAYER_ACTION_REQUIRED, CA$25.00 CAD, merchant L8SVBX42QHT3U). The real PayPal buyer-login popup opened — buyer approval needs the owner's Sandbox Personal account, so no capture was possible from testing.
+- **Defect found and fixed (migration 0026):** cancelling an uncaptured checkout cancelled the whole request. It now returns the request to `cleared_for_checkout` so payment can be retried; the UI message says so.
+- Re-tested end to end: second genuine order `4BA55974F2783102M` created, buyer popup closed without approval, "Cancel uncaptured checkout" succeeded, request returned to `cleared_for_checkout`, reservation released. Final state: 2 cancelled attempts, 2 released reservations, CA$0 committed — no double-counting. Full audit trail present (submitted → reserved → payment started → checkout cancelled, twice).
+
+**Webhook endpoint (published URL, controlled tests — not genuine PayPal notifications):**
+- No signature headers → 401 "Invalid signature"; malformed body with headers → 400 "Invalid event"; well-formed event with a fake signature → 401. Signature verification runs before any event is recorded.
+
+**Test suites:** 45/45 unit tests pass (incl. 18 PayPal contract/idempotency tests); all 4 `payment_controls.sql` blocks pass with expected values (self-verify blocked, untrusted channel blocked, hard limits, stale-version rejection, concurrent budget, cross-org isolation, injection fixture blocked, extraction creates no requests); typecheck clean; build OK. The SQL file's two `edit_purchase` calls were updated to the 13-argument form.
+
+**Preserved:** CA$80 request `PP-CHECKOUT-20261103` remains `verification_required` (v2, recipient TEST), 0 payment attempts, both supplier-change holds (`9ab023d6…` v1, `84080591…` v2) still pending. No payment, reservation or capture touched it.
+
+**Not done (require a human):**
+- Buyer approval in the PayPal popup needs the owner's Sandbox Personal login → no capture, no Paid state, no genuine signed webhook yet. The CA$25 request is ready at `cleared_for_checkout` for this.
+- Independent batch approval by a second payer/owner needs the partner's account (self-approval is refused by design).
+- Genuine webhook delivery/verification can only be observed after a real capture.
