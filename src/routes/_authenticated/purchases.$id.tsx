@@ -1,4 +1,5 @@
 import { friendlyError, humanize } from "@/lib/friendly";
+import type { Database } from "@/integrations/supabase/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -145,7 +146,7 @@ function Review() {
                 </>
               )}
             </dl>
-            {amountDiffersFromExtraction && (
+            {amountDiffersFromExtraction && exTotalMinor !== null && (
               <p className="mt-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
                 The AI reading of the document says {formatMinor(exTotalMinor, p.currency)}, but this request currently says {formatMinor(p.total_minor, p.currency)}.
                 {edits.length > 0 && <> Last changed by {names[edits[edits.length - 1]!.actor_id ?? ""] ?? "a team member"} on {new Date(edits[edits.length - 1]!.created_at).toLocaleString("en-CA")}.</>}
@@ -179,10 +180,11 @@ function Review() {
           )}
           {p.source !== "invoice" && <p className="mt-3 text-xs text-muted-foreground">Price and payment recipient were taken from the approved listing and supplier record.</p>}
         </Panel>
+        </div>
       </div>
 
       {p.source === "invoice" && (
-      <Panel title="What AI read from the document" className="mt-6">
+      <Panel title="What AI read from the document" className="mt-6" actions={latestExtraction && !editing && org.has("preparer", "owner") && !["paid", "payment_pending", "cancelled", "failed"].includes(p.status) ? <Button size="sm" variant="outline" onClick={() => { setEditing(true); document.getElementById("request-details")?.scrollIntoView({ behavior: "smooth" }); }}>Add missing details</Button> : null}>
         {latestExtraction ? (
           <ExtractionView row={latestExtraction} />
         ) : reading ? (
@@ -228,7 +230,7 @@ function Review() {
             {sv
               ? <p className="mt-1 font-mono text-sm">{sv.paypal_merchant_id}</p>
               : <p className="mt-1 text-sm italic text-muted-foreground">{p.supplier_id ? "Supplier record is loading." : "No approved supplier selected."}</p>}
-            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value} · enrolment: {humanize(sv.enrolment_status)}</p>}
+            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value}{isDemo ? " (fictional — use the Sandbox account check below)" : ""} · enrolment: {humanize(sv.enrolment_status)}</p>}
           </div>
         </div>
         <p className="mt-3 text-sm">{!sv ? (p.supplier_id ? "Supplier record is loading." : "No approved supplier to compare against. Match this request to an approved supplier or add the supplier through verification.") : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
@@ -251,7 +253,9 @@ function Review() {
       </Panel>
 
       {crs.map((cr) => (
-        <ChangeReview key={cr.id} cr={cr} sv={sv} verifs={verifs.filter((v) => v.change_request_id === cr.id)} names={names} onDone={refresh} />
+        <ChangeReview key={cr.id} cr={cr} sv={sv} isDemo={isDemo} members={members}
+          current={cr.base_version_id === p.supplier_version_id && cr.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()}
+          verifs={verifs.filter((v) => v.change_request_id === cr.id)} names={names} onDone={refresh} />
       ))}
 
       <Panel title="Approvals and checkout" className="mt-6">
@@ -295,33 +299,79 @@ function Review() {
   );
 }
 
-function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currency: string; requested_recipient: string | null; invoice_reference: string | null; category: string | null }; onDone: () => void }) {
-  const [f, setF] = useState({ amount: minorToInput(p.total_minor), currency: p.currency, recipient: p.requested_recipient ?? "", ref: p.invoice_reference ?? "", category: p.category ?? "" });
+function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currency: string; requested_recipient: string | null; invoice_reference: string | null; category: string | null; invoice_date: string | null; due_date: string | null; buyer_name: string | null; subtotal_minor: number | null; tax_minor: number | null; shipping_minor: number | null }; onDone: () => void }) {
+  const [f, setF] = useState({
+    amount: minorToInput(p.total_minor), currency: p.currency, recipient: p.requested_recipient ?? "",
+    ref: p.invoice_reference ?? "", category: p.category ?? "",
+    invoiceDate: p.invoice_date ?? "", dueDate: p.due_date ?? "", buyer: p.buyer_name ?? "",
+    subtotal: p.subtotal_minor !== null ? minorToInput(p.subtotal_minor) : "",
+    tax: p.tax_minor !== null ? minorToInput(p.tax_minor) : "",
+    shipping: p.shipping_minor !== null ? minorToInput(p.shipping_minor) : "",
+    reason: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const money = (s: string) => (s.trim() === "" ? null : parseToMinor(s));
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
     const m = parseToMinor(f.amount);
-    if (m === null) { toast.error("Enter the amount like 75.00"); return; }
-    const { error } = await supabase.rpc("edit_purchase", { _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category });
-    if (error) { toast.error(friendlyError(error)); return; }
+    if (m === null) { setError("Enter the amount like 75.00."); return; }
+    for (const [label, v] of [["Subtotal", f.subtotal], ["Tax", f.tax], ["Shipping", f.shipping]] as const) {
+      if (v.trim() !== "" && parseToMinor(v) === null) { setError(`Enter ${label.toLowerCase()} like 12.50, or leave it empty.`); return; }
+    }
+    if (!f.reason.trim()) { setError("A reason is required, so the team can see why this request changed."); return; }
+    setSaving(true);
+    const args = {
+      _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category,
+      _invoice_date: f.invoiceDate || null, _due_date: f.dueDate || null, _buyer: f.buyer,
+      _subtotal_minor: money(f.subtotal), _tax_minor: money(f.tax), _shipping_minor: money(f.shipping), _reason: f.reason.trim(),
+    };
+    const { error: rpcError } = await supabase.rpc("edit_purchase", args as unknown as Database["public"]["Functions"]["edit_purchase"]["Args"]);
+    setSaving(false);
+    if (rpcError) { setError(friendlyError(rpcError, "Saving")); return; }
     toast.success("Saved as a new version. Earlier approvals no longer apply.");
     onDone();
   }
-  const field = (k: keyof typeof f, label: string) => (
-    <div className="space-y-1"><Label htmlFor={`e-${k}`}>{label}</Label><Input id={`e-${k}`} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></div>
+  const field = (k: keyof typeof f, label: string, type = "text") => (
+    <div className="space-y-1"><Label htmlFor={`e-${k}`}>{label}</Label><Input id={`e-${k}`} type={type} value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></div>
   );
   return (
     <form onSubmit={save} className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-2">{field("amount", "Amount")}{field("currency", "Currency")}{field("ref", "Invoice reference")}{field("category", "Category")}</div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {field("amount", "Amount")}{field("currency", "Currency")}{field("ref", "Invoice reference")}{field("category", "Category")}
+        {field("invoiceDate", "Invoice date", "date")}{field("dueDate", "Due date", "date")}{field("buyer", "Buyer")}
+        {field("subtotal", "Subtotal (optional)")}{field("tax", "Tax (optional)")}{field("shipping", "Shipping (optional)")}
+      </div>
       {field("recipient", "Recipient")}
-      <p className="text-xs text-warning">Changing amount, currency or recipient creates a new version and invalidates approvals.</p>
-      <div className="flex gap-2"><Button type="submit">Save new version</Button><Button type="button" variant="ghost" onClick={onDone}>Cancel</Button></div>
+      <div className="space-y-1">
+        <Label htmlFor="e-reason">Reason for this correction</Label>
+        <Textarea id="e-reason" required value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="Why is this changing? Recorded in Evidence history with your name." />
+      </div>
+      {error && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{error}</p>}
+      <p className="text-xs text-warning">Any change creates a new version and invalidates approvals. The uploaded document and the AI reading stay unchanged.</p>
+      <div className="flex gap-2"><Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save new version"}</Button><Button type="button" variant="ghost" onClick={onDone}>Cancel</Button></div>
     </form>
   );
 }
 
-type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decision_note: string | null };
+type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decision_note: string | null; base_version_id: string };
 type SV = { trusted_contact_channel: string; trusted_contact_value: string; paypal_merchant_id: string } | null;
 type VR = { id: string; channel: string; channel_value: string; person_contacted: string; contacted_at: string; outcome: string; evidence: string; reviewer_id: string; check_kind?: string };
+type Member = { user_id: string; role: string };
+
+function EligibleReviewers({ members, exclude, names, isOwner }: { members: Member[]; exclude: string; names: Record<string, string>; isOwner: boolean }) {
+  const eligible = [...new Set(members.filter((m) => (m.role === "change_approver" || m.role === "owner") && m.user_id !== exclude).map((m) => m.user_id))];
+  if (eligible.length > 0) return <p className="mt-1">Eligible reviewers: {eligible.map((id) => names[id] ?? "team member").join(", ")}.</p>;
+  return (
+    <p className="mt-1">
+      No eligible reviewer exists in this business yet.{" "}
+      {isOwner
+        ? <Link to="/settings" className="font-semibold underline underline-offset-2">Add a reviewer under Team &amp; integrations</Link>
+        : "Ask an owner to add a reviewer under Team & integrations."}
+    </p>
+  );
+}
 
 function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
   const [f, setF] = useState({ merchant: "", account: "", outcome: "denied", notes: "" });
@@ -359,7 +409,7 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
   );
 }
 
-function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void }) {
+function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void; current: boolean; isDemo: boolean; members: Member[] }) {
   const org = useOrg();
   const canReview = org.has("change_approver", "owner") && cr.proposed_by !== org.userId;
   const open = cr.status === "pending_verification" || cr.status === "verified_pending_decision";
@@ -385,6 +435,16 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
 
   return (
     <Panel title="Supplier payment-detail change" className="mt-6">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        {current
+          ? <ToneBadge tone="warning">Applies to the current version of this request</ToneBadge>
+          : <ToneBadge tone="neutral">Earlier history</ToneBadge>}
+      </div>
+      {!current && (
+        <p className="mb-2 text-sm text-muted-foreground">
+          This record concerns an earlier version of the request and is kept for history. It stays open and enforced, but the hold on the current version comes from the record marked “Applies to the current version of this request”.
+        </p>
+      )}
       <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{humanize(cr.status)}</strong></p>
       {cr.status === "superseded"
         ? <p className="mt-1 text-sm text-muted-foreground">Closed automatically, not approved: {cr.decision_note}</p>
@@ -410,13 +470,21 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
         </ul>
       )}
       {open && !canReview && (
-        <p className="mt-3 rounded-md bg-warning-soft p-3 text-sm text-warning">
-          {cr.proposed_by === org.userId ? "You submitted this request. A different change approver or owner must verify it." : "Only change approvers or owners can verify this change."}
-        </p>
+        <div className="mt-3 rounded-md bg-warning-soft p-3 text-sm text-warning">
+          {cr.proposed_by === org.userId ? (
+            <>
+              <p>You created this request, so another person must verify the supplier payment details. A different team member with the Change approver or Business owner role can review it.</p>
+              <EligibleReviewers members={members} exclude={cr.proposed_by} names={names} isOwner={org.has("owner")} />
+            </>
+          ) : (
+            <p>Only change approvers or owners can verify this change.</p>
+          )}
+        </div>
       )}
       {open && canReview && (
         <div className="mt-4 grid gap-6 lg:grid-cols-2">
           <SandboxCheck cr={cr} onDone={onDone} />
+          {!isDemo && (
           <form onSubmit={record} className="space-y-3">
             <h3 className="font-semibold">Record independent verification</h3>
             <p className="text-xs text-muted-foreground">Use only the trusted contact on record: <strong>{sv?.trusted_contact_channel} {sv?.trusted_contact_value}</strong>. Do not use the contact details in the request.</p>
@@ -439,6 +507,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
             <div className="space-y-1"><Label htmlFor="ev">Evidence</Label><Textarea id="ev" required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} placeholder="What was said, call reference, notes" /></div>
             <Button type="submit">Record verification</Button>
           </form>
+          )}
           {cr.status === "verified_pending_decision" && (
             <div className="space-y-3">
               <h3 className="font-semibold">Decide</h3>
@@ -466,6 +535,9 @@ type ExtractionRow = {
   uncertain_fields: string[];
   missing_fields: string[];
 };
+
+// Only these missing values actually block the checks; the rest are optional context.
+const REQUIRED_EXTRACTION_KEYS = new Set(["total", "currency", "requested_payment_recipient", "invoice_reference"]);
 
 function ExtractionView({ row }: { row: ExtractionRow }) {
   const e = row.extracted as Extraction;
@@ -495,8 +567,8 @@ function ExtractionView({ row }: { row: ExtractionRow }) {
           <div key={key} className="contents">
             <dt className="text-muted-foreground">{label}</dt>
             <dd className="flex flex-wrap items-center gap-2">
-              <span className={value ? "" : "italic text-muted-foreground"}>{value || "not stated"}</span>
-              {flag(key) === "missing" && <ToneBadge tone="warning">Missing — needs input</ToneBadge>}
+              <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not found in document"}</span>
+              {flag(key) === "missing" && REQUIRED_EXTRACTION_KEYS.has(key) && <ToneBadge tone="warning">Required before proceeding</ToneBadge>}
               {flag(key) === "uncertain" && <ToneBadge tone="warning">Hard to read</ToneBadge>}
             </dd>
           </div>

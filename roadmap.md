@@ -1,15 +1,19 @@
 # PayPatrol roadmap
 
-## Done: full readiness review (8 areas) — 2026-11-04
-- [x] Password recovery added (forgot-password + /reset-password) and browser-verified
-- [x] Server-side test-fixture payment guard (migration 0020); CA$25 fixture reserve/pay refused server-side
-- [x] Non-payers told who can pay on cleared requests
-- [x] Sign-out, business isolation (probe workspace invisible), add-member error path, cron schedule, PayPal config state verified
-- [x] JUDGES_REPORT.md readiness table + partner test guide; copied to Files; published
+## Done this turn (preview only, not yet published)
+- Restored compilation of the purchase detail page; correction form calls the deployed 13-arg `edit_purchase` (schema-cache error fixed at the cause)
+- Full correction workflow: all invoice fields, required reason, inline errors preserving entries, "Provided by user" / "Not found in document" / "Required before proceeding" wording, discrepancy note, correction history
+- Reviewer requirement: exact warning copy, eligible reviewers from real memberships, owner link to Team & integrations; demo suppliers show only the Sandbox account check
+- Two supplier-change records labelled current-version vs earlier history; holds still enforced
+- Extraction auto-fills untouched fields on new invoices; manual edits protected by confirmation; "Add supplier" inline pending-supplier flow with Sandbox limitation note
+- Purchases list: Next-action side panel (status, holds, amounts, role-aware actions, mobile full-width) and controlled batch Review/Export/Approve-eligible/Reject-eligible
+- Verified in browser with real backend + real Gemini reading; 45/45 tests, typecheck clean, build OK; BUILD_LOG.md updated
 
-## Outstanding (waiting on people, not code)
-- Partner registers own account → owner adds as Change approver → partner records Sandbox account check and decides the CA$75 request (PP-CHECKOUT-20261103) hold
-- After approval: budget reservation → Personal Sandbox buyer approval → server-confirmed capture → genuine signed webhook reconciliation
-- Real email round-trips (signup confirmation, password reset delivery) unobserved
-- Two-user business-isolation test once the partner joins
-- First observed firing of the hourly maintenance schedule
+## Open
+- [ ] Publish this round (user decision)
+- [ ] Batch approve/reject execution itself untested (no eligible rows existed); eligibility display verified
+- [ ] CA$80 request (PP-CHECKOUT-20261103) stays on independent-verification hold until partner's Sandbox account check; no payment created
+
+## Standing constraints
+- Payment-control writes only via SECURITY DEFINER RPCs; minor units; server recomputes totals
+- Never fabricate extraction/payment results; Sandbox only

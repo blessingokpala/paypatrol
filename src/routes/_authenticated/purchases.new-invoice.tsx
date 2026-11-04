@@ -57,6 +57,8 @@ function NewInvoice() {
 
   const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", contact: "", category: "packaging", description: "", message: "" });
   const [edited, setEdited] = useState<Set<keyof typeof f>>(new Set());
+  const editedRef = useRef<Set<keyof typeof f>>(new Set());
+  const markEdited = (k: keyof typeof f) => { editedRef.current = new Set(editedRef.current).add(k); setEdited(new Set(editedRef.current)); };
   const [quote, setQuote] = useState({ listing: "", quantity: "1" });
   const [file, setFile] = useState<File | null>(null);
   const [path, setPath] = useState<string | null>(null);
@@ -64,6 +66,7 @@ function NewInvoice() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [applied, setApplied] = useState(false);
+  const [addSupplier, setAddSupplier] = useState(false);
   const [amountError, setAmountError] = useState<string | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const readSeq = useRef(0);
@@ -76,7 +79,7 @@ function NewInvoice() {
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setF({ ...f, [k]: e.target.value });
-    setEdited((prev) => new Set(prev).add(k));
+    markEdited(k);
     if (k === "amount") setAmountError(null);
   };
   const canSubmit = has("preparer", "owner");
@@ -117,7 +120,8 @@ function NewInvoice() {
     if (seq !== readSeq.current) return;
     setResult(out);
     setPhase(out.ok ? "ready" : "failed");
-    if (!out.ok) toast.error(out.error.message);
+    if (out.ok) applyExtracted(true, out.extraction);
+    else toast.error(out.error.message);
   }
 
   function onFileChosen(e: React.ChangeEvent<HTMLInputElement>) {
@@ -130,32 +134,34 @@ function NewInvoice() {
     if (chosen) void startRead(chosen);
   }
 
-  function useExtracted() {
-    if (!extraction) return;
+  // auto=true fills only fields the user has not touched; auto=false (the button) asks before replacing manual edits.
+  function applyExtracted(auto: boolean, ex: Extraction) {
     const incoming = {
-      ref: extraction.invoice_reference,
-      amount: extraction.total,
-      currency: extraction.currency,
-      recipient: extraction.requested_payment_recipient,
-      contact: extraction.payment_change_instructions || f.contact,
-      description: extraction.line_items[0]?.description ?? f.description,
+      ref: ex.invoice_reference,
+      amount: ex.total,
+      currency: ex.currency,
+      recipient: ex.requested_payment_recipient,
+      contact: ex.payment_change_instructions,
+      description: ex.line_items[0]?.description ?? "",
     };
-    const conflicts = (Object.keys(incoming) as (keyof typeof incoming)[]).filter(
-      (k) => edited.has(k) && f[k] !== incoming[k] && incoming[k],
-    );
-    if (conflicts.length > 0 && !window.confirm(`You edited ${conflicts.join(", ")} after the reading. Replace your edits with the values AI read?`)) {
+    const keys = (Object.keys(incoming) as (keyof typeof incoming)[]).filter((k) => Boolean(incoming[k]));
+    const conflicts = keys.filter((k) => editedRef.current.has(k) && f[k] !== incoming[k]);
+    if (!auto && conflicts.length > 0 && !window.confirm(`You edited ${conflicts.join(", ")} after the reading. Replace your edits with the values AI read?`)) {
       return;
     }
-    const qty = extraction.line_items.reduce((n, l) => n + (Number.parseInt(l.quantity, 10) || 0), 0);
-    setF({ ...f, ...incoming });
-    setEdited((prev) => {
-      const next = new Set(prev);
-      (Object.keys(incoming) as (keyof typeof incoming)[]).forEach((k) => next.delete(k));
+    const applyKeys = auto ? keys.filter((k) => !editedRef.current.has(k)) : keys;
+    if (applyKeys.length === 0) return;
+    setF((prev) => {
+      const next = { ...prev };
+      for (const k of applyKeys) next[k] = incoming[k] as string;
       return next;
     });
+    editedRef.current = new Set([...editedRef.current].filter((k) => !applyKeys.includes(k as keyof typeof incoming)));
+    setEdited(new Set(editedRef.current));
+    const qty = ex.line_items.reduce((n, l) => n + (Number.parseInt(l.quantity, 10) || 0), 0);
     if (qty > 0) setQuote((q) => ({ ...q, quantity: String(qty) }));
     setApplied(true);
-    toast.success("Extracted values filled in. Check every field before submitting.");
+    toast.success(auto ? "Extracted values filled into the empty fields. Check every field before submitting." : "Extracted values filled in. Check every field before submitting.");
   }
 
   async function submit(e: React.FormEvent) {
@@ -253,7 +259,7 @@ function NewInvoice() {
             <Panel
               title="What AI read from the document"
               actions={
-                <Button type="button" size="sm" variant="outline" onClick={useExtracted}>
+                <Button type="button" size="sm" variant="outline" onClick={() => extraction && applyExtracted(false, extraction)}>
                   {applied ? "Filled in again" : "Use these values"}
                 </Button>
               }
@@ -275,8 +281,8 @@ function NewInvoice() {
                   <div key={key} className="contents">
                     <dt className="text-muted-foreground">{label}</dt>
                     <dd className="flex flex-wrap items-center gap-2">
-                      <span className={value ? "" : "italic text-muted-foreground"}>{value || "not stated"}</span>
-                      {flag(key) === "missing" && <ToneBadge tone="warning">Missing — needs your input</ToneBadge>}
+                      <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not found in document"}</span>
+                      {flag(key) === "missing" && <ToneBadge tone="warning">{["total", "currency", "requested_payment_recipient", "invoice_reference"].includes(key) ? "Required before proceeding" : "Optional — not found in document"}</ToneBadge>}
                       {flag(key) === "uncertain" && <ToneBadge tone="warning">Hard to read — check it</ToneBadge>}
                     </dd>
                   </div>
@@ -329,7 +335,7 @@ function NewInvoice() {
               <FieldSelect
                 id="supplier"
                 value={f.supplier}
-                onChange={(v) => { setF({ ...f, supplier: v }); setEdited((prev) => new Set(prev).add("supplier")); }}
+                onChange={(v) => { setF({ ...f, supplier: v }); markEdited("supplier"); }}
                 placeholder="Not matched to an approved supplier"
                 options={[
                   { value: "", label: "Not matched to an approved supplier" },
@@ -341,6 +347,20 @@ function NewInvoice() {
                   Supplier named on the invoice: <span className="font-medium text-foreground">{extraction.supplier_name}</span>
                   {matchedSupplier ? ` — you matched it to the approved record “${matchedSupplier.name}”.` : " — choose the matching approved supplier yourself; AI never matches it for you."}
                 </p>
+              )}
+              {has("owner", "change_approver") && (
+                <div>
+                  <Button type="button" size="sm" variant="ghost" aria-expanded={addSupplier} onClick={() => setAddSupplier((v) => !v)}>
+                    {addSupplier ? "Close add supplier" : "Add supplier"}
+                  </Button>
+                  {addSupplier && (
+                    <AddSupplierInline
+                      orgId={orgId}
+                      suggestion={{ name: extraction?.supplier_name ?? "", merchant: extraction?.requested_payment_recipient ?? "" }}
+                      onCreated={(id) => { refresh(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); }}
+                    />
+                  )}
+                </div>
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -395,5 +415,61 @@ function NewInvoice() {
         </Panel>
       </form>
     </>
+  );
+}
+
+/** Inline pending-supplier creation that keeps the invoice draft on screen. */
+function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; suggestion: { name: string; merchant: string }; onCreated: (id: string) => void }) {
+  const [s, setS] = useState({ name: suggestion.name, merchant: suggestion.merchant, email: "", channel: "phone", channelValue: "", evidence: "" });
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setBusy(true);
+    const { data, error } = await supabase.rpc("create_supplier", {
+      _org: orgId, _name: s.name, _merchant: s.merchant, _email: s.email,
+      _channel: s.channel, _channel_value: s.channelValue, _evidence: s.evidence,
+    });
+    setBusy(false);
+    if (error) { setErr(friendlyError(error, "Adding the supplier")); return; }
+    toast.success("Supplier added as pending. It must pass independent verification before it can be approved or paid.");
+    onCreated(data as string);
+  }
+  const fld = (k: keyof typeof s, label: string, required = true) => (
+    <div className="space-y-1">
+      <Label htmlFor={`as-${k}`}>{label}{required ? " *" : ""}</Label>
+      <Input id={`as-${k}`} required={required} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} />
+    </div>
+  );
+  return (
+    <form onSubmit={create} className="mt-2 space-y-3 rounded-md border border-dashed p-3">
+      <p className="text-xs text-muted-foreground">
+        Values read from the invoice are only suggestions — edit them. A new supplier starts unverified: an uploaded invoice or a
+        matching Merchant ID never approves it. Sandbox limitation: only the supplier enrolled with the connected Sandbox Business
+        account can actually receive a Sandbox payment; any other supplier stays unpayable until enrolment.
+      </p>
+      {fld("name", "Supplier legal name")}
+      {fld("merchant", "PayPal Merchant ID")}
+      {fld("email", "Supplier email", false)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="as-channel">Trusted contact channel *</Label>
+          <FieldSelect
+            id="as-channel"
+            value={s.channel}
+            onChange={(v) => setS({ ...s, channel: v })}
+            options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }]}
+          />
+        </div>
+        {fld("channelValue", "Trusted contact value")}
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="as-evidence">How do you know this contact is genuine? *</Label>
+        <Textarea id="as-evidence" required value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="e.g. confirmed by phone on a number from a signed contract" />
+      </div>
+      {err && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{err}</p>}
+      <Button type="submit" size="sm" disabled={busy}>{busy ? "Adding…" : "Add as pending supplier"}</Button>
+    </form>
   );
 }

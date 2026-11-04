@@ -431,3 +431,21 @@ Scope: full 8-area readiness review before partner testing. Browser checks signe
 - Full two-user business-isolation test needs the partner's account; single-user isolation and anonymous denial verified.
 - Real email round-trips (signup confirmation, password reset delivery) not performed.
 - CA$75 checkout still awaits the partner's independent Sandbox account check.
+
+## 2026-11-04 — Correction workflow, extraction auto-fill, actionable next steps, batch review
+
+**Schema/functions (migrations 0021, 0023, 0024):** requests now store invoice date, due date, buyer, subtotal, tax and shipping. `edit_purchase` replaced with a 13-argument version that requires a correction reason, records who/what/why in the audit history, invalidates approvals and re-runs checks. For fictional suppliers the recipient-mismatch finding now directs reviewers to the labelled Sandbox account check instead of the fictional phone number.
+
+**Fixes verified in the browser (signed in as the owner, real backend):**
+- "Save new version" schema-cache error fixed at the cause: the form now calls the deployed 13-argument function. A real save on the labelled test invoice (buyer + invoice date + reason) produced version 2, showed "Provided by user" badges, kept the original AI reading unchanged, listed the correction with reason in Correction history, and persisted after refresh.
+- Correction form covers amount, currency, reference, category, invoice date, due date, buyer, subtotal, tax, shipping, recipient and a required reason. Saving without a reason is refused inline; failed saves keep entered values and show a readable message.
+- Extraction panel: "Not found in document" for absent values; "Required before proceeding" only on values the checks actually require (total, currency, recipient, reference). "Add missing details" opens the correction form.
+- Amount discrepancy note shown when the AI reading (CA$75.00) differs from the current request (CA$80.00); the document and reading are never changed by a correction.
+- Two pending supplier-change records labelled "Applies to the current version of this request" (TEST, v2) and "Earlier history" (v1, kept open and enforced). Reviewer warning uses the exact required wording and links the owner to Team & integrations when no eligible reviewer exists. For the fictional supplier only the Sandbox account check form is offered; the phone-verification form is hidden.
+- Re-run checks on the held request regenerated the finding with the Sandbox wording; the request stays Verification required. No payment, reservation or capture created.
+- New invoice page: a real Gemini reading (gemini-3.1-flash-lite, ~30 s) auto-filled untouched fields (ref ML-2026-0441, 51.75, CAD, MAPLEMERCH123, description). "Use these values" still asks before replacing manual edits. Supplier remains "Not matched" — AI never matches it. "Add supplier" creates a pending supplier inline without losing the draft and states the single-merchant Sandbox limitation.
+- Purchases list: each Next action is a button opening a side panel (full-width on mobile) with status, the specific holds/failed rules with amounts, and the next permitted action per role; blocked-before-payment is distinguished from payment-attempted-and-failed. Batch toolbar: Review selected, Export selected, Approve eligible (only requests genuinely awaiting spending approval, not self-submitted, not test fixtures; server re-validates each), Reject eligible (unpaid statuses only, reason required, history preserved; payment-pending never included).
+
+**Checks:** 45/45 unit tests pass; typecheck clean; production build OK.
+
+**Remaining:** batch approve/reject execution tested for eligibility display only (no eligible approval rows existed to execute); publish pending — changes are in preview only until published.
