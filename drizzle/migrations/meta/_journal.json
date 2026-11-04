@@ -183,6 +183,13 @@
       "when": 1793758588433,
       "tag": "0025_cancel_purchase_requires_reason_and_refuses_terminal",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793758711563,
+      "tag": "0026_cancel_uncaptured_attempt_returns_to_checkout",
+      "breakpoints": true
     }
   ]
 }
