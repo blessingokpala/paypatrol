@@ -115,9 +115,14 @@ function Purchases() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const scopeKey = JSON.stringify([search.q, source, status, supplier, dfrom, dto]);
   useEffect(() => { setSelected(new Set()); }, [scopeKey]);
-  const visibleSelected = rows.filter((p) => selected.has(p.id));
+  const visibleSelected = rows.filter((p) => selected.has(p.id)) as unknown as Row[];
   const allChecked = rows.length > 0 && visibleSelected.length === rows.length;
   const someChecked = visibleSelected.length > 0;
+  const [panelFor, setPanelFor] = useState<Row | null>(null);
+  const [batch, setBatch] = useState<null | "review" | "approve" | "reject">(null);
+  // Eligibility is re-checked on the server by the RPCs; these lists only decide what is offered.
+  const approvable = visibleSelected.filter((p) => p.status === "approval_required" && p.requested_by !== userId && !p.is_test_fixture);
+  const rejectable = visibleSelected.filter((p) => ["draft", "needs_clarification", "blocked", "verification_required", "approval_required", "cleared_for_checkout"].includes(p.status));
 
   function toggleAll() {
     setSelected(allChecked ? new Set() : new Set(rows.map((p) => p.id)));
@@ -249,11 +254,22 @@ function Purchases() {
         <>
           <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
             <span className="text-muted-foreground">
-              {visibleSelected.length === 0 ? "Select requests to export their summaries." : `${visibleSelected.length} of ${rows.length} shown selected`}
+              {visibleSelected.length === 0 ? "Select requests to review or export them." : `${visibleSelected.length} of ${rows.length} shown selected`}
             </span>
             {visibleSelected.length > 0 && (
               <>
+                <Button size="sm" variant="outline" onClick={() => setBatch("review")}>Review selected</Button>
                 <Button size="sm" variant="outline" onClick={exportSelected}>Export selected (CSV)</Button>
+                {has("payer", "owner") && (
+                  <Button size="sm" variant="outline" disabled={approvable.length === 0} onClick={() => setBatch("approve")}>
+                    Approve eligible ({approvable.length})
+                  </Button>
+                )}
+                {has("preparer", "owner") && (
+                  <Button size="sm" variant="outline" disabled={rejectable.length === 0} onClick={() => setBatch("reject")}>
+                    Reject eligible ({rejectable.length})
+                  </Button>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear selection</Button>
               </>
             )}
@@ -291,7 +307,15 @@ function Purchases() {
                     <td className="px-4 py-3">{p.source === "invoice" ? "Invoice" : "AI proposal"}</td>
                     <td className="px-4 py-3 whitespace-nowrap">{new Date(p.created_at).toLocaleDateString("en-CA")}</td>
                     <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                    <td className="px-4 py-3 text-muted-foreground">{STATUS_META[p.status as PurchaseStatus]?.next}</td>
+                    <td className="px-4 py-3">
+                      {NEXT_ACTION[p.status as PurchaseStatus] ? (
+                        <button type="button" onClick={() => setPanelFor(p as unknown as Row)} className="text-left text-brand-deep underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                          {NEXT_ACTION[p.status as PurchaseStatus]}
+                        </button>
+                      ) : (
+                        <span className="text-muted-foreground">None</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
