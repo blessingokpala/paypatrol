@@ -1,6 +1,6 @@
 # PayPatrol — Judges' Build Report
 
-Status as of 2026-11-03, 22:50 UTC. Sandbox test mode only. All supplier names, invoices and amounts are fictional.
+Status as of 2026-11-04, 01:00 UTC. Sandbox test mode only. All supplier names, invoices and amounts are fictional.
 This report is a self-contained account of the current state. Supporting detail is in the timestamped engineering log, [BUILD_LOG.md](BUILD_LOG.md), linked per section below. Where they differ, the newer entry wins. Earlier optimistic wording that was later corrected is flagged in section 5.
 
 **Payment status, checked in the database when this report was written:** 0 PayPal orders, 0 captures, 0 verified PayPal notifications, 0 independent supplier verifications, 0 purchases marked Paid, 0 active budget reservations.
@@ -91,7 +91,7 @@ This report is a self-contained account of the current state. Supporting detail 
 - **AI invoice reading:**
   - Itemised invoice lines are not carried into the saved request; it stores a summary total. The lines stay in the AI evidence.
   - The recipient can come back with its label (e.g. "PayPal merchant ID: …"). It is kept exactly as read, and the reviewer must trim it.
-- **CA$25 test proposal:** Reserve and Pay are hidden for it in the interface only. The server does not block them.
+- **CA$25 test proposal:** Reserve and Pay are hidden in the interface **and refused on the server** ("Demonstration requests cannot be reserved or paid") since 4 Nov 2026.
 - **Phones:** checked at one width (390 px) in an automated browser, not on a physical phone or with a screen reader. On phones the organisation switcher shows a shortened name.
 - **Purchases list:** no pagination; all of the organisation's requests load at once, which suits demo volumes but not thousands of rows. The date filter uses the browser's local date.
 - **Readable screens:** the raw-data cleanup is complete in the standard interface, including Proposal content. Deliberate exceptions: the Evidence history CSV export (an authorised technical export) keeps original details, and a pasted invoice message is shown exactly as submitted.
