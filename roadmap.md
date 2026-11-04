@@ -1,19 +1,20 @@
 # PayPatrol roadmap
 
-## Done this turn (preview only, not yet published)
-- Restored compilation of the purchase detail page; correction form calls the deployed 13-arg `edit_purchase` (schema-cache error fixed at the cause)
-- Full correction workflow: all invoice fields, required reason, inline errors preserving entries, "Provided by user" / "Not found in document" / "Required before proceeding" wording, discrepancy note, correction history
-- Reviewer requirement: exact warning copy, eligible reviewers from real memberships, owner link to Team & integrations; demo suppliers show only the Sandbox account check
-- Two supplier-change records labelled current-version vs earlier history; holds still enforced
-- Extraction auto-fills untouched fields on new invoices; manual edits protected by confirmation; "Add supplier" inline pending-supplier flow with Sandbox limitation note
-- Purchases list: Next-action side panel (status, holds, amounts, role-aware actions, mobile full-width) and controlled batch Review/Export/Approve-eligible/Reject-eligible
-- Verified in browser with real backend + real Gemini reading; 45/45 tests, typecheck clean, build OK; BUILD_LOG.md updated
+## Done previously (preview only, not yet published)
+- Correction workflow, reviewer requirement, supplier-change history labels, extraction auto-fill, Next-action panel, batch Review/Export/Approve-eligible/Reject-eligible
+- 45/45 tests, typecheck clean, build OK
 
-## Open
-- [ ] Publish this round (user decision)
-- [ ] Batch approve/reject execution itself untested (no eligible rows existed); eligibility display verified
-- [ ] CA$80 request (PP-CHECKOUT-20261103) stays on independent-verification hold until partner's Sandbox account check; no payment created
+## Open — release blockers (this turn)
+- [ ] 1. Verify batch approval/rejection end-to-end in the real interface (persist after refresh, reason required, mixed selections, blocked cannot bypass, unauthorised/self-approval refused, stale-version approvals rejected, no duplicate decisions, no auto budget reservation)
+- [ ] 2. Genuine PayPal Sandbox payment: new labelled test request (NOT the CA$80 "TEST" request — preserve its hold), checks → approval → reserve once → real Sandbox order → buyer approval → validated capture → Paid only on authoritative confirmation → reservation consumed once → consistent after refresh
+- [ ] 3. Webhook processing & recovery: genuine webhook signature verification, idempotency, redirect alone cannot mark Paid, cancelled-checkout recovery, declined/pending states, refresh safety, mismatch prevents capture
+- [ ] 4. Evidence report: tested version (preview/published), batch results, order/capture IDs, final status/budget, webhook results, incomplete items; update BUILD_LOG.md and testing guide
+
+## Blockers anticipated
+- Sandbox buyer approval needs the user's separate Sandbox Personal account login (human action)
+- Independent approval/Change approver may require the partner's account (human action)
 
 ## Standing constraints
 - Payment-control writes only via SECURITY DEFINER RPCs; minor units; server recomputes totals
-- Never fabricate extraction/payment results; Sandbox only
+- Never fabricate extraction/payment results; Sandbox only; no credentials in chat/logs
+- CA$80 PP-CHECKOUT-20261103 stays on independent-verification hold; no payment on it
