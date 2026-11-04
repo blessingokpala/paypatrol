@@ -1,15 +1,19 @@
 # PayPatrol roadmap
 
-## Done: full readiness review (8 areas) — 2026-11-04
-- [x] Password recovery added (forgot-password + /reset-password) and browser-verified
-- [x] Server-side test-fixture payment guard (migration 0020); CA$25 fixture reserve/pay refused server-side
-- [x] Non-payers told who can pay on cleared requests
-- [x] Sign-out, business isolation (probe workspace invisible), add-member error path, cron schedule, PayPal config state verified
-- [x] JUDGES_REPORT.md readiness table + partner test guide; copied to Files; published
+## In progress (this turn)
+- [ ] Restore compilation of `src/routes/_authenticated/purchases.$id.tsx` (unclosed div, exTotalMinor typing, EditForm calling dropped 6-arg `edit_purchase`)
+- [ ] Finish correction workflow: full-field form + required reason, "Add missing details" action, "Provided by user" / "Not found in document" wording, extraction-vs-current discrepancy note
+- [ ] Reviewer requirement: exact warning copy, eligible reviewers from memberships, owner route to Team & integrations
+- [ ] Label the two supplier-change records (current version vs earlier history), keep holds enforced
+- [ ] Fix "Save new version" schema-cache error end-to-end; readable inline errors preserving entered values
+- [ ] Extraction → form auto-population for untouched fields; ask before replacing manual edits; investigate stale PP-CHECKOUT reference
+- [ ] "Add supplier" action beside supplier selector on invoice workflow; pending supplier, independent verification, sandbox single-merchant limitation note
+- [ ] Next action → descriptive links/buttons opening a side panel with status, blockers, failed rule, amounts, next permitted action; mobile full-width; restore filters on return
+- [ ] Controlled batch review on Purchases: selection toolbar, Review/Export selected, Approve eligible (server-checked), Reject eligible unpaid with reason; no batch payment
+- [ ] Browser verification with a labelled test request; preserve CA$80 hold; no payment/reservation
+- [ ] Report: fixed / passed / incomplete / preview-vs-published
 
-## Outstanding (waiting on people, not code)
-- Partner registers own account → owner adds as Change approver → partner records Sandbox account check and decides the CA$75 request (PP-CHECKOUT-20261103) hold
-- After approval: budget reservation → Personal Sandbox buyer approval → server-confirmed capture → genuine signed webhook reconciliation
-- Real email round-trips (signup confirmation, password reset delivery) unobserved
-- Two-user business-isolation test once the partner joins
-- First observed firing of the hourly maintenance schedule
+## Standing constraints
+- CA$80 request `0300638e…` stays on independent-verification hold; no payment until partner review
+- Payment-control writes only via SECURITY DEFINER RPCs; minor units; server recomputes totals
+- Never fabricate extraction/payment results; Sandbox only
