@@ -57,6 +57,12 @@ function AuthPage() {
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) toast.error(friendlyError(error));
+    } else if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/reset-password",
+      });
+      if (error) toast.error(friendlyError(error));
+      else setResetSent(true);
     } else {
       const { error } = await supabase.auth.signUp({
         email,
