@@ -1,4 +1,5 @@
 import { friendlyError, humanize } from "@/lib/friendly";
+import type { Database } from "@/integrations/supabase/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -145,7 +146,7 @@ function Review() {
                 </>
               )}
             </dl>
-            {amountDiffersFromExtraction && (
+            {amountDiffersFromExtraction && exTotalMinor !== null && (
               <p className="mt-3 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
                 The AI reading of the document says {formatMinor(exTotalMinor, p.currency)}, but this request currently says {formatMinor(p.total_minor, p.currency)}.
                 {edits.length > 0 && <> Last changed by {names[edits[edits.length - 1]!.actor_id ?? ""] ?? "a team member"} on {new Date(edits[edits.length - 1]!.created_at).toLocaleString("en-CA")}.</>}
@@ -179,10 +180,11 @@ function Review() {
           )}
           {p.source !== "invoice" && <p className="mt-3 text-xs text-muted-foreground">Price and payment recipient were taken from the approved listing and supplier record.</p>}
         </Panel>
+        </div>
       </div>
 
       {p.source === "invoice" && (
-      <Panel title="What AI read from the document" className="mt-6">
+      <Panel title="What AI read from the document" className="mt-6" actions={latestExtraction && !editing && org.has("preparer", "owner") && !["paid", "payment_pending", "cancelled", "failed"].includes(p.status) ? <Button size="sm" variant="outline" onClick={() => { setEditing(true); document.getElementById("request-details")?.scrollIntoView({ behavior: "smooth" }); }}>Add missing details</Button> : null}>
         {latestExtraction ? (
           <ExtractionView row={latestExtraction} />
         ) : reading ? (
@@ -228,7 +230,7 @@ function Review() {
             {sv
               ? <p className="mt-1 font-mono text-sm">{sv.paypal_merchant_id}</p>
               : <p className="mt-1 text-sm italic text-muted-foreground">{p.supplier_id ? "Supplier record is loading." : "No approved supplier selected."}</p>}
-            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value} · enrolment: {humanize(sv.enrolment_status)}</p>}
+            {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value}{isDemo ? " (fictional — use the Sandbox account check below)" : ""} · enrolment: {humanize(sv.enrolment_status)}</p>}
           </div>
         </div>
         <p className="mt-3 text-sm">{!sv ? (p.supplier_id ? "Supplier record is loading." : "No approved supplier to compare against. Match this request to an approved supplier or add the supplier through verification.") : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
@@ -251,7 +253,9 @@ function Review() {
       </Panel>
 
       {crs.map((cr) => (
-        <ChangeReview key={cr.id} cr={cr} sv={sv} verifs={verifs.filter((v) => v.change_request_id === cr.id)} names={names} onDone={refresh} />
+        <ChangeReview key={cr.id} cr={cr} sv={sv} isDemo={isDemo} members={members}
+          current={cr.base_version_id === p.supplier_version_id && cr.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()}
+          verifs={verifs.filter((v) => v.change_request_id === cr.id)} names={names} onDone={refresh} />
       ))}
 
       <Panel title="Approvals and checkout" className="mt-6">
