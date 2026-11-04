@@ -417,3 +417,59 @@ function NewInvoice() {
     </>
   );
 }
+
+/** Inline pending-supplier creation that keeps the invoice draft on screen. */
+function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; suggestion: { name: string; merchant: string }; onCreated: (id: string) => void }) {
+  const [s, setS] = useState({ name: suggestion.name, merchant: suggestion.merchant, email: "", channel: "phone", channelValue: "", evidence: "" });
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function create(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setBusy(true);
+    const { data, error } = await supabase.rpc("create_supplier", {
+      _org: orgId, _name: s.name, _merchant: s.merchant, _email: s.email,
+      _channel: s.channel, _channel_value: s.channelValue, _evidence: s.evidence,
+    });
+    setBusy(false);
+    if (error) { setErr(friendlyError(error, "Adding the supplier")); return; }
+    toast.success("Supplier added as pending. It must pass independent verification before it can be approved or paid.");
+    onCreated(data as string);
+  }
+  const fld = (k: keyof typeof s, label: string, required = true) => (
+    <div className="space-y-1">
+      <Label htmlFor={`as-${k}`}>{label}{required ? " *" : ""}</Label>
+      <Input id={`as-${k}`} required={required} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} />
+    </div>
+  );
+  return (
+    <form onSubmit={create} className="mt-2 space-y-3 rounded-md border border-dashed p-3">
+      <p className="text-xs text-muted-foreground">
+        Values read from the invoice are only suggestions — edit them. A new supplier starts unverified: an uploaded invoice or a
+        matching Merchant ID never approves it. Sandbox limitation: only the supplier enrolled with the connected Sandbox Business
+        account can actually receive a Sandbox payment; any other supplier stays unpayable until enrolment.
+      </p>
+      {fld("name", "Supplier legal name")}
+      {fld("merchant", "PayPal Merchant ID")}
+      {fld("email", "Supplier email", false)}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="as-channel">Trusted contact channel *</Label>
+          <FieldSelect
+            id="as-channel"
+            value={s.channel}
+            onChange={(v) => setS({ ...s, channel: v })}
+            options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }]}
+          />
+        </div>
+        {fld("channelValue", "Trusted contact value")}
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="as-evidence">How do you know this contact is genuine? *</Label>
+        <Textarea id="as-evidence" required value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="e.g. confirmed by phone on a number from a signed contract" />
+      </div>
+      {err && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{err}</p>}
+      <Button type="submit" size="sm" disabled={busy}>{busy ? "Adding…" : "Add as pending supplier"}</Button>
+    </form>
+  );
+}
