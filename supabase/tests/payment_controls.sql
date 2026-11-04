@@ -1,4 +1,5 @@
 -- PayPatrol payment-control tests.
+-- edit_purchase calls use the 13-argument form (migration 0023): reason is required.
 -- Run each DO block with the backend SQL runner. Every block ends by raising
 -- 'RESULTS: ...' on purpose, so all test data is rolled back. Every line must read PASS
 -- (or show the expected status values).
