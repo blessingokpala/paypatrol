@@ -409,7 +409,7 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
   );
 }
 
-function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void }) {
+function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void; current: boolean; isDemo: boolean; members: Member[] }) {
   const org = useOrg();
   const canReview = org.has("change_approver", "owner") && cr.proposed_by !== org.userId;
   const open = cr.status === "pending_verification" || cr.status === "verified_pending_decision";
@@ -435,6 +435,16 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
 
   return (
     <Panel title="Supplier payment-detail change" className="mt-6">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        {current
+          ? <ToneBadge tone="warning">Applies to the current version of this request</ToneBadge>
+          : <ToneBadge tone="neutral">Earlier history</ToneBadge>}
+      </div>
+      {!current && (
+        <p className="mb-2 text-sm text-muted-foreground">
+          This record concerns an earlier version of the request and is kept for history. It stays open and enforced, but the hold on the current version comes from the record marked “Applies to the current version of this request”.
+        </p>
+      )}
       <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{humanize(cr.status)}</strong></p>
       {cr.status === "superseded"
         ? <p className="mt-1 text-sm text-muted-foreground">Closed automatically, not approved: {cr.decision_note}</p>
@@ -460,13 +470,21 @@ function ChangeReview({ cr, sv, verifs, names, onDone }: { cr: CR; sv: SV; verif
         </ul>
       )}
       {open && !canReview && (
-        <p className="mt-3 rounded-md bg-warning-soft p-3 text-sm text-warning">
-          {cr.proposed_by === org.userId ? "You submitted this request. A different change approver or owner must verify it." : "Only change approvers or owners can verify this change."}
-        </p>
+        <div className="mt-3 rounded-md bg-warning-soft p-3 text-sm text-warning">
+          {cr.proposed_by === org.userId ? (
+            <>
+              <p>You created this request, so another person must verify the supplier payment details. A different team member with the Change approver or Business owner role can review it.</p>
+              <EligibleReviewers members={members} exclude={cr.proposed_by} names={names} isOwner={org.has("owner")} />
+            </>
+          ) : (
+            <p>Only change approvers or owners can verify this change.</p>
+          )}
+        </div>
       )}
       {open && canReview && (
         <div className="mt-4 grid gap-6 lg:grid-cols-2">
           <SandboxCheck cr={cr} onDone={onDone} />
+          {!isDemo && (
           <form onSubmit={record} className="space-y-3">
             <h3 className="font-semibold">Record independent verification</h3>
             <p className="text-xs text-muted-foreground">Use only the trusted contact on record: <strong>{sv?.trusted_contact_channel} {sv?.trusted_contact_value}</strong>. Do not use the contact details in the request.</p>
