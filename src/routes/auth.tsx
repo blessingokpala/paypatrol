@@ -33,12 +33,13 @@ function safePath(p?: string) {
 function AuthPage() {
   const { redirect } = Route.useSearch();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -56,6 +57,12 @@ function AuthPage() {
     if (mode === "signin") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) toast.error(friendlyError(error));
+    } else if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/reset-password",
+      });
+      if (error) toast.error(friendlyError(error));
+      else setResetSent(true);
     } else {
       const { error } = await supabase.auth.signUp({
         email,
@@ -81,11 +88,15 @@ function AuthPage() {
           <SandboxBanner />
         </div>
         <div>
-          <h1 className="text-xl font-bold">{mode === "signin" ? "Sign in" : "Create your account"}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Each person needs their own account. Independent approval depends on it.</p>
+          <h1 className="text-xl font-bold">{mode === "signin" ? "Sign in" : mode === "signup" ? "Create your account" : "Reset your password"}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {mode === "forgot" ? "Enter your account email and we will send you a reset link." : "Each person needs their own account. Independent approval depends on it."}
+          </p>
         </div>
         {sent ? (
           <p className="rounded-md bg-selected p-4 text-sm">Check {email} for a confirmation link, then come back to sign in.</p>
+        ) : resetSent ? (
+          <p className="rounded-md bg-selected p-4 text-sm">If an account exists for {email}, a reset link is on its way. Open it on this device to choose a new password.</p>
         ) : (
           <form onSubmit={submit} className="space-y-4">
             {mode === "signup" && (
@@ -98,20 +109,31 @@ function AuthPage() {
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password<Req /></Label>
-              <PasswordInput id="password" minLength={8} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
-            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}</Button>
+            {mode !== "forgot" && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password<Req /></Label>
+                <PasswordInput id="password" minLength={8} autoComplete={mode === "signin" ? "current-password" : "new-password"} required value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset link"}</Button>
+            {mode === "signin" && (
+              <p className="text-right text-sm">
+                <button type="button" className="font-semibold text-brand-bright underline" onClick={() => { setMode("forgot"); setResetSent(false); }}>
+                  Forgot password?
+                </button>
+              </p>
+            )}
           </form>
         )}
-        <div className="space-y-2">
-          <Button type="button" variant="outline" className="w-full" onClick={() => oauth("google")}>Continue with Google</Button>
-          <button type="button" className="lovable-auth-button w-full" onClick={() => oauth("lovable")}>Continue with Lovable</button>
-        </div>
+        {mode !== "forgot" && (
+          <div className="space-y-2">
+            <Button type="button" variant="outline" className="w-full" onClick={() => oauth("google")}>Continue with Google</Button>
+            <button type="button" className="lovable-auth-button w-full" onClick={() => oauth("lovable")}>Continue with Lovable</button>
+          </div>
+        )}
         <p className="text-center text-sm">
           {mode === "signin" ? "New to PayPatrol?" : "Already have an account?"}{" "}
-          <button className="font-semibold text-brand-bright underline" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setSent(false); }}>
+          <button className="font-semibold text-brand-bright underline" onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setSent(false); setResetSent(false); }}>
             {mode === "signin" ? "Create an account" : "Sign in"}
           </button>
         </p>

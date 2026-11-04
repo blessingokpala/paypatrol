@@ -1,24 +1,15 @@
 # PayPatrol roadmap
 
-## Current: usability pass (13 items from brief)
-1. Fix AI proposal submit → 404 (navigate with returned id, keep form on error, prevent duplicates)
-2. Shared accessible dropdown component (supplier, listing, org, role) — palette, keyboard, alignment
-3. Auto-start invoice extraction after upload; populate form; keep extracted vs approved distinct; don't overwrite manual edits
-4. Extraction states (Uploading / Reading / Ready / Could not read); reuse saved extraction on detail page; bounded retries
-5. "Recipient on this request" wording; specific missing-value messages; never auto-fill from baseline
-6. Overview drill-downs: cards link to budget breakdown, reserved, verification, approvals, blocked; Needs action entries link to own request; compact integrations
-7. Consistent form/layout spacing; plain-language findings (codes internal only)
-8. Lighter placeholders; red asterisk on mandatory fields; inline errors + focus first invalid
-9. Back navigation on forms/detail pages; warn on unsaved changes
-10. Password show/hide toggles on auth + recent-sign-in
-11. Purchases table selection: header checkbox, count, clear, export selected summaries (no batch approval/payment)
-12. Evidence history: readable summaries instead of raw JSON; structured detail panel; keep audit records unchanged
-13. Verify workflows end-to-end; screenshots; report tested vs unfinished
+## Done: full readiness review (8 areas) — 2026-11-04
+- [x] Password recovery added (forgot-password + /reset-password) and browser-verified
+- [x] Server-side test-fixture payment guard (migration 0020); CA$25 fixture reserve/pay refused server-side
+- [x] Non-payers told who can pay on cleared requests
+- [x] Sign-out, business isolation (probe workspace invisible), add-member error path, cron schedule, PayPal config state verified
+- [x] JUDGES_REPORT.md readiness table + partner test guide; copied to Files; published
 
-## Outstanding from earlier phases
-- Partner (Change approver) review of PP-CHECKOUT-20261103 supplier change — waiting on user; CA$75 request stays on hold
-- Real PayPal sandbox checkout + genuine signed webhook — after partner review
-- Cross-org invoice isolation re-test
-- [x] Replace raw JSON/codes/nulls app-wide with readable summaries (proposal content, evidence, findings, errors); hide invoice-only fields on proposals
-- [x] Overview drill-downs verified; Reserved purchases page; shared back navigation
-- [ ] CA$75 Sandbox checkout — blocked on partner's independent review
+## Outstanding (waiting on people, not code)
+- Partner registers own account → owner adds as Change approver → partner records Sandbox account check and decides the CA$75 request (PP-CHECKOUT-20261103) hold
+- After approval: budget reservation → Personal Sandbox buyer approval → server-confirmed capture → genuine signed webhook reconciliation
+- Real email round-trips (signup confirmation, password reset delivery) unobserved
+- Two-user business-isolation test once the partner joins
+- First observed firing of the hourly maintenance schedule
