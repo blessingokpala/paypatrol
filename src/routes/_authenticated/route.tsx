@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { OrgProvider, useMemberships, useOrg, errMsg } from "@/lib/org";
-import { SandboxBanner, Wordmark } from "@/components/brand";
+import { SandboxPill, Wordmark } from "@/components/brand";
+import { NotificationBell } from "@/components/notifications";
+import { AccountMenu } from "@/components/account-menu";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ROLE_LABELS } from "@/lib/status";
 import { toast } from "sonner";
 import {
-  LayoutDashboard, ShoppingCart, Building2, CheckSquare, SlidersHorizontal, History, Settings, LogOut, Menu, X,
+  LayoutDashboard, ShoppingCart, Building2, CheckSquare, SlidersHorizontal, History, Settings, Menu, Store, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
