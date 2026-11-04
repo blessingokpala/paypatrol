@@ -7,9 +7,9 @@ import type { ReactNode } from "react";
 export function Wordmark({ className }: { className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-2 font-extrabold tracking-tight", className)}>
-      <svg viewBox="0 0 24 24" aria-hidden className="h-6 w-6">
+      <svg viewBox="0 0 24 24" aria-hidden className="h-7 w-7">
         <path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="var(--brand-deep)" />
-        <path d="m8.2 12.3 2.6 2.6 5-5.2" fill="none" stroke="var(--brand-bright)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="m8.2 12.3 2.6 2.6 5-5.2" fill="none" stroke="var(--primary-foreground)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <span>
         <span className="text-brand-deep">Pay</span>
@@ -54,6 +54,16 @@ export function SandboxBanner() {
     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-warning/40 bg-warning-soft px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-warning">
       <span className="h-2 w-2 rounded-full bg-warning" aria-hidden />
       Sandbox<span className="hidden sm:inline"> test mode</span>
+    </span>
+  );
+}
+
+/** Compact persistent Sandbox indicator for the sidebar footer. */
+export function SandboxPill() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning">
+      <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden />
+      Sandbox · Test money
     </span>
   );
 }

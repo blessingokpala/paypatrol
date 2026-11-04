@@ -109,6 +109,8 @@
   }
   body {
     background-color: var(--color-background);
+    background-image: linear-gradient(180deg, #e0edfa 0%, var(--background) 280px);
+    background-attachment: fixed;
     color: var(--color-foreground);
   }
   :focus-visible {

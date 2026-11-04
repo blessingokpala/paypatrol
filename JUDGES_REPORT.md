@@ -132,3 +132,27 @@ All reads go through the signed-in user's permissions. Nothing is hardcoded, and
 - Switcher shows only non-test workspaces from the user's own memberships (server-enforced by access rules); with one workspace it shows the name only. Switching clears cached data and returns to Overview.
 - Verified: header showed "Ada's Grocery" with no dropdown even with a stale saved test workspace; Ada's Grocery still has 13 purchases, policy v1 (CA$300/week), merchant L8SVBX42QHT3U, and the CA$75 request PP-CHECKOUT-20261103 still `verification_required` with its change request pending.
 - Not tested: switching between two legitimate workspaces in the browser (no second real workspace exists).
+
+## Header redesign and in-app notifications (4 Nov 2026)
+
+**Implemented**
+- Logo: white checkmark inside the shield, ~15% larger, proportions kept.
+- Sandbox badge removed from the header; a compact "Sandbox · Test money" pill now sits in the sidebar footer, with a small "Sandbox" pill in the header on phone widths. Explicit Sandbox wording at checkout is unchanged.
+- Business identity: dedicated header container (shop icon, border, pale blue background) showing the selected business name prominently. A dropdown arrow appears only when the user belongs to more than one legitimate business; automated test workspaces stay excluded. The business is not labelled as the account owner.
+- Account menu: the exposed email and standalone Sign out are replaced by an avatar button. Its panel shows the signed-in email, the person's roles in the selected business, and — for owners only — Team & integrations and Spending rules links, plus Sign out. No decorative items.
+- Notification bell with unread count and a panel of concise, timestamped notifications derived from real records: requests awaiting verification, supplier payment-detail changes, approvals required, requests blocked by spending rules, and outgoing payments pending/completed/failed. Each opens its exact purchase or supplier record with a return path. Read status is stored per user in the new `notification_reads` table (server-enforced: users read and mark only their own rows, and only in businesses they belong to). Repeated events deduplicate by a stable key; informational events stop appearing after 7 days while actionable ones persist until resolved. No sample alerts are generated.
+- Priority: Urgent (failed outgoing payment), Action required (verification, approval, correction), Update (completion and informational). Derived from explicit event rules, paired with text and icons, separate from payment status.
+- Labels are factual ("Payment details need verification", "Blocked by spending rules", "Information missing", "Payment confirmation pending"); no "Fake/Real/Safe/Fraud" verdicts anywhere. Notifications use no AI calls.
+- Styling: restrained pale blue gradient across the canvas extending into the header; forms, panels and tables stay on readable surfaces; Libre Franklin kept.
+
+**Verified (browser, owner account)**
+- Notification panel listed 22 real events with priorities and timestamps; clicking one opened its exact purchase with "Back to overview"; Mark all as read cleared the badge and stayed cleared after reload (persistence).
+- Account menu showed email, roles, business and owner-only links; Sign out present.
+- Keyboard: Tab reaches the bell and avatar, Enter opens, arrow keys move through items, Escape closes and returns focus to the trigger.
+- Phone width 390 px: header fits with no overflow; logo, Sandbox pill, business name, bell and avatar all usable; sidebar footer pill visible in the opened menu.
+
+**Unsupported / not done**
+- Incoming-payment notifications: not implemented — PayPatrol manages outgoing payments to suppliers and has no verified receiving workflow.
+- AI explanation summaries inside notifications: not added; notifications are rule-derived only.
+- Business switching between two legitimate businesses remains untested in the browser (only one real workspace exists).
+- No payment was created, captured or marked Paid. The CA$75 request remains Verification required pending the partner's independent review.
