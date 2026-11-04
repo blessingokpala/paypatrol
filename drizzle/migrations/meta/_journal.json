@@ -169,6 +169,13 @@
       "when": 1793755136004,
       "tag": "0023_edit_purchase_correction_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793755238905,
+      "tag": "0024_demo_supplier_sandbox_check_wording",
+      "breakpoints": true
     }
   ]
 }
