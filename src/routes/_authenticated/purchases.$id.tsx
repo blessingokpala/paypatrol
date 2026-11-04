@@ -31,9 +31,9 @@ function useReview(id: string) {
   return useQuery({
     queryKey: ["review", id],
     queryFn: async () => {
-      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name)").eq("id", id).single();
+      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name, is_demo)").eq("id", id).single();
       if (error) throw error;
-      const [items, docs, findings, crs, approvals, res, sv, exs] = await Promise.all([
+      const [items, docs, findings, crs, approvals, res, sv, exs, members, audits] = await Promise.all([
         supabase.from("purchase_line_items").select("*").eq("purchase_id", id),
         supabase.from("invoice_documents").select("*").eq("purchase_id", id),
         supabase.from("findings").select("*").eq("purchase_id", id).eq("purchase_version", p.version).order("created_at"),
@@ -42,10 +42,12 @@ function useReview(id: string) {
         supabase.from("budget_reservations").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
         p.supplier_version_id ? supabase.from("supplier_versions").select("*").eq("id", p.supplier_version_id).single() : Promise.resolve({ data: null }),
         supabase.from("ai_extractions").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
+        supabase.from("memberships").select("user_id, role").eq("org_id", p.org_id),
+        supabase.from("audit_events").select("*").eq("entity_type", "purchase").eq("entity_id", id).order("created_at"),
       ]);
       const crIds = (crs.data ?? []).map((c) => c.id);
       const verifs = crIds.length ? await supabase.from("verification_records").select("*").in("change_request_id", crIds).order("created_at") : { data: [] };
-      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [] };
+      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [], members: members.data ?? [], audits: audits.data ?? [] };
     },
   });
 }
