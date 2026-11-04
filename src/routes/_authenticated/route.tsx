@@ -112,9 +112,9 @@ function Shell() {
         </div>
       </header>
       <div className="flex">
-        <aside className={cn("fixed inset-y-14 left-0 z-20 w-60 border-r bg-card p-3 lg:sticky lg:top-14 lg:block lg:h-[calc(100vh-3.5rem)]", open ? "block" : "hidden")}>
-          {nav}
-          <div className="mt-6 border-t pt-4 text-xs text-muted-foreground">
+        <aside className={cn("fixed inset-y-14 left-0 z-20 flex w-60 flex-col border-r bg-card p-3 lg:sticky lg:top-14 lg:flex lg:h-[calc(100vh-3.5rem)]", open ? "flex" : "hidden")}>
+          <div className="min-h-0 flex-1 overflow-y-auto">{nav}</div>
+          <div className="mt-3 shrink-0 border-t pt-4 text-xs text-muted-foreground">
             <p className="font-semibold text-foreground">Your roles</p>
             <p className="mt-1">{org.roles.map((r) => ROLE_LABELS[r]).join(", ") || "None"}</p>
             <p className="mt-3"><SandboxPill /></p>
