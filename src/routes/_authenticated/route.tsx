@@ -75,37 +75,40 @@ function Shell() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-card px-3 sm:gap-3 sm:px-4">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-gradient-to-b from-secondary/70 to-card px-3 sm:gap-3 sm:px-4">
         <button className="rounded p-1 lg:hidden" onClick={() => setOpen(!open)} aria-label={open ? "Close menu" : "Open menu"}>
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
         <Link className="shrink-0" to="/overview" aria-label="PayPatrol overview">
           <Wordmark className="text-lg" />
         </Link>
-        <SandboxBanner />
-        <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
-          {org.orgs.length > 1 ? (
-            <div className="w-28 min-w-0 sm:w-44">
-              <FieldSelect
-                ariaLabel="Organisation"
-                value={org.orgId}
-                onChange={(v) => {
-                  if (v === org.orgId) return;
-                  // Drop the previous workspace's cached data, filters and selections.
-                  qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "memberships" });
-                  org.setOrgId(v);
-                  navigate({ to: "/overview" });
-                }}
-                options={org.orgs.map((o) => ({ value: o.id, label: o.name }))}
-              />
-            </div>
-          ) : (
-            <span className="truncate text-sm font-medium" title={org.orgName}>{org.orgName}</span>
-          )}
-          <span className="hidden text-xs text-muted-foreground md:inline">{org.email}</span>
-          <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sign out" className="px-2 sm:px-3">
-            <LogOut className="h-4 w-4 sm:mr-1" aria-hidden /> <span className="hidden sm:inline">Sign out</span>
-          </Button>
+        <span className="inline-flex shrink-0 items-center gap-1 rounded border border-warning/40 bg-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-warning sm:hidden">
+          <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden />Sandbox
+        </span>
+        <div className="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex min-w-0 items-center gap-2 rounded-md border bg-secondary px-2 py-1 sm:px-2.5" title={`Selected business: ${org.orgName}`}>
+            <Store className="h-4 w-4 shrink-0 text-brand-deep" aria-hidden />
+            {org.orgs.length > 1 ? (
+              <div className="w-28 min-w-0 sm:w-44">
+                <FieldSelect
+                  ariaLabel="Selected business"
+                  value={org.orgId}
+                  onChange={(v) => {
+                    if (v === org.orgId) return;
+                    // Drop the previous workspace's cached data, filters and selections.
+                    qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "memberships" });
+                    org.setOrgId(v);
+                    navigate({ to: "/overview" });
+                  }}
+                  options={org.orgs.map((o) => ({ value: o.id, label: o.name }))}
+                />
+              </div>
+            ) : (
+              <span className="max-w-28 truncate text-sm font-semibold text-brand-deep sm:max-w-56">{org.orgName}</span>
+            )}
+          </div>
+          <NotificationBell />
+          <AccountMenu />
         </div>
       </header>
       <div className="flex">
@@ -114,6 +117,7 @@ function Shell() {
           <div className="mt-6 border-t pt-4 text-xs text-muted-foreground">
             <p className="font-semibold text-foreground">Your roles</p>
             <p className="mt-1">{org.roles.map((r) => ROLE_LABELS[r]).join(", ") || "None"}</p>
+            <p className="mt-3"><SandboxPill /></p>
           </div>
         </aside>
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
