@@ -12,8 +12,8 @@ describe("deriveNotifications", () => {
   it("marks a failed outgoing payment as urgent", () => {
     const n = deriveNotifications({ purchases: [purchase({ status: "failed" })], changeRequests: [], now: NOW });
     expect(n).toHaveLength(1);
-    expect(n[0].priority).toBe("urgent");
-    expect(n[0].title).toBe("Outgoing payment failed");
+    expect(n[0]?.priority).toBe("urgent");
+    expect(n[0]?.title).toBe("Outgoing payment failed");
   });
 
   it("marks verification, approval, clarification and blocked as action required", () => {
@@ -70,7 +70,7 @@ describe("deriveNotifications", () => {
 
   it("links each notification to its exact record", () => {
     const n = deriveNotifications({ purchases: [purchase({ id: "p9", status: "blocked" })], changeRequests: [], now: NOW });
-    expect(n[0].link).toEqual({ kind: "purchase", id: "p9" });
+    expect(n[0]?.link).toEqual({ kind: "purchase", id: "p9" });
   });
 });
 
