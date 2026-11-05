@@ -47,8 +47,10 @@ function Approvals() {
     <>
       <BackLink to="/overview" label="Back to overview" optional />
       <PageHeader title="Approvals" description="Each approval is bound to one version. Any change to amount, currency, recipient, supplier record or rules cancels it. Approval cannot override a hard limit." />
-      {!org.has("payer", "owner") && <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">You can view this queue but only payers or owners can approve.</p>}
-      {q.isLoading ? <p className="text-sm">Loading…</p> : (q.data ?? []).length === 0 ? <EmptyState>No requests awaiting approval.</EmptyState> : (
+      <p className="mb-4 text-sm text-muted-foreground">This page has two queues: <a href="#spending" className="font-medium text-brand-deep underline">Spending approvals</a> (Payer or Business owner) and <a href="#supplier-reviews" className="font-medium text-brand-deep underline">Supplier payment-detail reviews</a> (Change approver or Business owner). Nobody can approve or verify their own request.</p>
+      <h2 id="spending" className="mb-3 text-lg font-bold">Spending approvals</h2>
+      {!org.has("payer", "owner") && <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">You can view this queue but only payers or owners can approve spending.</p>}
+      {q.isLoading ? <p className="text-sm">Loading…</p> : (q.data ?? []).length === 0 ? <EmptyState>No spending requests awaiting approval. This does not mean there are no supplier reviews — see below.</EmptyState> : (
         <div className="space-y-4">
           {(q.data ?? []).map((p) => {
             const sv = p.supplier_versions as { version: number; paypal_merchant_id: string } | null;
@@ -82,6 +84,50 @@ function Approvals() {
           })}
         </div>
       )}
+      <SupplierReviews here={here} />
     </>
+  );
+}
+
+function SupplierReviews({ here }: { here: string }) {
+  const org = useOrg();
+  const names = useProfiles(org.orgId).data ?? {};
+  const q = useQuery({
+    queryKey: ["supplier-reviews", org.orgId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("supplier_change_requests").select("id, status, proposed_recipient, proposed_by, purchase_id, created_at, suppliers(name), purchases(title, version, requested_by)").eq("org_id", org.orgId).in("status", ["pending_verification", "verified_pending_decision"]).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const canReview = org.has("change_approver", "owner");
+  return (
+    <section className="mt-8">
+      <h2 id="supplier-reviews" className="mb-3 text-lg font-bold">Supplier payment-detail reviews</h2>
+      {!canReview && <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">Only change approvers or owners can verify supplier payment details.</p>}
+      {q.isLoading ? <p className="text-sm">Loading…</p> : (q.data ?? []).length === 0 ? <EmptyState>No supplier payment-detail changes awaiting review.</EmptyState> : (
+        <ul className="space-y-3">
+          {(q.data ?? []).map((c) => {
+            const pur = c.purchases as { title: string; version: number; requested_by: string } | null;
+            const own = c.proposed_by === org.userId || pur?.requested_by === org.userId;
+            return (
+              <li key={c.id} className="rounded-lg border bg-card p-4 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">{(c.suppliers as { name: string } | null)?.name ?? "Supplier"} → new recipient <span className="font-mono text-xs">{c.proposed_recipient}</span></p>
+                  <ToneBadge tone="warning">{c.status === "pending_verification" ? "Awaiting verification" : "Verified, awaiting decision"}</ToneBadge>
+                </div>
+                <p className="mt-1 text-muted-foreground">{pur ? `For ${pur.title} (v${pur.version}). ` : ""}Raised by {names[c.proposed_by] ?? "a team member"} on {new Date(c.created_at).toLocaleDateString("en-CA")}.</p>
+                {own && <p className="mt-1 text-muted-foreground">You raised or requested this, so a different reviewer must verify it.</p>}
+                <div className="mt-2">
+                  {c.purchase_id
+                    ? <Link to="/purchases/$id" params={{ id: c.purchase_id }} search={{ from: here }} hash="supplier-change" className="font-medium text-brand-deep underline">{canReview && !own ? "Open review" : "View request"}</Link>
+                    : <Link to="/suppliers" className="font-medium text-brand-deep underline">Open Suppliers</Link>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
