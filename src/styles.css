@@ -70,6 +70,8 @@
   --secondary-foreground: #173b73;
   --muted: #eef2f7;
   --muted-foreground: #4a5a75;
+  /* Lighter than entered values (#172b4d) yet ~4.6:1 on white. */
+  --placeholder: #6b778c;
   --accent: #eaf2fc;
   --accent-foreground: #173b73;
   --selected: #eaf2fc;
@@ -101,6 +103,16 @@
 }
 
 @layer base {
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--placeholder) !important;
+    opacity: 1;
+    font-style: italic;
+  }
+  button[data-placeholder] > span:first-child {
+    color: var(--placeholder);
+    font-style: italic;
+  }
   * {
     border-color: var(--color-border);
   }

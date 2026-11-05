@@ -187,7 +187,7 @@ function Purchases() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Search requests, invoice references or suppliers"
-          className="bg-card text-sm placeholder:text-muted-foreground/70"
+          className="bg-card text-sm"
         />
       </div>
 
