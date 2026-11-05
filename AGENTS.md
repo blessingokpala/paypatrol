@@ -24,3 +24,4 @@
 - Merchant configuration replaces only fictional supplier baselines through owner reauthentication; requested invoice recipients remain unchanged. Why: enrolment must not erase discrepancies or bypass independent real-recipient verification.
 - Payment-control tests live in `supabase/tests/payment_controls.sql` (run via the backend SQL runner; they roll back).
 - Automated test scripts must call `mark_test_workspace` right after creating a workspace; the switcher hides workspaces by the `is_test_workspace` flag, never by name. Why: test fixtures must not appear as real businesses.
+- Team membership is granted only by `accept_invitation`, which requires the signed-in confirmed email to match a pending, unexpired invitation; owners manage invitations via create/resend/revoke RPCs. Why: access must never be granted by name matching or silent database edits, and accepting must not touch other businesses.
