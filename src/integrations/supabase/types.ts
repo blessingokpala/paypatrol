@@ -1514,6 +1514,7 @@ export type Database = {
         Args: { _org: string; _reason: string }
         Returns: undefined
       }
+      my_verified_email: { Args: never; Returns: string }
       org_budget_summary: { Args: { _org: string }; Returns: Json }
       org_week_start: { Args: { _tz: string }; Returns: string }
       prepare_sandbox_capture: { Args: { _attempt: string }; Returns: Json }
