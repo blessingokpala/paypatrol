@@ -56,6 +56,7 @@ function Shell() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const myInvites = useMyInvitations();
 
   const business = (width: string) => (
     <div className="flex min-w-0 items-center gap-2 rounded-md border bg-secondary px-2 py-1 sm:px-2.5" title={`Selected business: ${org.orgName}`}>
@@ -131,6 +132,12 @@ function Shell() {
         </aside>
         <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-6xl" key={org.orgId}>
+            {(myInvites.data ?? []).map((i) => (
+              <div key={i.id} className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border border-brand-deep/30 bg-selected p-3 text-sm">
+                <span>You've been invited to join <span className="font-semibold">{i.org_name}</span> as {rolesText(i.roles)}.</span>
+                <Button asChild size="sm"><Link to="/invite/$id" params={{ id: i.id }}>Review invitation</Link></Button>
+              </div>
+            ))}
             <Outlet />
           </div>
         </main>
