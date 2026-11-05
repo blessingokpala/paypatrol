@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { configureSandboxMerchant } from "@/lib/paypal.functions";
 import { useSuppliers } from "@/lib/queries";
 import { RecentSignin } from "@/components/recent-signin";
+import { InvitePanel } from "@/components/invite-panel";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({ meta: [{ title: "Team & integrations — PayPatrol" }, { name: "description", content: "Members, roles and integration status." }, { property: "og:title", content: "Team & integrations — PayPatrol" }, { property: "og:description", content: "PayPatrol team permissions and verified integration status." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
@@ -43,11 +44,9 @@ function Settings() {
   const testFn = useServerFn(testAiConnection);
   const [testing, setTesting] = useState(false);
   const [test, setTest] = useState<{ ok: boolean; text: string } | null>(null);
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<(typeof ROLES)[number]>("change_approver");
   const configureFn = useServerFn(configureSandboxMerchant);
   const suppliers = useSuppliers(org.orgId);
-  const [merchantId, setMerchantId] = useState("L8SVBX42QHT3U");
+  const [merchantId, setMerchantId] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [cadConfirmed, setCadConfirmed] = useState(false);
   const [configuring, setConfiguring] = useState(false);
@@ -55,14 +54,6 @@ function Settings() {
   const byUser = new Map<string, string[]>();
   for (const m of members.data ?? []) byUser.set(m.user_id, [...(byUser.get(m.user_id) ?? []), m.role]);
 
-  async function add(e: React.FormEvent) {
-    e.preventDefault();
-    const { error } = await supabase.rpc("add_member_by_email", { _org: org.orgId, _email: email, _role: role });
-    if (error) { toast.error(friendlyError(error)); return; }
-    toast.success("Role added");
-    setEmail("");
-    qc.invalidateQueries();
-  }
   async function remove(user: string, r: (typeof ROLES)[number]) {
     const { error } = await supabase.rpc("remove_member_role", { _org: org.orgId, _user: user, _role: r });
     if (error) { toast.error(friendlyError(error)); return; }
@@ -89,21 +80,7 @@ function Settings() {
               </li>
             ))}
           </ul>
-          {isOwner && (
-            <form onSubmit={add} className="mt-4 space-y-3 border-t pt-4">
-              <div className="space-y-1"><Label htmlFor="m-email">Email of an existing account</Label><Input id="m-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-              <div className="space-y-1">
-                <Label htmlFor="m-role">Role</Label>
-                <FieldSelect
-                  id="m-role"
-                  value={role}
-                  onChange={(v) => setRole(v as (typeof ROLES)[number])}
-                  options={ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] ?? r }))}
-                />
-              </div>
-              <Button type="submit">Add role</Button>
-            </form>
-          )}
+          {isOwner && <InvitePanel />}
         </Panel>
         <Panel title="Integrations (restricted)">
           {!isOwner ? <p className="text-sm text-muted-foreground">Only owners can view integration settings.</p> : (
@@ -143,7 +120,7 @@ function Settings() {
                  <ToneBadge tone={status.data?.webhookConfigured ? "success" : "warning"}>{status.data?.webhookConfigured ? "Webhook configured" : "Webhook registration required"}</ToneBadge>
                  <div className="space-y-3 border-t pt-3">
                    <Label htmlFor="sandbox-merchant">Sandbox Business Merchant ID</Label>
-                   <Input id="sandbox-merchant" value={merchantId} onChange={e => setMerchantId(e.target.value.trim())} maxLength={13} />
+                   <Input id="sandbox-merchant" placeholder="13-character Merchant ID from PayPal Developer" value={merchantId} onChange={e => setMerchantId(e.target.value.trim())} maxLength={13} />
                    <Label htmlFor="sandbox-supplier">Approved supplier represented by this Business account</Label>
                    <FieldSelect
                      id="sandbox-supplier"

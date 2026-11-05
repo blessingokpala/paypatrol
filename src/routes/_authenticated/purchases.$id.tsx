@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { RecentSignin } from "@/components/recent-signin";
 import { SandboxCheckout } from "@/components/sandbox-checkout";
+import { PaymentReadiness } from "@/components/payment-readiness";
 import { BackLink, useHere } from "@/components/back-link";
 import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
@@ -290,6 +291,7 @@ function Review() {
           <Button variant="ghost" onClick={() => call(() => supabase.rpc("recheck_purchase", { _pid: p.id }), "Checks re-run")}>Re-run checks</Button>
         </div>
         {isTestData && p.status === "cleared_for_checkout" && <p className="mt-3 text-sm text-muted-foreground">Labelled as test data. Budget reservation and payment are not offered for this request.</p>}
+        {!isTestData && p.status === "cleared_for_checkout" && <PaymentReadiness supplierId={p.supplier_id} supplierMerchant={sv?.paypal_merchant_id ?? null} />}
         {!isTestData && !org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending"].includes(p.status) && (
           <p className="mt-3 text-sm text-muted-foreground">Only an owner or payer can reserve budget and pay this request.</p>
         )}

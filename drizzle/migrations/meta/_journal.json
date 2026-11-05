@@ -190,6 +190,20 @@
       "when": 1793758711563,
       "tag": "0026_cancel_uncaptured_attempt_returns_to_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1793889823367,
+      "tag": "0027_org_invitations",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793889836592,
+      "tag": "0028_invitation_policy_helper",
+      "breakpoints": true
     }
   ]
 }

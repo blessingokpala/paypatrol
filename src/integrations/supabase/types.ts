@@ -485,6 +485,68 @@ export type Database = {
           },
         ]
       }
+      org_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          inviter_name: string | null
+          last_sent_at: string
+          org_id: string
+          org_name: string
+          revoked_at: string | null
+          roles: Database["public"]["Enums"]["member_role"][]
+          send_count: number
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          inviter_name?: string | null
+          last_sent_at?: string
+          org_id: string
+          org_name: string
+          revoked_at?: string | null
+          roles: Database["public"]["Enums"]["member_role"][]
+          send_count?: number
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          inviter_name?: string | null
+          last_sent_at?: string
+          org_id?: string
+          org_name?: string
+          revoked_at?: string | null
+          roles?: Database["public"]["Enums"]["member_role"][]
+          send_count?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_invitations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           created_at: string
@@ -1326,6 +1388,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { _id: string }; Returns: string }
       active_policy_id: { Args: { _org: string }; Returns: string }
       add_member_by_email: {
         Args: {
@@ -1360,6 +1423,14 @@ export type Database = {
           _supplier: string
         }
         Returns: undefined
+      }
+      create_invitation: {
+        Args: {
+          _email: string
+          _org: string
+          _roles: Database["public"]["Enums"]["member_role"][]
+        }
+        Returns: string
       }
       create_organization: {
         Args: { _name: string; _with_demo?: boolean }
@@ -1443,6 +1514,7 @@ export type Database = {
         Args: { _org: string; _reason: string }
         Returns: undefined
       }
+      my_verified_email: { Args: never; Returns: string }
       org_budget_summary: { Args: { _org: string }; Returns: Json }
       org_week_start: { Args: { _tz: string }; Returns: string }
       prepare_sandbox_capture: { Args: { _attempt: string }; Returns: Json }
@@ -1530,11 +1602,13 @@ export type Database = {
         Returns: undefined
       }
       require_recent_authentication: { Args: never; Returns: undefined }
+      resend_invitation: { Args: { _id: string }; Returns: undefined }
       reserve_budget: { Args: { _pid: string }; Returns: string }
       reset_uncaptured_sandbox_attempt: {
         Args: { _attempt: string }
         Returns: undefined
       }
+      revoke_invitation: { Args: { _id: string }; Returns: undefined }
       submit_ai_proposal: {
         Args: {
           _claimed_recipient?: string
