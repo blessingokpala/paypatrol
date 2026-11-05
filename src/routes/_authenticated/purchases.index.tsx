@@ -121,7 +121,7 @@ function Purchases() {
   const [panelFor, setPanelFor] = useState<Row | null>(null);
   const [batch, setBatch] = useState<null | "review" | "approve" | "reject">(null);
   // Eligibility is re-checked on the server by the RPCs; these lists only decide what is offered.
-  const approvable = visibleSelected.filter((p) => p.status === "approval_required" && p.requested_by !== userId && !p.is_test_fixture);
+  const approvable = visibleSelected.filter((p) => p.status === "approval_required" && p.requested_by !== userId); // labelled test data may be approved: approval never reserves budget or pays
   const rejectable = visibleSelected.filter((p) => ["draft", "needs_clarification", "blocked", "verification_required", "approval_required", "cleared_for_checkout"].includes(p.status));
 
   function toggleAll() {
@@ -405,7 +405,6 @@ function NextActionPanel({ p, here, onClose }: { p: Row; here: string; onClose: 
 function whyNotApprove(p: Row, userId: string): string {
   if (p.status !== "approval_required") return `not awaiting spending approval (${STATUS_META[p.status as PurchaseStatus]?.label ?? p.status})`;
   if (p.requested_by === userId) return "you submitted it, so a different payer must approve it";
-  if (p.is_test_fixture) return "labelled test data";
   return "";
 }
 function whyNotReject(p: Row): string {
