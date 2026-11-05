@@ -67,7 +67,7 @@ function AuthPage() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.origin + "/overview", data: { display_name: name } },
+        options: { emailRedirectTo: window.location.origin + (redirect ? `/auth?redirect=${encodeURIComponent(safePath(redirect))}` : "/overview"), data: { display_name: name } },
       });
       if (error) toast.error(friendlyError(error));
       else setSent(true);
