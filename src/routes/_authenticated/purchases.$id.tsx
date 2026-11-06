@@ -224,8 +224,9 @@ function Review() {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className={recipientDiffers ? "rounded-md border-2 border-warning bg-warning-soft p-4" : "rounded-md border p-4"}>
             <p className="text-xs font-semibold uppercase text-muted-foreground">Recipient on this request</p>
+            {p.requested_recipient_name?.trim() && <p className="mt-1 text-sm"><span className="text-muted-foreground">Name: </span>{p.requested_recipient_name}</p>}
             {p.requested_recipient?.trim()
-              ? <p className="mt-1 font-mono text-sm">{p.requested_recipient}</p>
+              ? <p className="mt-1 font-mono text-sm"><span className="font-sans text-muted-foreground">PayPal merchant ID: </span>{p.requested_recipient}</p>
               : <p className="mt-1 text-sm italic text-muted-foreground">No payment recipient provided.</p>}
             {p.requested_contact && <p className="mt-2 text-xs">Contact given: {p.requested_contact} <span className="text-warning">(not usable for verification)</span></p>}
           </div>

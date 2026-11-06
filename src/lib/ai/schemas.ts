@@ -31,6 +31,10 @@ export const extractionSchema = z.object({
   shipping: str,
   total: str,
   currency: str,
+  category_stated: str,
+  payment_recipient_name: str,
+  paypal_merchant_id: str,
+  /** Legacy field from earlier readings; it mixed payee names with merchant IDs. */
   requested_payment_recipient: str,
   payment_change_instructions: str,
   excerpts: z.array(excerptSchema).default([]),
