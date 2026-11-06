@@ -913,6 +913,7 @@ export type Database = {
           requested_by: string
           requested_contact: string | null
           requested_recipient: string | null
+          requested_recipient_name: string | null
           shipping_minor: number | null
           source: Database["public"]["Enums"]["purchase_source"]
           status: Database["public"]["Enums"]["purchase_status"]
@@ -943,6 +944,7 @@ export type Database = {
           requested_by: string
           requested_contact?: string | null
           requested_recipient?: string | null
+          requested_recipient_name?: string | null
           shipping_minor?: number | null
           source: Database["public"]["Enums"]["purchase_source"]
           status?: Database["public"]["Enums"]["purchase_status"]
@@ -973,6 +975,7 @@ export type Database = {
           requested_by?: string
           requested_contact?: string | null
           requested_recipient?: string | null
+          requested_recipient_name?: string | null
           shipping_minor?: number | null
           source?: Database["public"]["Enums"]["purchase_source"]
           status?: Database["public"]["Enums"]["purchase_status"]
@@ -1642,6 +1645,7 @@ export type Database = {
           _org: string
           _quantity?: number
           _recipient: string
+          _recipient_name?: string
           _storage_path: string
           _supplier: string
         }
