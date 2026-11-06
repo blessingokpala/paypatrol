@@ -390,7 +390,7 @@ function NewInvoice() {
                     canSubmit={has("owner")}
                     orgId={orgId}
                     suggestion={{ name: mapped?.recipientName || extraction?.supplier_name || "", merchant: f.recipient || mapped?.recipient || "" }}
-                    onCreated={(id) => { refresh(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); }}
+                    onCreated={async (id) => { await suppliers.refetch(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); refresh(); }}
                   />
                 )
               )}
@@ -471,7 +471,7 @@ function NewInvoice() {
 }
 
 /** Inline supplier draft creation that keeps the invoice draft on screen. */
-function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId: string; canSubmit: boolean; suggestion: { name: string; merchant: string }; onCreated: (id: string) => void }) {
+function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId: string; canSubmit: boolean; suggestion: { name: string; merchant: string }; onCreated: (id: string) => void | Promise<void> }) {
   const [s, setS] = useState({ name: suggestion.name, merchant: suggestion.merchant, email: "", channel: "phone", channelValue: "", evidence: "", isTest: false });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
