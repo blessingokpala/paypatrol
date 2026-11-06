@@ -1,218 +1,52 @@
-# PayPatrol — Judges' Build Report
+# PayPatrol — Judges’ Verification Report
 
-Status as of 2026-11-04, 01:00 UTC. Sandbox test mode only. All supplier names, invoices and amounts are fictional.
-This report is a self-contained account of the current state. Supporting detail is in the timestamped engineering log, [BUILD_LOG.md](BUILD_LOG.md), linked per section below. Where they differ, the newer entry wins. Earlier optimistic wording that was later corrected is flagged in section 5.
+**Review date: 6 November 2026 (UTC).** Live invoice verification: 16:43 UTC. Final security/export checks: approximately 20:31 UTC. Sandbox test money only; no production payments. This report supersedes the earlier November 4 status table. Historical engineering evidence remains in BUILD_LOG.md.
 
-**Payment status, checked in the database when this report was written:** 0 PayPal orders, 0 captures, 0 verified PayPal notifications, 0 independent supplier verifications, 0 purchases marked Paid, 0 active budget reservations.
+## Completion assessment
 
----
+Verified for invoice checking and the demonstrated payment controls, but **not fully closed**: the partner’s genuine batch approval, a legitimate positive supplier-change verification path, and disposition of one disputed deep-security finding remain outstanding. No new payment, reservation, supplier decision or spending-rule change was performed in this review.
 
-## 1. Features implemented
+## Verified workflows
 
-**Accounts, roles and organisations**
-- Email/password, Google and Lovable sign-in. Each person uses their own account.
-- Roles (owner, preparer, change approver, payer) are stored per organisation in a separate table, never on the profile.
-- Sensitive changes need a sign-in from the last five minutes. This is checked from the signed authentication time, not from token refresh.
+| Workflow | Evidence and actual outcome |
+|---|---|
+| Published unfamiliar invoice without merchant ID: upload → review → check → save → reopen | A new explicitly fictional PDF, `MLO-FINAL-20261106-1644`, was uploaded to the published app. Genuine Gemini `gemini-3.1-flash-lite` completed in 4.8 seconds; reference, CAD 40.00 and Office supplies were correct; merchant ID stayed empty. Submitted once and refreshed the detail page. Saved amount/category/reference and original extraction persisted. “Invoice checked. Payment is unavailable…” and “Cannot check: payment recipient or approved supplier record missing” were visible. No spending rule failed. No Reserve or Pay action; database has zero reservations and zero attempts. [Open saved test request](https://paypatrol.lovable.app/purchases/69dfa696-3ec6-4839-95df-4d3aca207626). |
+| Supplier drafts without payment setup | Previously live-checked: optional collapsed payment setup, incomplete/unverified drafts, and Check an invoice. Maple Lane remains a draft/unverified supplier. Its inclusion in policy v2 is spending permission only, not recipient verification or activation. |
+| Historical spending approval and invalidation | Five independent individual decisions remain stored and visible in Completed. All have `is_valid=false`, reason “Spending rules changed to version 2.” Rule v2 was saved at 16:08:43 UTC on Nov 6. Live partner-account mobile Completed view contained all five “No longer valid” explanations; approval-required status now applies to their current requests. No rules were changed in this review. |
+| Batch preparation, not execution | Existing `ac8d1478-4a5a-4204-9bb6-db064af60ddd` and `7d392866-0d7b-4283-a136-1c7885bb38d5`, each CA$135 CAD/v1, are approval_required. Exact visible fixture references are “Batch approval check 1 — test data” and “Batch approval check 2 — test data”; these AI requests have no invoice_reference. Under the partner’s authorised session at 390×844, selecting both enabled “Approve eligible (2)”; no sideways overflow. No approve/reject/capture action was submitted. Each has zero reservation/payment-attempt records. |
+| Partner spending rejections and supplier rejection | Earlier recorded evidence: three spending rejections with reasons; supplier change for PP-CHECKOUT-20261103 v2 recipient TEST was rejected, not cancelled. The supplier decision was not altered or repeated. Current purchase has since been corrected by the owner to CA$78, remains blocked, and still requests TEST. It is inaccurate to call its current amount CA$80; the rejection concerned the earlier CA$80 version. |
+| Genuine CA$25 Sandbox payment | Records reconfirmed: PP-PAYMENT-TEST-001 is Paid; order `6PP262896T830104W`, capture `2X730686B0899582N`, COMPLETED. Earlier verification established one consumed CA$25 reservation and genuine signed PENDING and COMPLETED notifications. This review did not repeat checkout or claim new webhook receipt. |
+| Automated regression checks | 59 tests passed across 11 test files after export fixes, including 18 PayPal contract/event tests and 3 new CSV security tests. Preview build log reports build OK. |
+| Spreadsheet exports | Deep review found formula-injection risks in Purchases and Evidence CSV. Shared quoting/formula-neutralization now covers every cell; stored data and audit history unchanged. Tests cover `=`, `+`, `-`, `@`, leading whitespace/control characters and quotes. Browser downloaded Purchases CSV: exactly two selected rows. Evidence CSV: 187 rows, eight columns per row, details decoded as JSON. Fixes published; live export-version confirmation pending. |
 
-**Payment controls (all in protected database functions; the browser can only read)**
-- Money is stored in whole cents. The server recomputes every total.
-- One shared checker, `evaluate_purchase`, applies the same rules to invoices and AI proposals: weekly limit, per-order limit, approval threshold, allowed categories and suppliers, currency, duplicate invoice and recipient mismatch.
-- An approval is tied to a fingerprint of the exact version, amount, currency, recipient, supplier record and rules. Any change cancels it.
-- Budget reservations lock the organisation first, so two simultaneous requests cannot both pass the weekly limit.
-- A change of supplier recipient opens a change request. The purchase stays held until a different authorised person verifies it. Nobody can clear their own change by replacing the supplier record.
-- Reservations, payment attempts and capture are all refused on the server while a change request is open.
-- Labelled Sandbox account check (test only): a different change approver records what they saw in PayPal Developer. It is recorded as "no real supplier was contacted".
+## Exact remaining human action
 
-**AI (Google Gemini `gemini-3.1-flash-lite`, server-side only)**
-- **Invoice reading:** an uploaded invoice is read automatically. Values reach the form only after the user clicks "Use these values". Missing and uncertain fields are flagged.
-- **Purchase proposals:** the AI may only choose from approved listings. The price, total and recipient come from approved records, never from the model.
-- **Untrusted text:** instructions written inside invoices or listings are treated as information only and have no authority.
+1. Partner signs in, selects **Ada’s Grocery**, and opens [the two batch tests](https://paypatrol.lovable.app/purchases?q=Batch%20approval%20check&status=approval_required). Tick both references above, choose **Approve eligible (2)**, optionally enter “Final batch approval verification”, then confirm **Approve 2 requests** once. Do not Reserve or Pay. Expected: two successful decisions and Completed entries labelled Batch approval. Tell the owner when finished; reconciliation must check both `_via=batch` records, persistence after refresh, and zero reservations/payment attempts. No successful batch operation is claimed until those records exist.
 
-**PayPal Sandbox**
-- Owner-only connection check, plus Sandbox supplier setup that requires a recent sign-in.
-- Checkout validates the actual PayPal order (payee Merchant ID, CA$ amount, CAD, order ID, saved purchase snapshot) before capture. Only one capture can run at a time.
-- Webhook at `https://paypatrol.lovable.app/api/public/paypal/webhook`. It verifies the signature with PayPal and re-reads the order before changing anything.
-  - **Handled:** capture completed, pending, denied and declined.
-  - **Explicitly unsupported:** refunded and reversed. They are acknowledged with no status or budget change.
+[First request directly](https://paypatrol.lovable.app/purchases/ac8d1478-4a5a-4204-9bb6-db064af60ddd) · [Second request directly](https://paypatrol.lovable.app/purchases/7d392866-0d7b-4283-a136-1c7885bb38d5)
 
-**Usability (latest)**
-- **Dropdowns and fields:** shared accessible dropdowns, Show/Hide password, required-field markers and inline amount errors.
-- **Leaving a form:** a warning appears if the form has unsaved entries.
-- **Purchases list:** search across request titles, invoice references and supplier names; the All / Invoices / AI proposals tabs; Status, Supplier and submission-date filters; sorting by submission date or amount (newest first by default); a result count, removable filter chips, Clear all and a "No purchases match your search" empty state. Everything is kept in the address, so it survives opening a request, returning and refreshing. Search covers every request the signed-in person may see in the organisation, not just the rows on screen. Selection and Export selected cover only the matching rows and reset when search or filters change. On phones the filters fold behind a "Filters and sorting" button.
-- **Readable screens:** proposal summaries (proposed values kept separate from calculated ones), plain-language evidence history, findings and error messages. Stored records and technical CSV exports are unchanged.
-- **Overview cards** open matching views. Reserved now opens a dedicated "Reserved purchases" page (see section 6).
-- **Back links:** a shared back link above every drill-down, form and detail page. It returns to the actual originating view, keeps that view's filters, survives refresh and accepts only internal pages. On directly opened links it falls back to the parent page.
+## Supplier-change test: limitation and valid proposal, not assigned
 
----
+The app currently binds one configured merchant to one supplier in Ada’s Grocery. Harbourside’s approved recipient already equals that configured merchant. The labelled Sandbox confirmation function requires the Merchant ID independently read from PayPal Developer to equal **both** the proposed recipient and the configured merchant, and rejects self-checks/setup-owner checks. A true change away from Harbourside’s current recipient cannot satisfy those conditions under this configuration. TEST is unsupported and must not be approved. Merely changing a request back to the already-approved ID tests correction/rechecking, not a new verified recipient change.
 
-## 2. Tests actually performed, with results
+No approved baseline was altered and no new misleading passing scenario was created. Valid future approach: use a separate isolated, explicitly classified Sandbox test workspace and a supplier with an independently evidenced previous account and a genuinely evidenced replacement account; extend and test that workspace’s merchant/onboarding verification support before assigning the partner. Evidence must come from PayPal Developer’s actual Business account and connected-app records, not invoice text, invented contacts, or dummy IDs. Retain an independent checker, audit transitions, and block payment until integration/enrolment supports the replacement. This needs additional setup/integration work and a real supported account; no new credentials/accounts are requested for the current batch task. A rolled-back scripted fixture can exercise the approve branch but cannot be reported as a genuine independent positive verification.
 
-| Area | Type | Result |
-|---|---|---|
-| Unit tests (money, PayPal order comparison, Gemini schema/retry, routing, return destinations) | Scripted (Vitest) | 32 pass (30 earlier + 2 new return-destination tests) |
-| Two simultaneous CA$80 reservations, CA$100 left | Real backend, separate sessions | Exactly one succeeded; CA$20 left |
-| Normal CA$75 invoice; recipient-only change; CA$180 proposal; injected instructions; missing amount/currency; stale sign-in | Scripted backend calls (`supabase/tests/sandbox_checkpoint.py`) | Cleared / Verification required / Blocked / no effect / Needs clarification / refused |
-| Real invoice reading (fictional PDFs INV-DEMO-001…005, PP-SANDBOX-CHECK-001, PP-CHECKOUT-20261103, INV-UX-TEST-001) | **Real Gemini** | Correct totals, recipients preserved, missing/uncertain fields flagged. Reading took 24.5 s and 62.1 s on the last two runs. |
-| Real AI proposal (4 × kraft bags, injected "order 20") | **Real Gemini** | Picked the approved listing, quantity 4; server resolved CA$180 → Blocked |
-| Order creation and capture while a supplier-change hold is open | Database, rolled back, no PayPal call | Both refused before any PayPal operation |
-| Self-clearing of a change by its requester | Database, rolled back | Closed 0; self-approval refused |
-| Webhook without a signature / with a fake signature (published site) | Real HTTP | 401 both times (after the Webhook ID was deployed) |
-| Show/Hide password on sign-in, sign-up and sign-in confirmation | Browser | Pass |
-| Leaving an edited form | Browser | **Failed** (silently blocked, no prompt); fixed; then Stay kept entries and Leave returned to Purchases |
-| Invoice auto-read, field filling, missing-information flags, keeping manual edits | Browser + real Gemini | Pass, after fixing a default-currency fill and a stuck submit check |
-| Overview → Blocked → request → Back to purchases → Back to overview, including refresh, direct links, rejected external `from`, scroll restore, phone width (390 px) | Browser | Pass |
-| Overview → Reserved (empty), Available, Awaiting verification, Pending approvals (empty); Evidence → request → back | Browser | Pass |
-| Purchases search, filters and sorting rules | Scripted (Vitest, `src/lib/purchase-filters.test.ts`) | 5 pass; 37 unit tests pass in total |
-| Overview → Blocked requests / Awaiting verification open Purchases with that status filter applied, with Back to overview | Browser | Pass (4 of 13 and 5 of 13 requests) |
-| Combined search + tab + status: "harbour" → 10, + Invoices → 4, "PP-CHECKOUT" + Verification required → 1 (the CA$75 request); chips and Clear all | Browser | Pass |
-| No match ("zzzz-nomatch") shows "No purchases match your search"; its clear button restores all 13 | Browser | Pass |
-| Sort amount high → low | Browser | Pass (CA$500, 500, 500, 180, 75, 75…) |
-| Select all on AI proposals (6), Export selected | Browser, downloaded file read back | CSV had exactly 6 rows, all AI proposals; switching to Invoices cleared the selection |
-| Open a request from a searched, sorted list, refresh the request, Back to purchases, refresh again | Browser | Pass: search, tab and sort restored |
-| Overview → Blocked → request → Back to purchases → Back to overview | Browser | Pass |
-| Keyboard-only dropdowns (Status and Sort filters, invoice Supplier, proposal listing, organisation switcher): Enter/Space/Arrow opens, arrows move, typing jumps, Enter selects, Escape closes without changing, focus returns to the dropdown, Tab moves on | Browser | Pass |
-| Phone layout at 390 px: Overview, Purchases, both creation forms, purchase details, Approvals, Suppliers, Spending rules, Evidence history, Team & integrations, Weekly budget, Reserved | Browser, page-width measurement + screenshots | **Failed first**: every page was 581 px wide because of the top bar, and Overview and Evidence history had extra overflow. Fixed; all now fit at 390 px. Wide tables scroll inside their own box. |
+## Security review
 
-## 3. Scripted tests vs genuine PayPal Sandbox transactions
+- Basic checks completed twice: no issues reported.
+- Deeper review completed Nov 6: two material CSV export warnings fixed, tested, and marked fixed.
+- **One Critical finding remains active/disputed:** “Any payer can mark purchases paid outside signed notifications.” The scanner identified the protected capture API path, not an unauthenticated client status write. Code review shows server authentication, Payer/owner checks via the capture-preparation RPC, persisted immutable snapshot/order binding, authenticated HTTPS PayPal capture/order responses, exact payee/amount/currency/digest/version checks, and service-only recording. A browser return or supplied capture payload cannot establish Paid. Genuine PayPal API confirmation can establish payment truth independently of webhook delivery; signed webhook receipt is separately tracked. Existing contract tests pass. We did not weaken this working control to force webhook-only completion, did not dismiss the Critical finding automatically, and do not claim the security review is clean. Owner disposition of the documented false-positive assessment or further independent review is pending.
 
-- **Scripted:** every PayPal order, capture, webhook and timeout scenario so far, using fake PayPal responses in unit tests and rolled-back database checks.
-- **Genuine PayPal Sandbox:**
-  - OAuth with the Sandbox credentials (HTTP 200).
-  - Signature-verification calls that refused fake signatures.
-  - **No genuine Sandbox order, buyer approval, capture or signed notification has happened yet.**
+## Known limitations and unverified paths
 
-## 4. Untested behaviour, known limitations, unfinished work
+- Genuine positive supplier-change verification and genuine batch approval remain unverified, as above.
+- Published export fixes have been requested; serving the updated version is not yet independently confirmed.
+- Invoice saves retain a summary total, not full itemisation. Extracted invoice date/buyer/subtotal remain in original AI evidence until user corrections provide them; this review did not claim automatic saving of all extracted optional fields.
+- Additional independently onboarded merchant routing is not supported by the current one-merchant demo. No merchant ID alone makes an unfamiliar supplier payable. TESTONLY IDs remain non-payment data.
+- Refunded/reversed notifications remain explicitly unsupported and do not restore budget or change status automatically.
+- Physical-phone/screen-reader checks, high-volume pagination, observed scheduled-maintenance firing, and duplicate/delayed genuine PayPal delivery cases remain outside this completed evidence.
+- Signup confirmation/password-recovery email round trips and invitation delivery via a configured sender domain are not newly verified here. Existing partner membership is confirmed; no further invite is needed.
 
-- **CA$75 Sandbox checkout (PP-CHECKOUT-20261103): not performed.** It is held under "Verification required" until the partner, using their own Change approver account, records the Sandbox account check and decides. No independent review has happened yet.
-- **PayPal behaviour not yet seen live:** a real order's payee match, the buyer approving with the Personal Sandbox account, a completed CAD capture, receipt of a genuine signed webhook, duplicate or delayed real deliveries.
-- **Scheduled job:** the hourly maintenance job (reservation expiry and recovery) has not been confirmed to run on schedule.
-- **Untested end-to-end:** blocking another organisation from the uploaded invoice was checked only in an earlier database test that was later found unreliable (see section 5). The Sandbox account-check form has not yet been used by a second real person.
-- **Refunds and reversals:** unsupported and must be reconciled manually.
-- **AI invoice reading:**
-  - Itemised invoice lines are not carried into the saved request; it stores a summary total. The lines stay in the AI evidence.
-  - The recipient can come back with its label (e.g. "PayPal merchant ID: …"). It is kept exactly as read, and the reviewer must trim it.
-- **CA$25 test proposal:** Reserve and Pay are hidden in the interface **and refused on the server** ("Demonstration requests cannot be reserved or paid") since 4 Nov 2026.
-- **Phones:** checked at one width (390 px) in an automated browser, not on a physical phone or with a screen reader. On phones the organisation switcher shows a shortened name.
-- **Purchases list:** no pagination; all of the organisation's requests load at once, which suits demo volumes but not thousands of rows. The date filter uses the browser's local date.
-- **Readable screens:** the raw-data cleanup is complete in the standard interface, including Proposal content. Deliberate exceptions: the Evidence history CSV export (an authorised technical export) keeps original details, and a pasted invoice message is shown exactly as submitted.
-- **Audit log:** cannot prove the whole log was not rewritten, because no separately stored checkpoints exist.
-- **AI cost:** no per-request cost metering. The Gemini billing tier was not verified.
+## Report location and access
 
-## Supporting build-log entries
-
-- [Phase 2 verification checkpoint](BUILD_LOG.md#phase-2-verification-checkpoint-2026-11-03)
-- [PayPal Sandbox phase — partial checkpoint](BUILD_LOG.md#paypal-sandbox-phase--partial-checkpoint-2026-11-03)
-- [Invoice PP-CHECKOUT-20261103 consistency review](BUILD_LOG.md#checkpoint--invoice-pp-checkout-20261103-consistency-review-2026-11-03-1755-utc)
-- [No self-clearing of supplier changes](BUILD_LOG.md#follow-up--no-self-clearing-of-supplier-changes-2026-11-03-1802-utc)
-- [Usability verification checkpoint](BUILD_LOG.md#usability-verification-checkpoint--2026-11-03-21402200-utc)
-- [Navigation and overview drill-downs](BUILD_LOG.md#navigation-and-overview-drill-downs-2026-11-03-2215-utc)
-- [Purchases search, keyboard and phone checks](BUILD_LOG.md#purchases-search-keyboard-and-phone-checks-2026-11-03-2250-utc)
-
-## 5. Corrections to earlier claims
-
-- A phase-two SQL test block was first reported as passing. Its runner actually failed with a permission error. The outcomes were re-tested later through authenticated calls.
-- A stale supplier change was briefly closed automatically by the same person who set up the supplier record. That closure was reversed through an audited reopening, and self-clearing is now blocked.
-- "Leave form" protection was listed as implemented before it was tested. Testing showed it blocked silently; it is now fixed and verified.
-
-## 6. Overview cards: data source and calculation
-
-| Card | Source | Calculation | Scope | Destination (same records) |
-|---|---|---|---|---|
-| Available this week | `org_budget_summary` | weekly limit − active reservations − consumed reservations | Organisation, active rules' currency, current policy week | Weekly budget |
-| Reserved | `org_budget_summary` | Sum of reservations with status active and the current week's start | Organisation, current week | Reserved purchases (same conditions; flags any mismatch) |
-| Requests awaiting verification | `purchases` table | Count of purchase **requests** with status Verification required, one row each | Organisation, **all outstanding**, not just this week | Purchases filtered to Verification required |
-| Pending approvals | `purchases` table | Count of requests with status Approval required | Organisation, all outstanding | Approvals |
-| Blocked requests | `purchases` table | Count of requests with status Blocked | Organisation, all outstanding | Purchases filtered to Blocked |
-
-All reads go through the signed-in user's permissions. Nothing is hardcoded, and no demonstration reservations were created.
-
-## Workspace switcher correction (3 Nov 2026)
-- Cause: `supabase/tests/concurrent_budget.py` (3 runs) and `sandbox_checkpoint.py` (2 runs) created isolated workspaces with the owner account (the only account), so the owner became their owner/preparer. They persisted (16:07–16:26 UTC).
-- Correction: migration 0018 adds explicit `is_test_workspace` classification; the five workspaces were classified by ID with an audit event each. Nothing was deleted or merged; their 36 purchases and 127 audit events remain. Scripts now classify their workspace immediately.
-- Switcher shows only non-test workspaces from the user's own memberships (server-enforced by access rules); with one workspace it shows the name only. Switching clears cached data and returns to Overview.
-- Verified: header showed "Ada's Grocery" with no dropdown even with a stale saved test workspace; Ada's Grocery still has 13 purchases, policy v1 (CA$300/week), merchant L8SVBX42QHT3U, and the CA$75 request PP-CHECKOUT-20261103 still `verification_required` with its change request pending.
-- Not tested: switching between two legitimate workspaces in the browser (no second real workspace exists).
-
-## Header redesign and in-app notifications (4 Nov 2026)
-
-**Implemented**
-- Logo: white checkmark inside the shield, ~15% larger, proportions kept.
-- Sandbox badge removed from the header; a compact "Sandbox · Test money" pill now sits in the sidebar footer, with a small "Sandbox" pill in the header on phone widths. Explicit Sandbox wording at checkout is unchanged.
-- Business identity: dedicated header container (shop icon, border, pale blue background) showing the selected business name prominently. A dropdown arrow appears only when the user belongs to more than one legitimate business; automated test workspaces stay excluded. The business is not labelled as the account owner.
-- Account menu: the exposed email and standalone Sign out are replaced by an avatar button. Its panel shows the signed-in email, the person's roles in the selected business, and — for owners only — Team & integrations and Spending rules links, plus Sign out. No decorative items.
-- Notification bell with unread count and a panel of concise, timestamped notifications derived from real records: requests awaiting verification, supplier payment-detail changes, approvals required, requests blocked by spending rules, and outgoing payments pending/completed/failed. Each opens its exact purchase or supplier record with a return path. Read status is stored per user in the new `notification_reads` table (server-enforced: users read and mark only their own rows, and only in businesses they belong to). Repeated events deduplicate by a stable key; informational events stop appearing after 7 days while actionable ones persist until resolved. No sample alerts are generated.
-- Priority: Urgent (failed outgoing payment), Action required (verification, approval, correction), Update (completion and informational). Derived from explicit event rules, paired with text and icons, separate from payment status.
-- Labels are factual ("Payment details need verification", "Blocked by spending rules", "Information missing", "Payment confirmation pending"); no "Fake/Real/Safe/Fraud" verdicts anywhere. Notifications use no AI calls.
-- Styling: restrained pale blue gradient across the canvas extending into the header; forms, panels and tables stay on readable surfaces; Libre Franklin kept.
-
-**Verified (browser, owner account)**
-- Notification panel listed 22 real events with priorities and timestamps; clicking one opened its exact purchase with "Back to overview"; Mark all as read cleared the badge and stayed cleared after reload (persistence).
-- Account menu showed email, roles, business and owner-only links; Sign out present.
-- Keyboard: Tab reaches the bell and avatar, Enter opens, arrow keys move through items, Escape closes and returns focus to the trigger.
-- Phone width 390 px: header fits with no overflow; logo, Sandbox pill, business name, bell and avatar all usable; sidebar footer pill visible in the opened menu.
-
-**Unsupported / not done**
-- Incoming-payment notifications: not implemented — PayPatrol manages outgoing payments to suppliers and has no verified receiving workflow.
-- AI explanation summaries inside notifications: not added; notifications are rule-derived only.
-- Business switching between two legitimate businesses remains untested in the browser (only one real workspace exists).
-- No payment was created, captured or marked Paid. The CA$75 request remains Verification required pending the partner's independent review.
-
-## 7. Readiness review (4 Nov 2026, 01:00 UTC)
-
-Full 8-area review before partner testing. Statuses: **Implemented and verified** / **Implemented but unverified** / **Partially implemented** / **Not implemented**. Supporting detail: [Readiness review build-log entry](BUILD_LOG.md#readiness-review--2026-11-04-0100-utc).
-
-| Requirement | Status | How tested | Actual result | Remaining work | Blocks partner testing? |
-|---|---|---|---|---|---|
-| Registration, sign-in, sign-out | Implemented and verified | Browser | Sign-out returns to sign-in; protected pages redirect to sign-in; sign-up sends a confirmation email | Real email delivery not observed | No |
-| Password recovery | Implemented and verified | Browser | Reset link requested from sign-in; reset page validates the link and sets a new password; expired links handled | Added this review; full email round-trip not performed | No |
-| Business creation and joining | Partially implemented | Browser + backend | Owner created Ada's Grocery; adding an unregistered email fails cleanly ("Ask them to sign up first") | Partner must register their own account, then the owner adds their email as Change approver | No — steps ready |
-| Role assignment and payment authorisation | Implemented and verified | Browser + code | Roles per business in a separate table; only owner/payer see Reserve/Pay; non-payers now see "Only an owner or payer can reserve budget and pay"; approver cannot approve their own request | — | No |
-| Business isolation | Implemented and verified | Live data API | A probe workspace owned by a fake user was invisible to the signed-in owner; anonymous access is denied; probe data deleted | Two-user test once the partner joins | No |
-| Invoice workflow (upload → AI reading → review → checks) | Implemented and verified | Browser + real Gemini | Auto-read 24.5 s / 62.1 s; correct totals; missing fields flagged; manual edits preserved; values apply only after "Use these values" | Itemised lines stay in AI evidence (saved request holds a summary total — labelled) | No |
-| Duplicate and failed extractions | Implemented and verified | Backend | Duplicate invoice reference for the same supplier blocks; unreadable/missing amount or currency requires clarification | — | No |
-| AI purchase requests | Implemented and verified | Real Gemini + backend | Model may only pick approved listings; price/total/recipient come from approved records; injected listing instructions had no effect; CA$180 and CA$500 proposals blocked by limits | — | No |
-| Supplier-change protection | Implemented and verified | Backend + browser | Changed recipient opens a hold; reservation, order creation and capture all refused while open; self-approval and baseline-replacement bypass blocked; Sandbox account check form labelled "test only" | Partner performs the actual independent review | **Yes — this is the partner's task** |
-| Spending rules and budget | Implemented and verified | Backend + browser | Per-order, weekly, approval threshold, category and supplier rules enforced server-side and versioned; two simultaneous CA$80 reservations with CA$100 left: exactly one succeeded; rule changes re-check open requests | Hourly expiry/reconciliation job is registered and active but a scheduled firing has not been observed | No |
-| PayPal Sandbox pre-checkout | Implemented and verified | Backend + live HTTP | Credentials authenticated; merchant L8SVBX42QHT3U with CAD confirmed; webhook endpoint live, verifies signatures (fake signatures refused 401); capture requires payee/amount/currency/order match; duplicate capture prevented | Buyer approval, capture and signed webhook — all require the checkout below | No |
-| Genuine Sandbox order + cancel recovery (PP-PAYMENT-TEST-001, CA$25) | Partially verified | Real browser + real PayPal Sandbox | Two genuine orders created (`06Y50592YD2069013`, `4BA55974F2783102M`, both PAYER_ACTION_REQUIRED, CA$25.00 CAD, correct merchant); budget reserved exactly once per checkout and released on cancel; fixed defect: cancel no longer cancels the request — it returns to checkout; batch rejection now requires a reason server-side and refuses repeat cancellations (both defects found and fixed this round) | Buyer approval in the PayPal popup needs the owner's Sandbox Personal login; capture, Paid state and genuine signed webhook still unperformed | **Yes — owner's buyer login** |
-| Batch approval and rejection | Rejection verified; approval **unverified** | Backend + real interface | Self-approval, stale-version and blocked-request approvals refused server-side; mixed selection showed "Approve eligible (0)" — this demonstrates **exclusion**, not a successful approval; reason required for rejection; real 3-request batch rejection persisted after refresh. Prepared labelled test request "3 × Kraft paper bags" (CA$135, test data, status Approval required) for an independent approver | A successful approval has **not happened yet**; it needs a different person with Payer or Business owner role to approve the CA$135 test request | **Yes — partner's account** |
-| CA$75 Sandbox checkout (PP-CHECKOUT-20261103) | Not implemented (held) | — | Request remains Verification required; no order, capture or Paid state exists | 1) Partner's independent Sandbox account check; 2) any required approval; 3) budget reservation; 4) Personal Sandbox buyer approval; 5) server-confirmed capture; 6) genuine signed webhook reconciliation | **Yes — by design** |
-| Refunds and reversals | Partially implemented | Code review | Webhook acknowledges them without changing status or budget; manual reconciliation required | Documented limitation; no automated handling planned for the demo | No |
-| Usability (search, filters, drill-downs, back nav, dropdowns, toggles, readable evidence, notifications, raw-JSON cleanup) | Implemented and verified | Browser + 45 unit tests | All verified in earlier checkpoints; notification read state persists per user; keyboard and 390 px phone layouts pass | No pagination; one phone width only; no screen-reader test | No |
-
-**Changes in this review:** password recovery, the server-side test-fixture payment guard and the payer-authorisation note are in the current preview and were published with this review. Everything else was already published.
-
-### Is PayPatrol ready for partner testing?
-
-**Yes — for the core workflows, with one intentional hold.** The partner's first task is the independent review that currently holds the CA$75 request; that hold is the product working as designed, not a defect. Production payments are outside this Sandbox assessment.
-
-**Partner test guide (Change approver role)**
-1. Register your own account at https://paypatrol.lovable.app/auth (email/password or Google), then tell the owner your email.
-2. The owner adds you under Team & integrations → Members and roles as **Change approver**.
-3. Sign in and open the notification "Payment details need verification" (or Purchases → invoice PP-CHECKOUT-20261103).
-4. In the supplier-change section, open the **Sandbox account check (test only)** form. In PayPal Developer, compare the connected Business Sandbox account and Merchant ID `L8SVBX42QHT3U` against what the request shows, then record what you saw (merchant ID, account email, result, notes). This is a Sandbox check — no real supplier is contacted.
-5. Approve or reject the change. Expected: your decision is recorded with evidence; the request leaves Verification required only after approval; the owner can then reserve budget and run the Sandbox checkout with the Personal Sandbox buyer account.
-6. Also try: signing out and back in, the notification bell, and searching/filtering Purchases. You should not see Reserve or Pay buttons — only owners and payers can pay.
-
-## Approval and supplier-review checkpoint (2026-11-06 UTC)
-- Invitation acceptance: **verified** — nnennafege@yahoo.com accepted at 00:56:16 UTC (Payer + Change approver, Ada's Grocery).
-- Individual spending approval: **verified** — three CA$135 test requests (a7ec5854, a0a398f9, f04fa0dc), v1, approved by Nnenna Nwokeabia at 00:57:25/27/31 UTC; still valid; 0 reservations and 0 payment attempts created. Method was not recorded at that time, so these are not claimed as batch.
-- Batch spending approval: **pending human action** — approval method is now recorded (individual/batch). Two new labelled test requests (ac8d1478, 7d392866) await a batch approval by a different Payer.
-- Supplier-change rejection/verification: **pending human action** — rejection now requires a reason, is refused for the request creator, and keeps the request blocked without editing it. CA$80 PP-CHECKOUT-20261103 v2 current review (84080591, recipient TEST) remains open. Its v1 review (9ab023d6) was marked superseded (earlier history, not verified) through an audited system transition because the request no longer asks for that recipient. Other open reviews still apply to their current request versions and remain enforced.
-- PayPal: **verified** — CA$25 PP-PAYMENT-TEST-001 order 6PP262896T830104W, capture 2X730686B0899582N COMPLETED; purchase Paid; one completed attempt; reservation consumed (two earlier uncaptured reservations released); genuine signed webhooks PAYMENT.CAPTURE.PENDING (2026-11-04 02:49 UTC) and PAYMENT.CAPTURE.COMPLETED (2026-11-05 02:49 UTC) verified and processed.
-
-## Update 2026-11-06 07:30 UTC — spending rejection verification
-- Server (rolled-back SQL test, Block 6 in `supabase/tests/payment_controls.sql`): requester, preparer-only and outsider refused; blank reason and stale version refused; one `spending_rejected` record, zero cancellation records; repeat, approval, reservation and payment after rejection all refused; no active reservation. All PASS.
-- Interface rejection by a different reviewer (individual and mixed batch): NOT yet performed — needs a second authorised person. Three labelled CA$135 requests prepared ("Spending rejection check — individual / batch 1 / batch 2").
-- Earlier cancellations remain recorded as cancellations; Evidence history and Approvals → Completed explain why they are not listed as rejections.
-- Pending tab now has search, review-type filter and oldest/newest sort; checked on the published site at phone width (no horizontal scroll; return navigation keeps filters).
-- Published and confirmed serving the new Pending controls. Basic security scan: no issues. Deep scan not run.
-- Batch approval: the two batch-test requests were approved one at a time (recorded method "individual", 06:35–06:36 UTC), so batch approval remains unverified.
-- Still pending: batch approval, successful independent supplier-change verification.
-
-## Final review — 2026-11-06 16:25 UTC
-- Live site (paypatrol.lovable.app) serves the optional payment-setup supplier form and "Check an invoice" action; unfamiliar Maple Lane invoice (no merchant ID) extracted live in 5.4s (MLO-TEST-0001, CA$40, CAD, recipient blank); detail page shows "Invoice checked. Payment is unavailable", "Cannot check: payment recipient…", no Reserve/Pay actions.
-- Partner decisions (records): 5 individual spending approvals on CA$135 test requests (none batch); 3 spending rejections with reasons; 1 supplier-change rejection (PP-CHECKOUT-20261103 v2, recipient TEST). Approvals created no reservations or payments. All 5 approvals were later invalidated when the owner saved spending rules v2 (2026-11-06 16:08 UTC, adding Maple Lane to allowed suppliers) — expected control behaviour.
-- CA$25 payment unchanged: capture 2X730686B0899582N COMPLETED, one consumed reservation, verified PENDING and COMPLETED webhooks, no active reservations.
-- Still unverified: batch approval by a second person; successful independent supplier-change verification (approve path). Payment demo supports only the configured Harbourside Sandbox merchant (one merchant per business).
-- Quick security scan clean; 56 automated tests pass.
+Project document: `JUDGES_REPORT.md`; not an app page or public route. The revised downloadable report is provided through Files as `PayPatrol_Judges_Report_v2.md`. Request links require normal sign-in and authorised workspace membership. Uploaded invoices remain private; no permanent public document URL is supplied.

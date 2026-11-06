@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Architecture rules
+- Spreadsheet exports use the shared CSV cell encoder for quoting and formula neutralization; stored evidence stays unchanged. Why: untrusted invoice and profile text must not execute in spreadsheets.
 - All payment-control writes go through SECURITY DEFINER SQL functions (RPC); app tables grant only SELECT to signed-in users. Why: browser writes must never mark Paid, approve changes, or edit trusted records.
 - Money is stored and compared as integer minor units; the server recomputes totals. Why: avoids float errors and client tampering.
 - `evaluate_purchase` is the single deterministic checker for invoices and AI proposals. Why: both entry points must pass identical controls.
