@@ -113,16 +113,21 @@ function Review() {
       />
       {p.is_test_fixture && <div className="mb-4"><FixtureTag label={p.fixture_label} /></div>}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Panel title={p.source === "invoice" ? "Source document and message" : "Proposal content"}>
           {p.source === "invoice" ? (
-            docs.length === 0 ? <p className="text-sm text-muted-foreground">No document attached.</p> : docs.map((d) => (
-              <div key={d.id} className="space-y-3">
-                {d.storage_path && <Button variant="outline" size="sm" onClick={() => { if (d.storage_path) void openDoc(d.storage_path); }}>Open {d.file_name ?? "document"}</Button>}
-                {d.source_message ? <pre className="whitespace-pre-wrap rounded-md border bg-muted p-3 font-sans text-sm">{d.source_message}</pre> : <p className="text-sm text-muted-foreground">No message pasted.</p>}
-                <p className="text-xs text-muted-foreground">Untrusted content. Shown for comparison only.</p>
-              </div>
-            ))
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">Compare the original document with the request details. Document content does not authorise payment.</p>
+              {docs.length === 0 ? <p className="text-sm text-muted-foreground">No document attached.</p> : docs.map((d) => (
+                <div key={d.id} className="space-y-3">
+                  {d.storage_path ? <DocumentViewer path={d.storage_path} fileName={d.file_name ?? "document"} uploadedAt={d.created_at} uploadedBy={d.uploaded_by ? names[d.uploaded_by] : undefined} /> : <p className="text-sm text-muted-foreground">No document attached.</p>}
+                  <div>
+                    <p className="text-xs font-semibold uppercase text-muted-foreground">Accompanying message</p>
+                    {d.source_message ? <pre className="mt-1 whitespace-pre-wrap rounded-md border bg-muted p-3 font-sans text-sm">{d.source_message}</pre> : <p className="text-sm text-muted-foreground">No accompanying message.</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <ProposalSummary claims={p.ai_claims} items={items} />
           )}
@@ -132,7 +137,7 @@ function Review() {
         <Panel title="Request details" actions={!editing && org.has("preparer", "owner") && p.source === "invoice" && !["paid", "payment_pending", "cancelled", "failed"].includes(p.status) ? <Button size="sm" variant="outline" onClick={() => setEditing(true)}>Correct details</Button> : null}>
           {editing ? <EditForm p={p} onDone={() => { setEditing(false); refresh(); }} /> : (
             <>
-            <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-2 text-sm">
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2 [&>div>dt]:text-xs [&>div>dt]:text-muted-foreground">
               <dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name ?? "Not matched"}</dd>
               <dt className="text-muted-foreground">Amount</dt><dd className="flex flex-wrap items-center gap-2 font-semibold">{formatMinor(p.total_minor, p.currency)}{moneyFromUser(p.total_minor, ex?.total) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
               <dt className="text-muted-foreground">Currency</dt><dd className="flex flex-wrap items-center gap-2">{p.currency}{fromUser(p.currency, ex?.currency) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
