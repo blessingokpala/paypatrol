@@ -17,11 +17,21 @@ describe("invoice reading → form mapping", () => {
     expect(m.recipientName).toBe("Willow Peak Retail Supplies (fictional)");
   });
 
-  it("does not substitute a permitted category for one the rules do not allow", () => {
+  it("matches a stated category to a predefined option without granting permission", () => {
     const m = mapExtraction(extractionSchema.parse({ category_stated: "retail supplies" }), allowed);
-    expect(m.category).toBe("");
+    expect(m.category).toBe("retail_supplies");
     expect(m.categoryStated).toBe("retail supplies");
     expect(m.categoryPermitted).toBe(false);
+  });
+
+  it("puts unmatched wording into Other for review", () => {
+    const m = mapExtraction(extractionSchema.parse({ category_stated: "Seasonal decorations" }), allowed);
+    expect(m.category).toBe("other");
+    expect(m.categoryOther).toBe("Seasonal decorations");
+  });
+
+  it("leaves category empty when the document states none", () => {
+    expect(mapExtraction(extractionSchema.parse({}), allowed).category).toBe("");
   });
 
   it("fills a stated category that the rules permit", () => {
