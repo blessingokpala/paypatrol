@@ -254,7 +254,7 @@ function Review() {
       </Panel>
 
       {crs.map((cr) => (
-        <ChangeReview key={cr.id} cr={cr} sv={sv} isDemo={isDemo} members={members}
+        <ChangeReview key={cr.id} cr={cr} sv={sv} isDemo={isDemo} members={members} purchaseRequestedBy={p.requested_by}
           current={cr.base_version_id === p.supplier_version_id && cr.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()}
           verifs={verifs.filter((v) => v.change_request_id === cr.id)} names={names} onDone={refresh} />
       ))}
@@ -416,7 +416,7 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
   );
 }
 
-function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void; current: boolean; isDemo: boolean; members: Member[] }) {
+function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members, purchaseRequestedBy }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void; current: boolean; isDemo: boolean; members: Member[]; purchaseRequestedBy?: string }) {
   const org = useOrg();
   const canReview = org.has("change_approver", "owner") && cr.proposed_by !== org.userId && purchaseRequestedBy !== org.userId;
   const open = cr.status === "pending_verification" || cr.status === "verified_pending_decision";
