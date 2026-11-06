@@ -1591,6 +1591,10 @@ export type Database = {
         Args: { _event: string; _order: string; _type: string }
         Returns: boolean
       }
+      reject_spending: {
+        Args: { _pid: string; _reason: string; _version: number }
+        Returns: undefined
+      }
       release_reservation: { Args: { _pid: string }; Returns: undefined }
       remove_member_role: {
         Args: {
