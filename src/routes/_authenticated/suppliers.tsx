@@ -44,16 +44,17 @@ function Suppliers() {
           {(q.data ?? []).map((s) => {
             const c = s.current;
             return (
-              <Panel key={s.id} title={s.name} actions={<ToneBadge tone={s.status === "active" ? "success" : "warning"}>{s.status === "active" ? "Approved" : humanize(s.status)}</ToneBadge>}>
+              <Panel key={s.id} title={s.name} actions={<div className="flex flex-wrap gap-2">{s.is_test_supplier && <ToneBadge tone="neutral">Fictional test supplier</ToneBadge>}<ToneBadge tone={s.status === "active" ? "success" : "warning"}>{s.status === "active" ? "Approved" : s.status === "draft" ? "Draft — unverified, not payable" : humanize(s.status)}</ToneBadge></div>}>
                 {c && (
                   <dl className="grid gap-3 text-sm sm:grid-cols-3">
-                    <div><dt className="text-muted-foreground">Approved recipient</dt><dd className="font-mono text-xs">{c.paypal_merchant_id}</dd></div>
-                    <div><dt className="text-muted-foreground">Trusted contact</dt><dd>{c.trusted_contact_channel}: {c.trusted_contact_value}</dd></div>
+                    <div><dt className="text-muted-foreground">{s.status === "active" ? "Approved recipient" : "Proposed recipient (unverified)"}</dt><dd className="font-mono text-xs">{c.paypal_merchant_id || <span className="font-sans italic text-muted-foreground">Payment recipient not provided</span>}</dd></div>
+                    <div><dt className="text-muted-foreground">Trusted contact</dt><dd>{c.trusted_contact_value ? `${c.trusted_contact_channel}: ${c.trusted_contact_value}` : <span className="italic text-muted-foreground">Missing</span>}</dd></div>
                     <div><dt className="text-muted-foreground">PayPal enrolment</dt><dd>{c.enrolment_status === "demo_fixture" ? <ToneBadge tone="neutral">Fictional demo record</ToneBadge> : c.enrolment_status === "enrolled" ? <ToneBadge tone="success">Enrolled</ToneBadge> : <ToneBadge tone="warning">{humanize(c.enrolment_status)} — unpayable</ToneBadge>}</dd></div>
-                    <div className="sm:col-span-2"><dt className="text-muted-foreground">Verification evidence</dt><dd>{c.verification_evidence}</dd></div>
+                    <div className="sm:col-span-2"><dt className="text-muted-foreground">Verification evidence</dt><dd>{c.verification_evidence || <span className="italic text-muted-foreground">Missing — no independent check recorded</span>}</dd></div>
                     <div><dt className="text-muted-foreground">Approver</dt><dd>{c.approved_by ? names[c.approved_by] ?? "Team member" : s.is_demo ? "Seeded demo record" : "Pending"}{c.approved_at ? ` · ${new Date(c.approved_at).toLocaleDateString("en-CA")}` : ""}</dd></div>
                   </dl>
                 )}
+                {s.status === "draft" && c && <DraftCompletion supplierId={s.id} current={c} canSubmit={org.has("owner")} onDone={refresh} />}
                 {s.status === "pending_approval" && org.has("owner", "change_approver") && (
                   c?.created_by === org.userId
                     ? <p className="mt-3 text-sm text-muted-foreground">You proposed this supplier. A different owner or change approver must approve it.</p>
@@ -113,5 +114,32 @@ function AddSupplier({ onDone }: { onDone: () => void }) {
         <Button type="submit" className="sm:w-fit">Propose supplier</Button>
       </form>
     </Panel>
+  );
+}
+
+function DraftCompletion({ supplierId, current, canSubmit, onDone }: { supplierId: string; current: { paypal_merchant_id: string; trusted_contact_channel: string; trusted_contact_value: string; verification_evidence: string | null }; canSubmit: boolean; onDone: () => void }) {
+  const [f, setF] = useState({ merchant: current.paypal_merchant_id, channel: current.trusted_contact_channel || "phone", value: current.trusted_contact_value, evidence: current.verification_evidence ?? "" });
+  const missing = [!f.merchant.trim() && "PayPal merchant ID", !f.value.trim() && "trusted contact", !f.evidence.trim() && "independent verification evidence"].filter(Boolean) as string[];
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const { error } = await supabase.rpc("submit_supplier_draft", { _supplier: supplierId, _merchant: f.merchant, _channel: f.channel, _channel_value: f.value, _evidence: f.evidence });
+    if (error) { toast.error(friendlyError(error)); return; }
+    toast.success("Submitted for approval. A different owner or change approver must approve it.");
+    onDone();
+  }
+  return (
+    <div className="mt-4 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
+      <p className="font-semibold">Draft — unverified and cannot be paid.</p>
+      {missing.length > 0 ? <p>Missing for approval: {missing.join(", ")}.</p> : <p>All verification details are filled in.</p>}
+      {canSubmit ? (
+        <form onSubmit={submit} className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2"><RequiredNote /></div>
+          <div className="space-y-1"><Label htmlFor={`dm-${supplierId}`}>PayPal merchant ID<Req /></Label><Input id={`dm-${supplierId}`} required className="font-mono" value={f.merchant} onChange={(e) => setF({ ...f, merchant: e.target.value })} /><p className="text-xs text-muted-foreground">Confirmed with the supplier through a trusted channel, not copied from an invoice.</p></div>
+          <div className="space-y-1"><Label htmlFor={`dv-${supplierId}`}>Trusted contact<Req /></Label><Input id={`dv-${supplierId}`} required value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} /><p className="text-xs text-muted-foreground">From a source you already trust, never from the invoice.</p></div>
+          <div className="space-y-1 sm:col-span-2"><Label htmlFor={`de-${supplierId}`}>Independent verification evidence<Req /></Label><Textarea id={`de-${supplierId}`} required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} /><p className="text-xs text-muted-foreground">Describe a check that actually happened. Fictional contacts and dummy IDs are not evidence.</p></div>
+          <Button type="submit" size="sm" className="sm:w-fit">Request approval</Button>
+        </form>
+      ) : <p className="mt-1 text-xs">A Business owner must complete these details and request approval.</p>}
+    </div>
   );
 }
