@@ -218,3 +218,49 @@ begin
 
   raise exception 'RESULTS: %', res;
 end $$;
+
+-- Block 6: spending rejection (reject_spending) is distinct from cancellation
+do $$
+declare
+  a uuid := '00000000-0000-0000-0000-00000000000a';
+  b uuid := '00000000-0000-0000-0000-00000000000b';
+  c uuid := '00000000-0000-0000-0000-00000000000c';
+  d uuid := '00000000-0000-0000-0000-00000000000d';
+  v_org uuid; v_sup uuid; v_p uuid; v_st text; v_n int; res text := '';
+begin
+  perform set_config('request.jwt.claims', json_build_object('sub',a,'role','authenticated')::text, true);
+  v_org := public.create_organization('Reject Test', true);
+  insert into public.memberships(org_id,user_id,role) values (v_org,b,'payer'),(v_org,d,'preparer');
+  select s.id into v_sup from public.suppliers s where s.org_id=v_org limit 1;
+  v_p := public.submit_invoice(v_org, v_sup, 'INV-REJ', 12000, 'CAD', 'DEMO-MERCHANT-HARBOUR-001', null, 'packaging', 'T', null, null, null);
+  select status into v_st from public.purchases where id=v_p; res := res || 'start=' || v_st || '; ';
+  begin perform public.reject_spending(v_p,1,'self'); res := res || 'FAIL requester rejected; ';
+  exception when others then res := res || 'PASS requester refused; '; end;
+  perform set_config('request.jwt.claims', json_build_object('sub',d,'role','authenticated')::text, true);
+  begin perform public.reject_spending(v_p,1,'x'); res := res || 'FAIL preparer rejected; ';
+  exception when others then res := res || 'PASS preparer refused; '; end;
+  perform set_config('request.jwt.claims', json_build_object('sub',c,'role','authenticated')::text, true);
+  begin perform public.reject_spending(v_p,1,'x'); res := res || 'FAIL outsider rejected; ';
+  exception when others then res := res || 'PASS outsider refused; '; end;
+  perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
+  begin perform public.reject_spending(v_p,1,'   '); res := res || 'FAIL blank reason; ';
+  exception when others then res := res || 'PASS blank reason refused; '; end;
+  begin perform public.reject_spending(v_p,2,'x'); res := res || 'FAIL stale version; ';
+  exception when others then res := res || 'PASS stale version refused; '; end;
+  perform public.reject_spending(v_p,1,'Not needed this week');
+  begin perform public.reject_spending(v_p,1,'again'); res := res || 'FAIL duplicate; ';
+  exception when others then res := res || 'PASS repeat refused; '; end;
+  select count(*) into v_n from public.audit_events where entity_id=v_p and action='spending_rejected';
+  res := res || 'rejection events=' || v_n || '; ';
+  select count(*) into v_n from public.audit_events where entity_id=v_p and action ilike '%cancel%';
+  res := res || 'cancel events=' || v_n || '; ';
+  begin perform public.approve_purchase(v_p,1,'x'); res := res || 'FAIL approve after reject; ';
+  exception when others then res := res || 'PASS approve refused; '; end;
+  begin perform public.reserve_budget(v_p); res := res || 'FAIL reserve after reject; ';
+  exception when others then res := res || 'PASS reserve refused; '; end;
+  begin perform public.begin_sandbox_payment(v_p); res := res || 'FAIL payment after reject; ';
+  exception when others then res := res || 'PASS payment refused; '; end;
+  select count(*) into v_n from public.budget_reservations where purchase_id=v_p and status='active';
+  res := res || 'active reservations=' || v_n || '; ';
+  raise exception 'RESULTS: %', res;
+end $$;
