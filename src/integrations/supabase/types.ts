@@ -1241,6 +1241,7 @@ export type Database = {
           current_version_id: string | null
           id: string
           is_demo: boolean
+          is_test_supplier: boolean
           name: string
           org_id: string
           status: string
@@ -1251,6 +1252,7 @@ export type Database = {
           current_version_id?: string | null
           id?: string
           is_demo?: boolean
+          is_test_supplier?: boolean
           name: string
           org_id: string
           status?: string
@@ -1261,6 +1263,7 @@ export type Database = {
           current_version_id?: string | null
           id?: string
           is_demo?: boolean
+          is_test_supplier?: boolean
           name?: string
           org_id?: string
           status?: string
@@ -1619,6 +1622,19 @@ export type Database = {
         Returns: undefined
       }
       revoke_invitation: { Args: { _id: string }; Returns: undefined }
+      save_supplier_draft: {
+        Args: {
+          _channel: string
+          _channel_value: string
+          _email: string
+          _evidence: string
+          _is_test: boolean
+          _merchant: string
+          _name: string
+          _org: string
+        }
+        Returns: string
+      }
       submit_ai_proposal: {
         Args: {
           _claimed_recipient?: string
@@ -1650,6 +1666,16 @@ export type Database = {
           _supplier: string
         }
         Returns: string
+      }
+      submit_supplier_draft: {
+        Args: {
+          _channel: string
+          _channel_value: string
+          _evidence: string
+          _merchant: string
+          _supplier: string
+        }
+        Returns: undefined
       }
       supersede_stale_change_requests: {
         Args: { _pid: string }

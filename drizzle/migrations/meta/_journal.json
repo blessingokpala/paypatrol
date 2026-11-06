@@ -225,6 +225,13 @@
       "when": 1793979647919,
       "tag": "0031_recipient_name_and_testonly_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793980534947,
+      "tag": "0032_supplier_drafts_and_unchecked_recipient",
+      "breakpoints": true
     }
   ]
 }
