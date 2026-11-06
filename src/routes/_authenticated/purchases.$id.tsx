@@ -1,3 +1,5 @@
+import { CategoryField } from "@/components/category-field";
+import { categoryLabel, fromStored, toStored } from "@/lib/categories";
 import { friendlyError, humanize } from "@/lib/friendly";
 import type { Database } from "@/integrations/supabase/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -138,7 +140,7 @@ function Review() {
               <div><dt className="text-muted-foreground">Amount</dt><dd className="flex flex-wrap items-center gap-2 font-semibold">{formatMinor(p.total_minor, p.currency)}{moneyFromUser(p.total_minor, ex?.total) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
               <div><dt className="text-muted-foreground">Currency</dt><dd className="flex flex-wrap items-center gap-2">{p.currency}{fromUser(p.currency, ex?.currency) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
               {p.source === "invoice" && <><div><dt className="text-muted-foreground">Invoice reference</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_reference, ex?.invoice_reference) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div></>}
-              <div><dt className="text-muted-foreground">Category</dt><dd>{p.category || <span className="text-muted-foreground">Not provided</span>}</dd></div>
+              <div><dt className="text-muted-foreground">Category</dt><dd>{categoryLabel(p.category) || <span className="text-muted-foreground">Not provided</span>}</dd></div>
               {p.source === "invoice" && (
                 <>
                   <div><dt className="text-muted-foreground">Invoice date</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_date, ex?.invoice_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
@@ -323,14 +325,16 @@ function Review() {
 function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currency: string; requested_recipient: string | null; invoice_reference: string | null; category: string | null; invoice_date: string | null; due_date: string | null; buyer_name: string | null; subtotal_minor: number | null; tax_minor: number | null; shipping_minor: number | null }; onDone: () => void }) {
   const [f, setF] = useState({
     amount: minorToInput(p.total_minor), currency: p.currency, recipient: p.requested_recipient ?? "",
-    ref: p.invoice_reference ?? "", category: p.category ?? "",
+    ref: p.invoice_reference ?? "",
     invoiceDate: p.invoice_date ?? "", dueDate: p.due_date ?? "", buyer: p.buyer_name ?? "",
     subtotal: p.subtotal_minor !== null ? minorToInput(p.subtotal_minor) : "",
     tax: p.tax_minor !== null ? minorToInput(p.tax_minor) : "",
     shipping: p.shipping_minor !== null ? minorToInput(p.shipping_minor) : "",
     reason: "",
   });
+  const [cat, setCat] = useState(() => fromStored(p.category));
   const [error, setError] = useState<string | null>(null);
+  const [catError, setCatError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const money = (s: string) => (s.trim() === "" ? null : parseToMinor(s));
   async function save(e: React.FormEvent) {
@@ -341,10 +345,12 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
     for (const [label, v] of [["Subtotal", f.subtotal], ["Tax", f.tax], ["Shipping", f.shipping]] as const) {
       if (v.trim() !== "" && parseToMinor(v) === null) { setError(`Enter ${label.toLowerCase()} like 12.50, or leave it empty.`); return; }
     }
+    const category = toStored(cat);
+    if (!category) { const msg = cat.choice === "other" ? "Specify the category." : "Select a category."; setCatError(msg); setError(msg); return; }
     if (!f.reason.trim()) { setError("A reason is required, so the team can see why this request changed."); return; }
     setSaving(true);
     const args = {
-      _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: f.category,
+      _pid: p.id, _amount_minor: m, _currency: f.currency, _recipient: f.recipient, _invoice_ref: f.ref, _category: category,
       _invoice_date: f.invoiceDate || null, _due_date: f.dueDate || null, _buyer: f.buyer,
       _subtotal_minor: money(f.subtotal), _tax_minor: money(f.tax), _shipping_minor: money(f.shipping), _reason: f.reason.trim(),
     };
@@ -361,7 +367,7 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
     <form onSubmit={save} className="space-y-3">
       <RequiredNote />
       <div className="grid gap-3 sm:grid-cols-2">
-        {field("amount", "Amount")}{field("currency", "Currency")}{field("ref", "Invoice reference")}{field("category", "Category")}
+        {field("amount", "Amount")}{field("currency", "Currency")}{field("ref", "Invoice reference")}<CategoryField id="e-category" value={cat} onChange={(v) => { setCat(v); setCatError(null); }} error={catError} />
         {field("invoiceDate", "Invoice date", "date")}{field("dueDate", "Due date", "date")}{field("buyer", "Buyer")}
         {field("subtotal", "Subtotal (optional)")}{field("tax", "Tax (optional)")}{field("shipping", "Shipping (optional)")}
       </div>
