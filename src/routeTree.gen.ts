@@ -22,6 +22,7 @@ import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
 import { Route as InviteIdRouteImport } from './routes/invite.$id'
+import { Route as AuthenticatedNotificationsIdRouteImport } from './routes/_authenticated/notifications.$id'
 import { Route as AuthenticatedPurchasesIndexRouteImport } from './routes/_authenticated/purchases.index'
 import { Route as AuthenticatedPurchasesIdRouteImport } from './routes/_authenticated/purchases.$id'
 import { Route as AuthenticatedPurchasesNewInvoiceRouteImport } from './routes/_authenticated/purchases.new-invoice'
@@ -93,6 +94,12 @@ const InviteIdRoute = InviteIdRouteImport.update({
   path: '/invite/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedNotificationsIdRoute =
+  AuthenticatedNotificationsIdRouteImport.update({
+    id: '/notifications/$id',
+    path: '/notifications/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedPurchasesIndexRoute =
   AuthenticatedPurchasesIndexRouteImport.update({
     id: '/purchases/',
@@ -142,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
   '/invite/$id': typeof InviteIdRoute
+  '/notifications/$id': typeof AuthenticatedNotificationsIdRoute
   '/purchases/$id': typeof AuthenticatedPurchasesIdRoute
   '/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
   '/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
@@ -162,6 +170,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
   '/invite/$id': typeof InviteIdRoute
+  '/notifications/$id': typeof AuthenticatedNotificationsIdRoute
   '/purchases/$id': typeof AuthenticatedPurchasesIdRoute
   '/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
   '/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
@@ -184,6 +193,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
   '/invite/$id': typeof InviteIdRoute
+  '/_authenticated/notifications/$id': typeof AuthenticatedNotificationsIdRoute
   '/_authenticated/purchases/$id': typeof AuthenticatedPurchasesIdRoute
   '/_authenticated/purchases/new-invoice': typeof AuthenticatedPurchasesNewInvoiceRoute
   '/_authenticated/purchases/new-proposal': typeof AuthenticatedPurchasesNewProposalRoute
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/invite/$id'
+    | '/notifications/$id'
     | '/purchases/$id'
     | '/purchases/new-invoice'
     | '/purchases/new-proposal'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/suppliers'
     | '/invite/$id'
+    | '/notifications/$id'
     | '/purchases/$id'
     | '/purchases/new-invoice'
     | '/purchases/new-proposal'
@@ -247,6 +259,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/suppliers'
     | '/invite/$id'
+    | '/_authenticated/notifications/$id'
     | '/_authenticated/purchases/$id'
     | '/_authenticated/purchases/new-invoice'
     | '/_authenticated/purchases/new-proposal'
@@ -358,6 +371,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/notifications/$id': {
+      id: '/_authenticated/notifications/$id'
+      path: '/notifications/$id'
+      fullPath: '/notifications/$id'
+      preLoaderRoute: typeof AuthenticatedNotificationsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/purchases/': {
       id: '/_authenticated/purchases/'
       path: '/purchases'
@@ -412,6 +432,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
+  AuthenticatedNotificationsIdRoute: typeof AuthenticatedNotificationsIdRoute
   AuthenticatedPurchasesIdRoute: typeof AuthenticatedPurchasesIdRoute
   AuthenticatedPurchasesNewInvoiceRoute: typeof AuthenticatedPurchasesNewInvoiceRoute
   AuthenticatedPurchasesNewProposalRoute: typeof AuthenticatedPurchasesNewProposalRoute
@@ -427,6 +448,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
+  AuthenticatedNotificationsIdRoute: AuthenticatedNotificationsIdRoute,
   AuthenticatedPurchasesIdRoute: AuthenticatedPurchasesIdRoute,
   AuthenticatedPurchasesNewInvoiceRoute: AuthenticatedPurchasesNewInvoiceRoute,
   AuthenticatedPurchasesNewProposalRoute:
