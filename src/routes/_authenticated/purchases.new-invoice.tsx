@@ -526,7 +526,7 @@ function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId:
         <p className="mt-1 text-xs text-muted-foreground">Optional for invoice checking. Required before this supplier can receive payment.</p>
         <div className="mt-3 space-y-3">
       <div className="space-y-1">
-        <Label htmlFor="as-merchant">PayPal merchant ID</Label>
+        <Label htmlFor="as-merchant">PayPal merchant ID <span className="ml-1 text-xs font-normal text-muted-foreground">(Required for payment setup)</span></Label>
         <Input id="as-merchant" className="font-mono" value={s.merchant} onChange={(e) => setS({ ...s, merchant: e.target.value })} />
         {hint("From the invoice if printed. Unverified until confirmed with the supplier through a trusted channel. IDs starting with TESTONLY are fictional and can never be paid.")}
       </div>
@@ -536,28 +536,28 @@ function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId:
           <FieldSelect id="as-channel" value={s.channel} onChange={(v) => setS({ ...s, channel: v })} options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }]} />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="as-channelValue">Trusted contact</Label>
+          <Label htmlFor="as-channelValue">Trusted contact <span className="ml-1 text-xs font-normal text-muted-foreground">(Required for payment setup)</span></Label>
           <Input id="as-channelValue" value={s.channelValue} onChange={(e) => setS({ ...s, channelValue: e.target.value })} />
         </div>
       </div>
       {hint("Must come from a source you already trust (signed contract, earlier verified records) — not from this invoice or its message.")}
       <div className="space-y-1">
-        <Label htmlFor="as-evidence">Independent verification evidence</Label>
+        <Label htmlFor="as-evidence">Independent verification evidence <span className="ml-1 text-xs font-normal text-muted-foreground">(Required for payment setup)</span></Label>
         <Textarea id="as-evidence" value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="Leave empty if no independent check has happened yet." />
         {hint("Only describe a check that actually happened. Invoice details, dummy merchant IDs and fictional contacts are not evidence.")}
       </div>
+        </div>
+      </details>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={s.isTest} onChange={(e) => setS({ ...s, isTest: e.target.checked })} />
         Fictional test supplier (label it as test data)
       </label>
-      {missing.length > 0 && <p className="text-xs">Still missing for approval: {missing.join(", ")}.</p>}
+      {missing.length > 0 && <p className="text-xs">Payment setup not complete (optional for invoice checking): {missing.join(", ")} missing.</p>}
       {err && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{err}</p>}
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" disabled={busy} onClick={() => void save(false)}>{busy ? "Saving…" : "Save as draft"}</Button>
         {canSubmit && <Button type="button" size="sm" variant="outline" disabled={busy || missing.length > 0} onClick={() => void save(true)}>Save and request approval</Button>}
       </div>
-        </div>
-      </details>
       {canSubmit && missing.length > 0 && <p className="text-xs text-muted-foreground">“Save and request approval” is available once the merchant ID, trusted contact and verification evidence are filled in.</p>}
     </div>
   );
