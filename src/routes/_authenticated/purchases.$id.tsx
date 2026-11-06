@@ -270,6 +270,16 @@ function Review() {
             ))}
           </ul>
         )}
+        {audits.filter((e) => e.action === "spending_rejected").map((e) => {
+          const d = (e.details ?? {}) as Record<string, unknown>;
+          return (
+            <div key={e.id} className="mb-4 rounded-md border p-3 text-sm">
+              <ToneBadge tone="blocked">Spending rejected</ToneBadge>
+              <p className="mt-1 text-muted-foreground">v{e.entity_version} · by {names[e.actor_id ?? ""] ?? "a team member"} · {new Date(e.created_at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}</p>
+              {typeof d["reason"] === "string" && <p className="mt-1">Reason: {d["reason"]}</p>}
+            </div>
+          );
+        })}
         <div className="flex flex-wrap gap-2">
           {p.status === "approval_required" && org.has("payer", "owner") && (
             p.requested_by === org.userId
@@ -363,7 +373,7 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
   );
 }
 
-type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decision_note: string | null; base_version_id: string };
+type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decided_at: string | null; decision_note: string | null; base_version_id: string };
 type SV = { trusted_contact_channel: string; trusted_contact_value: string; paypal_merchant_id: string } | null;
 type VR = { id: string; channel: string; channel_value: string; person_contacted: string; contacted_at: string; outcome: string; evidence: string; reviewer_id: string; check_kind?: string };
 type Member = { user_id: string; role: string };
@@ -457,7 +467,14 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
       <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{humanize(cr.status)}</strong></p>
       {cr.status === "superseded"
         ? <p className="mt-1 text-sm text-muted-foreground">Closed automatically, not approved: {cr.decision_note}</p>
-        : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Decision by {names[cr.decided_by ?? ""] ?? "reviewer"}: {cr.decision_note}</p>}
+        : (cr.status === "approved" || cr.status === "rejected")
+          ? <div className="mt-2 rounded-md border p-3 text-sm">
+              <ToneBadge tone={cr.status === "approved" ? "success" : "blocked"}>{cr.status === "approved" ? "Supplier change verified" : "Supplier change rejected"}</ToneBadge>
+              <p className="mt-1 text-muted-foreground">By {names[cr.decided_by ?? ""] ?? "a reviewer"}{cr.decided_at ? ` · ${new Date(cr.decided_at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}` : ""}</p>
+              {cr.decision_note && <p className="mt-1">{cr.status === "rejected" ? "Reason" : "Note"}: {cr.decision_note}</p>}
+              {cr.status === "rejected" && <p className="mt-1 text-xs text-muted-foreground">Rejecting the supplier change did not cancel this request, change its recipient or make it payable.</p>}
+            </div>
+          : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Note: {cr.decision_note}</p>}
       {verifs.length > 0 && (
         <ul className="mt-3 space-y-2 text-sm">
           {verifs.map((v) => (
