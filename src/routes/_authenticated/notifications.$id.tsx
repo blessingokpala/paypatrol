@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/lib/org";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/notifications/$id")({
 function OpenNotification() {
   const { id } = Route.useParams();
   const org = useOrg();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const notification = useQuery({
     queryKey: ["open-notification", org.userId, id],
@@ -27,6 +28,7 @@ function OpenNotification() {
       if (error) throw error;
       const read = await supabase.rpc("mark_review_notification_read", { _id: id });
       if (read.error) throw read.error;
+      qc.invalidateQueries({ queryKey: ["review-notifications", org.userId] });
       return data;
     },
     retry: false,
