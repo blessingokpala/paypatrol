@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/purchases/new-invoice")({
-  validateSearch: fromSearch,
+  validateSearch: (s: Record<string, unknown>) => ({ ...fromSearch(s), ...(typeof s["supplier"] === "string" && /^[0-9a-f-]{36}$/.test(s["supplier"]) ? { supplier: s["supplier"] } : {}) }),
   head: () => ({
     meta: [
       { title: "Check an invoice — PayPatrol" },
@@ -61,7 +61,8 @@ function NewInvoice() {
   const refresh = useRefreshAll();
   const readInvoice = useServerFn(extractInvoiceDetails);
 
-  const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", recipientName: "", contact: "", category: "", categoryOther: "", description: "", message: "" });
+  const initialSupplier = (Route.useSearch() as { supplier?: string }).supplier ?? "";
+  const [f, setF] = useState({ supplier: initialSupplier, ref: "", amount: "", currency: "CAD", recipient: "", recipientName: "", contact: "", category: "", categoryOther: "", description: "", message: "" });
   const [edited, setEdited] = useState<Set<keyof typeof f>>(new Set());
   const editedRef = useRef<Set<keyof typeof f>>(new Set());
   const markEdited = (k: keyof typeof f) => { editedRef.current = new Set(editedRef.current).add(k); setEdited(new Set(editedRef.current)); };
@@ -370,7 +371,8 @@ function NewInvoice() {
                     placeholder="Not matched to a supplier"
                     options={[
                       { value: "", label: "Not matched to a supplier" },
-                      ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.is_test_supplier ? " [test supplier]" : ""} — ${s.status === "active" ? "Approved" : s.status === "draft" ? "Draft, unverified (not payable)" : "Pending verification (not approved)"}` })),
+                      ...(suppliers.data ?? []).filter((s) => s.status === "active").map((s) => ({ value: s.id, label: `Approved: ${s.name}${s.is_test_supplier ? " [test supplier]" : ""}` })),
+                      ...(suppliers.data ?? []).filter((s) => s.status !== "active").map((s) => ({ value: s.id, label: `Unverified: ${s.name}${s.is_test_supplier ? " [test supplier]" : ""} — ${s.status === "draft" ? "draft, not payable" : "pending verification, not payable"}` })),
                     ]}
                   />
                 </div>
@@ -515,14 +517,18 @@ function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId:
         {hint("From the invoice. A name on an invoice does not prove who the supplier is.")}
       </div>
       <div className="space-y-1">
-        <Label htmlFor="as-merchant">PayPal merchant ID</Label>
-        <Input id="as-merchant" className="font-mono" value={s.merchant} onChange={(e) => setS({ ...s, merchant: e.target.value })} />
-        {hint("From the invoice if printed. Unverified until confirmed with the supplier through a trusted channel. IDs starting with TESTONLY are fictional and can never be paid.")}
-      </div>
-      <div className="space-y-1">
         <Label htmlFor="as-email">Supplier email</Label>
         <Input id="as-email" type="email" value={s.email} onChange={(e) => setS({ ...s, email: e.target.value })} />
         {hint("Billing email for reference only. Never used to verify payment details.")}
+      </div>
+      <details className="rounded-md border bg-muted/30 p-3">
+        <summary className="cursor-pointer text-sm font-semibold">Set up this supplier for payment</summary>
+        <p className="mt-1 text-xs text-muted-foreground">Optional for invoice checking. Required before this supplier can receive payment.</p>
+        <div className="mt-3 space-y-3">
+      <div className="space-y-1">
+        <Label htmlFor="as-merchant">PayPal merchant ID <span className="ml-1 text-xs font-normal text-muted-foreground">(Required for payment setup)</span></Label>
+        <Input id="as-merchant" className="font-mono" value={s.merchant} onChange={(e) => setS({ ...s, merchant: e.target.value })} />
+        {hint("From the invoice if printed. Unverified until confirmed with the supplier through a trusted channel. IDs starting with TESTONLY are fictional and can never be paid.")}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
@@ -530,21 +536,23 @@ function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId:
           <FieldSelect id="as-channel" value={s.channel} onChange={(v) => setS({ ...s, channel: v })} options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }]} />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="as-channelValue">Trusted contact</Label>
+          <Label htmlFor="as-channelValue">Trusted contact <span className="ml-1 text-xs font-normal text-muted-foreground">(Required for payment setup)</span></Label>
           <Input id="as-channelValue" value={s.channelValue} onChange={(e) => setS({ ...s, channelValue: e.target.value })} />
         </div>
       </div>
       {hint("Must come from a source you already trust (signed contract, earlier verified records) — not from this invoice or its message.")}
       <div className="space-y-1">
-        <Label htmlFor="as-evidence">Independent verification evidence</Label>
+        <Label htmlFor="as-evidence">Independent verification evidence <span className="ml-1 text-xs font-normal text-muted-foreground">(Required for payment setup)</span></Label>
         <Textarea id="as-evidence" value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="Leave empty if no independent check has happened yet." />
         {hint("Only describe a check that actually happened. Invoice details, dummy merchant IDs and fictional contacts are not evidence.")}
       </div>
+        </div>
+      </details>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={s.isTest} onChange={(e) => setS({ ...s, isTest: e.target.checked })} />
         Fictional test supplier (label it as test data)
       </label>
-      {missing.length > 0 && <p className="text-xs">Still missing for approval: {missing.join(", ")}.</p>}
+      {missing.length > 0 && <p className="text-xs">Payment setup not complete (optional for invoice checking): {missing.join(", ")} missing.</p>}
       {err && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{err}</p>}
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" disabled={busy} onClick={() => void save(false)}>{busy ? "Saving…" : "Save as draft"}</Button>

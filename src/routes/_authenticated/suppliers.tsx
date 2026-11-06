@@ -1,10 +1,10 @@
 import { friendlyError, humanize } from "@/lib/friendly";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg, useProfiles } from "@/lib/org";
 import { useRefreshAll, useSuppliers } from "@/lib/queries";
-import { EmptyState, PageHeader, Panel, ToneBadge, Req, RequiredNote } from "@/components/brand";
+import { EmptyState, PageHeader, Panel, ToneBadge, Req } from "@/components/brand";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,12 @@ function Suppliers() {
                     <div><dt className="text-muted-foreground">Approver</dt><dd>{c.approved_by ? names[c.approved_by] ?? "Team member" : s.is_demo ? "Seeded demo record" : "Pending"}{c.approved_at ? ` · ${new Date(c.approved_at).toLocaleDateString("en-CA")}` : ""}</dd></div>
                   </dl>
                 )}
+                {s.status !== "active" && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Button asChild size="sm" variant="outline"><Link to="/purchases/new-invoice" search={{ supplier: s.id, from: "/suppliers" }}>Check an invoice</Link></Button>
+                    <span className="text-xs text-muted-foreground">The invoice stays linked to this unverified supplier. Checks run; payment stays unavailable.</span>
+                  </div>
+                )}
                 {s.status === "draft" && c && <DraftCompletion supplierId={s.id} current={c} canSubmit={org.has("owner")} onDone={refresh} />}
                 {s.status === "pending_approval" && org.has("owner", "change_approver") && (
                   c?.created_by === org.userId
@@ -80,38 +86,43 @@ function Suppliers() {
   );
 }
 
+const PAY = <span className="ml-1 text-xs font-normal text-muted-foreground">(Required for payment setup)</span>;
+
 function AddSupplier({ onDone }: { onDone: () => void }) {
   const { orgId } = useOrg();
-  const [f, setF] = useState({ name: "", merchant: "", email: "", channel: "phone", value: "", evidence: "" });
-  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
+  const [f, setF] = useState({ name: "", merchant: "", email: "", channel: "phone", value: "", evidence: "", isTest: false });
+  const set = (k: "name" | "merchant" | "email" | "value" | "evidence") => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = await supabase.rpc("create_supplier", { _org: orgId, _name: f.name, _merchant: f.merchant, _email: f.email, _channel: f.channel, _channel_value: f.value, _evidence: f.evidence });
+    if (!f.name.trim()) { toast.error("Enter the supplier name to save a draft."); return; }
+    const { error } = await supabase.rpc("save_supplier_draft", { _org: orgId, _name: f.name, _merchant: f.merchant, _email: f.email, _channel: f.channel, _channel_value: f.value, _evidence: f.evidence, _is_test: f.isTest });
     if (error) { toast.error(friendlyError(error)); return; }
-    toast.success("Supplier proposed. A second person must approve it.");
+    toast.success("Supplier saved as a draft. It is unverified and cannot be paid. You can check invoices against it now.");
     onDone();
   }
   return (
     <Panel title="Propose a supplier" className="mb-6">
       <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2"><RequiredNote /></div>
+        <p className="text-xs text-muted-foreground sm:col-span-2"><span className="text-destructive" aria-hidden>*</span> Required to save a draft. Nothing else is needed to check invoices.</p>
         <div className="space-y-1"><Label htmlFor="sn">Legal or trading name<Req /></Label><Input id="sn" required value={f.name} onChange={set("name")} /></div>
-        <div className="space-y-1"><Label htmlFor="sm">PayPal merchant ID<Req /></Label><Input id="sm" required value={f.merchant} onChange={set("merchant")} /></div>
-        <div className="space-y-1"><Label htmlFor="se">Billing email</Label><Input id="se" type="email" value={f.email} onChange={set("email")} /></div>
-        <div className="grid grid-cols-[auto,1fr] gap-2">
-          <div className="space-y-1"><Label htmlFor="sc">Trusted channel<Req /></Label>
-            <FieldSelect
-              id="sc"
-              value={f.channel}
-              onChange={(v) => setF({ ...f, channel: v })}
-              options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }, { value: "in_person", label: "In person" }]}
-            />
+        <div className="space-y-1"><Label htmlFor="se">Billing email</Label><Input id="se" type="email" value={f.email} onChange={set("email")} /><p className="text-xs text-muted-foreground">Reference only; never used to verify payment details.</p></div>
+        <label className="flex items-center gap-2 text-sm sm:col-span-2"><input type="checkbox" checked={f.isTest} onChange={(e) => setF({ ...f, isTest: e.target.checked })} />Fictional test supplier (label it as test data)</label>
+        <details className="rounded-md border bg-muted/30 p-3 sm:col-span-2">
+          <summary className="cursor-pointer text-sm font-semibold">Set up this supplier for payment</summary>
+          <p className="mt-1 text-xs text-muted-foreground">Optional for invoice checking. Required before this supplier can receive payment.</p>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1"><Label htmlFor="sm">PayPal merchant ID{PAY}</Label><Input id="sm" className="font-mono" value={f.merchant} onChange={set("merchant")} /><p className="text-xs text-muted-foreground">Confirmed with the supplier through a trusted channel. IDs starting with TESTONLY can never be paid.</p></div>
+            <div className="grid grid-cols-[auto,1fr] gap-2">
+              <div className="space-y-1"><Label htmlFor="sc">Trusted channel</Label>
+                <FieldSelect id="sc" value={f.channel} onChange={(v) => setF({ ...f, channel: v })} options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }, { value: "in_person", label: "In person" }]} />
+              </div>
+              <div className="space-y-1"><Label htmlFor="sv">Trusted contact{PAY}</Label><Input id="sv" value={f.value} onChange={set("value")} /></div>
+            </div>
+            <div className="space-y-1 sm:col-span-2"><Label htmlFor="sev">How was this relationship independently established?{PAY}</Label><Textarea id="sev" value={f.evidence} onChange={set("evidence")} placeholder="Leave empty if no independent check has happened yet." /><p className="text-xs text-muted-foreground">Invoice details, dummy merchant IDs and fictional contacts are not evidence.</p></div>
+            <p className="text-xs text-muted-foreground sm:col-span-2">A merchant ID identifies a PayPal account; it does not prove who owns it. After saving, request approval from the draft; a different owner or Change approver must approve before any payment.</p>
           </div>
-          <div className="space-y-1"><Label htmlFor="sv">Trusted contact<Req /></Label><Input id="sv" required value={f.value} onChange={set("value")} /></div>
-        </div>
-        <div className="space-y-1 sm:col-span-2"><Label htmlFor="sev">How was this relationship independently established?<Req /></Label><Textarea id="sev" required value={f.evidence} onChange={set("evidence")} /></div>
-        <p className="text-xs text-muted-foreground sm:col-span-2">A merchant ID identifies a PayPal account; it does not prove who owns it. New suppliers start unenrolled and cannot be paid until enrolment is complete.</p>
-        <Button type="submit" className="sm:w-fit">Propose supplier</Button>
+        </details>
+        <Button type="submit" className="sm:w-fit">Save supplier draft</Button>
       </form>
     </Panel>
   );
@@ -130,16 +141,20 @@ function DraftCompletion({ supplierId, current, canSubmit, onDone }: { supplierI
   return (
     <div className="mt-4 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">
       <p className="font-semibold">Draft — unverified and cannot be paid.</p>
-      {missing.length > 0 ? <p>Missing for approval: {missing.join(", ")}.</p> : <p>All verification details are filled in.</p>}
+      {missing.length > 0 ? <p>Payment setup not complete (optional for invoice checking): {missing.join(", ")} missing.</p> : <p>All payment setup details are filled in.</p>}
       {canSubmit ? (
+        <details className="mt-3 rounded-md border bg-card p-3">
+        <summary className="cursor-pointer font-semibold">Set up this supplier for payment</summary>
+        <p className="mt-1 text-xs text-muted-foreground">Optional for invoice checking. Required before this supplier can receive payment.</p>
         <form onSubmit={submit} className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2"><RequiredNote /></div>
-          <div className="space-y-1"><Label htmlFor={`dm-${supplierId}`}>PayPal merchant ID<Req /></Label><Input id={`dm-${supplierId}`} required className="font-mono" value={f.merchant} onChange={(e) => setF({ ...f, merchant: e.target.value })} /><p className="text-xs text-muted-foreground">Confirmed with the supplier through a trusted channel, not copied from an invoice.</p></div>
-          <div className="space-y-1"><Label htmlFor={`dv-${supplierId}`}>Trusted contact<Req /></Label><Input id={`dv-${supplierId}`} required value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} /><p className="text-xs text-muted-foreground">From a source you already trust, never from the invoice.</p></div>
-          <div className="space-y-1 sm:col-span-2"><Label htmlFor={`de-${supplierId}`}>Independent verification evidence<Req /></Label><Textarea id={`de-${supplierId}`} required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} /><p className="text-xs text-muted-foreground">Describe a check that actually happened. Fictional contacts and dummy IDs are not evidence.</p></div>
+          <p className="text-xs text-muted-foreground sm:col-span-2">Fields marked <span className="text-destructive" aria-hidden>*</span> are required for payment setup.</p>
+          <div className="space-y-1"><Label htmlFor={`dm-${supplierId}`}>PayPal merchant ID<Req /><span className="sr-only"> (required for payment setup)</span></Label><Input id={`dm-${supplierId}`} required className="font-mono" value={f.merchant} onChange={(e) => setF({ ...f, merchant: e.target.value })} /><p className="text-xs text-muted-foreground">Confirmed with the supplier through a trusted channel, not copied from an invoice.</p></div>
+          <div className="space-y-1"><Label htmlFor={`dv-${supplierId}`}>Trusted contact<Req /><span className="sr-only"> (required for payment setup)</span></Label><Input id={`dv-${supplierId}`} required value={f.value} onChange={(e) => setF({ ...f, value: e.target.value })} /><p className="text-xs text-muted-foreground">From a source you already trust, never from the invoice.</p></div>
+          <div className="space-y-1 sm:col-span-2"><Label htmlFor={`de-${supplierId}`}>Independent verification evidence<Req /><span className="sr-only"> (required for payment setup)</span></Label><Textarea id={`de-${supplierId}`} required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} /><p className="text-xs text-muted-foreground">Describe a check that actually happened. Fictional contacts and dummy IDs are not evidence.</p></div>
           <Button type="submit" size="sm" className="sm:w-fit">Request approval</Button>
         </form>
-      ) : <p className="mt-1 text-xs">A Business owner must complete these details and request approval.</p>}
+        </details>
+      ) : <p className="mt-1 text-xs">A Business owner can complete payment setup later. It is not needed to check invoices.</p>}
     </div>
   );
 }
