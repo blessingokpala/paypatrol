@@ -77,6 +77,7 @@ export type Database = {
       approvals: {
         Row: {
           amount_minor: number
+          approval_method: string | null
           approver_id: string
           created_at: string
           currency: string
@@ -95,6 +96,7 @@ export type Database = {
         }
         Insert: {
           amount_minor: number
+          approval_method?: string | null
           approver_id: string
           created_at?: string
           currency: string
@@ -113,6 +115,7 @@ export type Database = {
         }
         Update: {
           amount_minor?: number
+          approval_method?: string | null
           approver_id?: string
           created_at?: string
           currency?: string
@@ -1399,7 +1402,7 @@ export type Database = {
         Returns: undefined
       }
       approve_purchase: {
-        Args: { _note?: string; _pid: string; _version: number }
+        Args: { _note?: string; _pid: string; _version: number; _via?: string }
         Returns: Database["public"]["Enums"]["purchase_status"]
       }
       approve_supplier_baseline: {
@@ -1639,6 +1642,10 @@ export type Database = {
           _supplier: string
         }
         Returns: string
+      }
+      supersede_stale_change_requests: {
+        Args: { _pid: string }
+        Returns: number
       }
       update_spending_policy: {
         Args: {
