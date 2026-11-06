@@ -14,6 +14,16 @@ function kindOf(type: string, name: string): Kind {
   if (/\.(png|jpe?g|webp|gif)$/i.test(name)) return "image";
   return "other";
 }
+/** Identify the real file type from its first bytes, so the label never relies on the filename alone. */
+function sniffType(h: Uint8Array): string | null {
+  const s = String.fromCharCode(...h);
+  if (s.startsWith("%PDF-")) return "application/pdf";
+  if (h[0] === 0x89 && s.slice(1, 4) === "PNG") return "image/png";
+  if (h[0] === 0xff && h[1] === 0xd8) return "image/jpeg";
+  if (s.startsWith("GIF8")) return "image/gif";
+  if (s.startsWith("RIFF") && s.slice(8, 12) === "WEBP") return "image/webp";
+  return null;
+}
 function fmtSize(b: number) {
   return b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`;
 }
@@ -25,11 +35,14 @@ function useDocument(path: string, name: string) {
     let url: string | null = null;
     let live = true;
     setState({ status: "loading" });
-    supabase.storage.from("invoices").download(path).then(({ data, error }) => {
+    supabase.storage.from("invoices").download(path).then(async ({ data, error }) => {
       if (!live) return;
       if (error || !data) { setState({ status: "error", msg: "This document is unavailable or you don't have access to it." }); return; }
-      url = URL.createObjectURL(data);
-      setState({ status: "ready", url, kind: kindOf(data.type, name), size: data.size, type: data.type || "unknown" });
+      const head = new Uint8Array(await data.slice(0, 12).arrayBuffer());
+      if (!live) return;
+      const sniff = sniffType(head) ?? data.type;
+      url = URL.createObjectURL(sniff && sniff !== data.type ? new Blob([data], { type: sniff }) : data);
+      setState({ status: "ready", url, kind: kindOf(sniff, name), size: data.size, type: sniff || "unknown" });
     });
     return () => { live = false; if (url) setTimeout(() => URL.revokeObjectURL(url!), 30_000); };
   }, [path, name]);
