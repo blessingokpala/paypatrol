@@ -37,7 +37,7 @@ function Approvals() {
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   async function approve(id: string, version: number) {
-    const { error } = await supabase.rpc("approve_purchase", { _pid: id, _version: version, _note: notes[id] ?? "" });
+    const { error } = await supabase.rpc("approve_purchase", { _pid: id, _version: version, _note: notes[id] ?? "", _via: "individual" });
     if (error) { toast.error(friendlyError(error)); return; }
     toast.success("Approved this exact version");
     refresh();

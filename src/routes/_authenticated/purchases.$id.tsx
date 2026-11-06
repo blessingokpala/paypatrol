@@ -418,7 +418,7 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
 
 function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void; current: boolean; isDemo: boolean; members: Member[] }) {
   const org = useOrg();
-  const canReview = org.has("change_approver", "owner") && cr.proposed_by !== org.userId;
+  const canReview = org.has("change_approver", "owner") && cr.proposed_by !== org.userId && purchaseRequestedBy !== org.userId;
   const open = cr.status === "pending_verification" || cr.status === "verified_pending_decision";
   const [f, setF] = useState({ channel_value: "", person: "", when: new Date().toISOString().slice(0, 16), outcome: "denied", evidence: "" });
   const [note, setNote] = useState("");
@@ -436,7 +436,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members 
   async function decide(approve: boolean) {
     const { error } = await supabase.rpc("decide_supplier_change", { _cr: cr.id, _approve: approve, _note: note });
     if (error) { toast.error(friendlyError(error)); return; }
-    toast.success(approve ? "Change approved. New recipient stays unpayable until PayPal enrolment." : "Change rejected. Original supplier record retained.");
+    toast.success(approve ? "Supplier change verified. The new recipient stays unpayable until PayPal enrolment. The decision is listed under Approvals → Completed." : "Supplier change rejected. The original supplier record is kept and this request stays blocked — it was not edited or made payable. The decision is listed under Approvals → Completed.", { duration: 10000 });
     onDone();
   }
 
@@ -515,18 +515,18 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members 
             <Button type="submit">Record verification</Button>
           </form>
           )}
-          {cr.status === "verified_pending_decision" && (
-            <div className="space-y-3">
-              <h3 className="font-semibold">Decide</h3>
-              <div className="space-y-1"><Label htmlFor="dn">Decision note</Label><Textarea id="dn" value={note} onChange={(e) => setNote(e.target.value)} /></div>
-              <RecentSignin />
-              <div className="flex flex-wrap gap-2">
-                <Button variant="destructive" onClick={() => decide(false)}>Reject change, keep original</Button>
-                <Button variant="outline" onClick={() => decide(true)}>Approve change</Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Approval requires a confirmed verification. An approved new recipient cannot be paid until PayPal enrolment is complete.</p>
+          <div className="space-y-3">
+            <h3 className="font-semibold">Decide</h3>
+            <p className="text-xs text-muted-foreground">Reject if the requested recipient is not supported by the approved supplier record or independent evidence. Rejecting keeps the original supplier record, does not edit the request and does not make it payable.</p>
+            <div className="space-y-1"><Label htmlFor="dn">Reason (required to reject)</Label><Textarea id="dn" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Requested recipient TEST does not match the approved PayPal Merchant ID and no evidence supports it." /></div>
+            <RecentSignin />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="destructive" disabled={!note.trim()} onClick={() => decide(false)}>Reject supplier change</Button>
+              {cr.status === "verified_pending_decision" && <Button variant="outline" onClick={() => decide(true)}>Approve change</Button>}
             </div>
-          )}
+            {!note.trim() && <p className="text-xs text-muted-foreground">Enter a reason to enable rejection.</p>}
+            <p className="text-xs text-muted-foreground">{cr.status === "verified_pending_decision" ? "Approval requires a confirmed verification. An approved new recipient cannot be paid until PayPal enrolment is complete." : "Approval is only offered after a confirmed check is recorded."}</p>
+          </div>
         </div>
       )}
     </Panel>

@@ -474,7 +474,7 @@ function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose
     setBusy(true);
     const out: NonNullable<typeof results> = [];
     for (const p of approvable) {
-      const { error } = await supabase.rpc("approve_purchase", { _pid: p.id, _version: p.version, ...(note ? { _note: note } : {}) });
+      const { error } = await supabase.rpc("approve_purchase", { _pid: p.id, _version: p.version, _via: "batch", ...(note ? { _note: note } : {}) });
       out.push({ id: p.id, title: p.title, ok: !error, message: error ? friendlyError(error, "Approval") : "Approved" });
     }
     setResults(out);
