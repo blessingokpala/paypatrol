@@ -1,6 +1,6 @@
 import { friendlyError, humanize } from "@/lib/friendly";
 import { createFileRoute, useNavigate, useBlocker } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useOrg } from "@/lib/org";
 import { useActivePolicy, useListings, useSuppliers, useRefreshAll } from "@/lib/queries";
@@ -73,6 +73,14 @@ function NewInvoice() {
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [applied, setApplied] = useState(false);
   const [addSupplier, setAddSupplier] = useState(false);
+  const [newSupplierId, setNewSupplierId] = useState<string | null>(null);
+  useEffect(() => {
+    if (newSupplierId && (suppliers.data ?? []).some((x) => x.id === newSupplierId)) {
+      setF((prev) => ({ ...prev, supplier: newSupplierId }));
+      markEdited("supplier");
+      setNewSupplierId(null);
+    }
+  }, [newSupplierId, suppliers.data]);
   const [amountError, setAmountError] = useState<string | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const readSeq = useRef(0);
@@ -390,7 +398,7 @@ function NewInvoice() {
                     canSubmit={has("owner")}
                     orgId={orgId}
                     suggestion={{ name: mapped?.recipientName || extraction?.supplier_name || "", merchant: f.recipient || mapped?.recipient || "" }}
-                    onCreated={async (id) => { await suppliers.refetch(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); refresh(); }}
+                    onCreated={async (id) => { setNewSupplierId(id); setAddSupplier(false); await suppliers.refetch(); }}
                   />
                 )
               )}
