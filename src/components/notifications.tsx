@@ -133,11 +133,7 @@ export function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0 sm:w-96">
         <div className="flex items-center justify-between border-b px-4 py-2.5">
           <h2 className="text-sm font-semibold">Notifications</h2>
-          {false && (
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => markRead.mutate(notifications.map((n) => n.key))}>
-              Mark all as read
-            </Button>
-          )}
+          {freshKeys.size > 0 && <span className="text-xs text-muted-foreground">{freshKeys.size} new</span>}
         </div>
         <div className="max-h-96 overflow-y-auto">
           {notifications.length === 0 ? (
