@@ -276,6 +276,11 @@ function Review() {
               ? <p className="text-sm text-muted-foreground">You submitted this request, so a different payer must approve it.</p>
               : <Button asChild><Link to="/approvals" search={{ from: here }}>Review in Approvals</Link></Button>
           )}
+          {p.status === "approval_required" && !org.has("payer", "owner") && (
+            <p className="text-sm text-muted-foreground">
+              Spending approval needs the Payer or Business owner role in {org.orgName}. Your roles here: {org.roles.join(", ").replace(/_/g, " ") || "none"}. Accept a Payer invitation from the owner to approve it.
+            </p>
+          )}
           {p.status === "cleared_for_checkout" && org.has("payer", "owner") && !activeRes && !isTestData && (
             <Button onClick={() => call(() => supabase.rpc("reserve_budget", { _pid: p.id }), "Budget reserved")}>Reserve budget for checkout</Button>
           )}
