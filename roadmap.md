@@ -1,5 +1,13 @@
 # PayPatrol roadmap
 
+## Final verification request — 6 November 2026
+- [ ] Identify two existing batch-eligible requests; verify phone selection preparation without impersonating the partner.
+- [ ] Assess a legitimate supplier-change confirmation scenario without replacing the approved baseline or unsupported routing.
+- [ ] Confirm historical approval invalidation and Maple Lane payment restrictions; freeze spending rules during final tests.
+- [ ] Complete published no-merchant invoice save/reopen verification.
+- [ ] Run basic and deeper security review; resolve material findings after results arrive.
+- [ ] Replace the inconsistent judges’ report with a dated verified/pending/limitations assessment.
+
 ## Done this turn (preview only, not yet published)
 - Batch decisions verified end-to-end: self/stale/blocked approvals refused server-side; mixed selection shows eligible/excluded; real 3-request batch rejection persisted after refresh
 - Fixed two defects: rejection now requires a reason server-side and refuses repeat cancellations (migration 0025); cancelling an uncaptured checkout returns the request to checkout instead of cancelling it (migration 0026)
