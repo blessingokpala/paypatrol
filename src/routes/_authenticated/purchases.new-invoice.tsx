@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/purchases/new-invoice")({
-  validateSearch: fromSearch,
+  validateSearch: (s: Record<string, unknown>) => ({ ...fromSearch(s), ...(typeof s["supplier"] === "string" && /^[0-9a-f-]{36}$/.test(s["supplier"]) ? { supplier: s["supplier"] } : {}) }),
   head: () => ({
     meta: [
       { title: "Check an invoice — PayPatrol" },
@@ -61,7 +61,8 @@ function NewInvoice() {
   const refresh = useRefreshAll();
   const readInvoice = useServerFn(extractInvoiceDetails);
 
-  const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", recipientName: "", contact: "", category: "", categoryOther: "", description: "", message: "" });
+  const initialSupplier = (Route.useSearch() as { supplier?: string }).supplier ?? "";
+  const [f, setF] = useState({ supplier: initialSupplier, ref: "", amount: "", currency: "CAD", recipient: "", recipientName: "", contact: "", category: "", categoryOther: "", description: "", message: "" });
   const [edited, setEdited] = useState<Set<keyof typeof f>>(new Set());
   const editedRef = useRef<Set<keyof typeof f>>(new Set());
   const markEdited = (k: keyof typeof f) => { editedRef.current = new Set(editedRef.current).add(k); setEdited(new Set(editedRef.current)); };
@@ -370,7 +371,8 @@ function NewInvoice() {
                     placeholder="Not matched to a supplier"
                     options={[
                       { value: "", label: "Not matched to a supplier" },
-                      ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.is_test_supplier ? " [test supplier]" : ""} — ${s.status === "active" ? "Approved" : s.status === "draft" ? "Draft, unverified (not payable)" : "Pending verification (not approved)"}` })),
+                      ...(suppliers.data ?? []).filter((s) => s.status === "active").map((s) => ({ value: s.id, label: `Approved: ${s.name}${s.is_test_supplier ? " [test supplier]" : ""}` })),
+                      ...(suppliers.data ?? []).filter((s) => s.status !== "active").map((s) => ({ value: s.id, label: `Unverified: ${s.name}${s.is_test_supplier ? " [test supplier]" : ""} — ${s.status === "draft" ? "draft, not payable" : "pending verification, not payable"}` })),
                     ]}
                   />
                 </div>
