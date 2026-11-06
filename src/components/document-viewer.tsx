@@ -45,7 +45,7 @@ function PdfPages({ url, zoom, page, setPages, onError }: { url: string; zoom: n
         const pdfjs = await import("pdfjs-dist");
         const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
         pdfjs.GlobalWorkerOptions.workerSrc = worker;
-        const doc = await pdfjs.getDocument(url).promise;
+        const doc = await pdfjs.getDocument({ url }).promise;
         if (!live) return;
         docRef.current = doc;
         setPages(doc.numPages);
@@ -113,7 +113,7 @@ function Viewer({ doc, tall }: { doc: Loaded; tall?: boolean }) {
   );
 }
 
-export function DocumentViewer({ path, fileName, uploadedAt, uploadedBy }: { path: string; fileName: string; uploadedAt: string; uploadedBy?: string }) {
+export function DocumentViewer({ path, fileName, uploadedAt, uploadedBy }: { path: string; fileName: string; uploadedAt: string; uploadedBy?: string | undefined }) {
   const state = useDocument(path, fileName);
   const [open, setOpen] = useState(false);
   const openFull = async () => {
