@@ -39,6 +39,8 @@ export function NotificationBell() {
   const qc = useQueryClient();
   const here = useHere();
 
+  // Items fading out of the panel after being opened.
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());
   const purchases = usePurchases(org.orgId);
   const changes = useQuery({
     queryKey: ["change-requests", org.orgId],
@@ -78,8 +80,6 @@ export function NotificationBell() {
   const visible = notifications.filter((n) => !readKeys.has(n.key));
   const unread = unreadCount(notifications, new Set([...readKeys, ...leaving]));
 
-  // Items fading out of the panel after being opened.
-  const [leaving, setLeaving] = useState<Set<string>>(new Set());
 
   const markRead = useMutation({
     mutationFn: async (keys: string[]) => {
