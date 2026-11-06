@@ -3,7 +3,8 @@ import { createFileRoute, useNavigate, useBlocker } from "@tanstack/react-router
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useOrg } from "@/lib/org";
-import { useListings, useSuppliers, useRefreshAll } from "@/lib/queries";
+import { useActivePolicy, useListings, useSuppliers, useRefreshAll } from "@/lib/queries";
+import { mapExtraction } from "@/lib/ai/invoice-mapping";
 import { formatMinor, parseToMinor } from "@/lib/money";
 import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
 import { AI_ERROR_COPY, type AiError, type Extraction } from "@/lib/ai/schemas";
@@ -51,11 +52,14 @@ function NewInvoice() {
   const { orgId, has } = useOrg();
   const suppliers = useSuppliers(orgId);
   const listings = useListings(orgId);
+  const policy = useActivePolicy(orgId);
+  const allowedCategories = policy.data?.active?.allowed_categories ?? [];
+  const [categoryError, setCategoryError] = useState<string | null>(null);
   const navigate = useNavigate();
   const refresh = useRefreshAll();
   const readInvoice = useServerFn(extractInvoiceDetails);
 
-  const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", contact: "", category: "packaging", description: "", message: "" });
+  const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", recipientName: "", contact: "", category: "", description: "", message: "" });
   const [edited, setEdited] = useState<Set<keyof typeof f>>(new Set());
   const editedRef = useRef<Set<keyof typeof f>>(new Set());
   const markEdited = (k: keyof typeof f) => { editedRef.current = new Set(editedRef.current).add(k); setEdited(new Set(editedRef.current)); };
@@ -87,6 +91,8 @@ function NewInvoice() {
   const supplierListings = (listings.data ?? []).filter((l) => !f.supplier || l.supplier_id === f.supplier);
   const selectedQuote = (listings.data ?? []).find((l) => l.id === quote.listing) ?? null;
   const matchedSupplier = (suppliers.data ?? []).find((s) => s.id === f.supplier) ?? null;
+  const mapped = extraction ? mapExtraction(extraction, allowedCategories) : null;
+  const categoryStated = mapped?.categoryStated ?? "";
 
   const flag = (field: string) =>
     extraction ? (extraction.missing_fields.includes(field) ? "missing" : extraction.uncertain_fields.includes(field) ? "uncertain" : "ok") : "ok";
@@ -136,11 +142,14 @@ function NewInvoice() {
 
   // auto=true fills only fields the user has not touched; auto=false (the button) asks before replacing manual edits.
   function applyExtracted(auto: boolean, ex: Extraction) {
+    const mapped = mapExtraction(ex, allowedCategories);
     const incoming = {
       ref: ex.invoice_reference,
       amount: ex.total,
       currency: ex.currency,
-      recipient: ex.requested_payment_recipient,
+      recipient: mapped.recipient,
+      recipientName: mapped.recipientName,
+      category: mapped.category,
       contact: ex.payment_change_instructions,
       description: ex.line_items[0]?.description ?? "",
     };
@@ -172,8 +181,15 @@ function NewInvoice() {
       amountRef.current?.focus();
       return;
     }
+    if (!f.category) {
+      setCategoryError(categoryStated && !mapped?.categoryPermitted
+        ? `The document says “${categoryStated}”, which your spending rules do not permit. Choose a permitted category.`
+        : "Choose a permitted category.");
+      document.getElementById("cat")?.focus();
+      return;
+    }
     if (applied && extraction) {
-      const fieldOf: Record<string, keyof typeof f> = { invoice_reference: "ref", total: "amount", currency: "currency", requested_payment_recipient: "recipient" };
+      const fieldOf: Record<string, keyof typeof f> = { invoice_reference: "ref", total: "amount", currency: "currency", requested_payment_recipient: "recipient", paypal_merchant_id: "recipient", payment_recipient_name: "recipientName" };
       // Uncertain values must be re-entered or confirmed by editing; missing ones must be filled in.
       const blocked = Object.keys(fieldOf).filter(
         (k) => extraction.uncertain_fields.includes(k) && !edited.has(fieldOf[k]!),
@@ -181,7 +197,7 @@ function NewInvoice() {
       const stillEmpty = [
         !f.ref.trim() && "invoice_reference",
         !f.currency.trim() && "currency",
-        !f.recipient.trim() && "requested_payment_recipient",
+        !f.recipient.trim() && "PayPal merchant ID",
       ].filter(Boolean) as string[];
       const unresolved = [...new Set([...blocked, ...stillEmpty])];
       if (unresolved.length) { toast.error(`Fix these first: ${unresolved.join(", ")}`); return; }
@@ -194,6 +210,7 @@ function NewInvoice() {
       _recipient: f.recipient, _contact: f.contact, _category: f.category, _description: f.description, _message: f.message,
       _storage_path: objectPath as string, _file_name: (file?.name ?? null) as string,
       _listing: (quote.listing || null) as string, _quantity: (quote.listing ? Number(quote.quantity) : null) as number,
+      _recipient_name: (f.recipientName.trim() || null) as string,
     });
     if (error) {
       setBusy(false);
@@ -276,13 +293,16 @@ function NewInvoice() {
                   ["Shipping", extraction.shipping, "shipping"],
                   ["Total", extraction.total, "total"],
                   ["Currency", extraction.currency, "currency"],
-                  ["Payment recipient", extraction.requested_payment_recipient, "requested_payment_recipient"],
+                  ["Category stated", extraction.category_stated, "category_stated"],
+                  ["Payee name", extraction.payment_recipient_name, "payment_recipient_name"],
+                  ["PayPal merchant ID", extraction.paypal_merchant_id, "paypal_merchant_id"],
+                  ...(extraction.requested_payment_recipient ? [["Payment recipient (earlier reading)", extraction.requested_payment_recipient, "requested_payment_recipient"]] : []),
                 ] as [string, string, string][]).map(([label, value, key]) => (
                   <div key={key} className="contents">
                     <dt className="text-muted-foreground">{label}</dt>
                     <dd className="flex flex-wrap items-center gap-2">
                       <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not found in document"}</span>
-                      {flag(key) === "missing" && <ToneBadge tone="warning">{["total", "currency", "requested_payment_recipient", "invoice_reference"].includes(key) ? "Required before proceeding" : "Optional — not found in document"}</ToneBadge>}
+                      {flag(key) === "missing" && <ToneBadge tone="warning">{["total", "currency", "requested_payment_recipient", "paypal_merchant_id", "invoice_reference"].includes(key) ? "Required before proceeding" : "Optional — not found in document"}</ToneBadge>}
                       {flag(key) === "uncertain" && <ToneBadge tone="warning">Hard to read — check it</ToneBadge>}
                     </dd>
                   </div>
@@ -331,41 +351,68 @@ function NewInvoice() {
           <div className="space-y-4">
             <RequiredNote />
             <div className="space-y-2">
-              <Label htmlFor="supplier">Approved supplier match</Label>
-              <FieldSelect
-                id="supplier"
-                value={f.supplier}
-                onChange={(v) => { setF({ ...f, supplier: v }); markEdited("supplier"); }}
-                placeholder="Not matched to an approved supplier"
-                options={[
-                  { value: "", label: "Not matched to an approved supplier" },
-                  ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.status !== "active" ? ` (${humanize(s.status)})` : ""}` })),
-                ]}
-              />
+              <Label htmlFor="supplier">Supplier record</Label>
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <FieldSelect
+                    id="supplier"
+                    value={f.supplier}
+                    onChange={(v) => { setF({ ...f, supplier: v }); markEdited("supplier"); }}
+                    placeholder="Not matched to a supplier"
+                    options={[
+                      { value: "", label: "Not matched to a supplier" },
+                      ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: s.status === "active" ? `${s.name} — Approved` : `${s.name} — Pending verification (not approved)` })),
+                    ]}
+                  />
+                </div>
+                <Button type="button" variant="outline" aria-expanded={addSupplier} aria-controls="add-supplier" onClick={() => setAddSupplier((v) => !v)}>
+                  {addSupplier ? "Close" : "Add supplier"}
+                </Button>
+              </div>
               {extraction?.supplier_name && (
                 <p className="text-xs text-muted-foreground">
                   Supplier named on the invoice: <span className="font-medium text-foreground">{extraction.supplier_name}</span>
-                  {matchedSupplier ? ` — you matched it to the approved record “${matchedSupplier.name}”.` : " — choose the matching approved supplier yourself; AI never matches it for you."}
+                  {matchedSupplier ? ` — you matched it to “${matchedSupplier.name}”.` : " — not matched. AI never matches a supplier for you; if it isn't listed, add it as a pending supplier."}
                 </p>
               )}
-              {has("owner", "change_approver") && (
-                <div>
-                  <Button type="button" size="sm" variant="ghost" aria-expanded={addSupplier} onClick={() => setAddSupplier((v) => !v)}>
-                    {addSupplier ? "Close add supplier" : "Add supplier"}
-                  </Button>
-                  {addSupplier && (
-                    <AddSupplierInline
-                      orgId={orgId}
-                      suggestion={{ name: extraction?.supplier_name ?? "", merchant: extraction?.requested_payment_recipient ?? "" }}
-                      onCreated={(id) => { refresh(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); }}
-                    />
-                  )}
+              {matchedSupplier && matchedSupplier.status !== "active" && (
+                <div className="rounded-md border border-warning/40 bg-warning-soft p-3 text-xs space-y-1">
+                  <p className="font-semibold">Pending supplier — not approved and not payable.</p>
+                  <p>Next step: a <span className="font-medium">different</span> team member with the Business owner or Change approver role reviews it on the Suppliers page. The person who proposed it cannot approve it.</p>
+                  <p>Approval alone does not make it payable: its PayPal merchant ID must also complete enrolment. An uploaded invoice never approves a supplier or its payment details.</p>
                 </div>
+              )}
+              {addSupplier && (
+                has("owner") ? (
+                  <AddSupplierInline
+                    orgId={orgId}
+                    suggestion={{ name: mapped?.recipientName || extraction?.supplier_name || "", merchant: f.recipient || mapped?.recipient || "" }}
+                    onCreated={(id) => { refresh(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); }}
+                  />
+                ) : (
+                  <p id="add-supplier" className="rounded-md border p-3 text-sm">Only a Business owner can propose a new supplier. Ask an owner to add it; your invoice entries stay here.</p>
+                )
               )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="ref">Invoice reference</Label><Input id="ref" value={f.ref} onChange={set("ref")} /></div>
-              <div className="space-y-2"><Label htmlFor="cat">Category</Label><Input id="cat" value={f.category} onChange={set("category")} /></div>
+              <div className="space-y-2">
+                <Label htmlFor="cat">Category<Req /></Label>
+                <FieldSelect
+                  id="cat"
+                  value={f.category}
+                  onChange={(v) => { setF({ ...f, category: v }); markEdited("category"); setCategoryError(null); }}
+                  placeholder="Choose a permitted category"
+                  options={[{ value: "", label: "Choose a permitted category" }, ...allowedCategories.map((c) => ({ value: c, label: humanize(c) }))]}
+                />
+                {categoryStated && (
+                  <p className="text-xs text-muted-foreground">
+                    Document says: <span className="font-medium text-foreground">{categoryStated}</span>
+                    {mapped?.categoryPermitted ? "" : " — not one of your permitted categories, so nothing was filled in. Choose one yourself."}
+                  </p>
+                )}
+                {categoryError && <p id="cat-error" role="alert" className="text-xs text-blocked">{categoryError}</p>}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="amt">Amount<Req /></Label>
                 <Input id="amt" ref={amountRef} inputMode="decimal" required value={f.amount} onChange={set("amount")} placeholder="75.00" aria-invalid={Boolean(amountError)} aria-describedby={amountError ? "amt-error" : undefined} />
@@ -373,10 +420,16 @@ function NewInvoice() {
               </div>
               <div className="space-y-2"><Label htmlFor="cur">Currency<Req /></Label><Input id="cur" required maxLength={3} value={f.currency} onChange={set("currency")} /></div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="rec">Payment recipient on the invoice (PayPal merchant ID)</Label>
-              <Input id="rec" value={f.recipient} onChange={set("recipient")} />
-              <p className="text-xs text-muted-foreground">Kept exactly as the invoice states it. It is never replaced by the approved supplier record.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="recname">Payment recipient name</Label>
+                <Input id="recname" value={f.recipientName} onChange={set("recipientName")} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rec">PayPal merchant ID on the invoice</Label>
+                <Input id="rec" className="font-mono" value={f.recipient} onChange={set("recipient")} />
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">Kept exactly as the invoice states them. Never replaced by the approved supplier record or the connected Sandbox account.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact">Contact details given in the invoice or message</Label>
@@ -423,9 +476,10 @@ function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; su
   const [s, setS] = useState({ name: suggestion.name, merchant: suggestion.merchant, email: "", channel: "phone", channelValue: "", evidence: "" });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  async function create(e: React.FormEvent) {
-    e.preventDefault();
+  async function create() {
     setErr(null);
+    const missing = [!s.name.trim() && "supplier name", !s.merchant.trim() && "PayPal Merchant ID", !s.channelValue.trim() && "trusted contact value", !s.evidence.trim() && "how you know the contact is genuine"].filter(Boolean);
+    if (missing.length) { setErr(`Complete: ${missing.join(", ")}.`); return; }
     setBusy(true);
     const { data, error } = await supabase.rpc("create_supplier", {
       _org: orgId, _name: s.name, _merchant: s.merchant, _email: s.email,
@@ -439,17 +493,18 @@ function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; su
   const fld = (k: keyof typeof s, label: string, required = true) => (
     <div className="space-y-1">
       <Label htmlFor={`as-${k}`}>{label}{required ? <Req /> : null}</Label>
-      <Input id={`as-${k}`} required={required} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} />
+      <Input id={`as-${k}`} aria-required={required} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} />
     </div>
   );
   return (
-    <form onSubmit={create} className="mt-2 space-y-3 rounded-md border border-dashed p-3">
+    <div id="add-supplier" role="group" aria-label="Add a pending supplier" className="mt-2 space-y-3 rounded-md border border-dashed p-3">
       <RequiredNote />
       <p className="text-xs text-muted-foreground">
         Values read from the invoice are only suggestions — edit them. A new supplier starts unverified: an uploaded invoice or a
         matching Merchant ID never approves it. Sandbox limitation: only the supplier enrolled with the connected Sandbox Business
         account can actually receive a Sandbox payment; any other supplier stays unpayable until enrolment.
       </p>
+      <p className="text-xs">Approval step: a different Business owner or Change approver must review this supplier on the Suppliers page. Merchant IDs starting with TESTONLY are fictional and can never be enrolled for payment.</p>
       {fld("name", "Supplier legal name")}
       {fld("merchant", "PayPal Merchant ID")}
       {fld("email", "Supplier email", false)}
@@ -467,10 +522,10 @@ function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; su
       </div>
       <div className="space-y-1">
         <Label htmlFor="as-evidence">How do you know this contact is genuine?<Req /></Label>
-        <Textarea id="as-evidence" required value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="e.g. confirmed by phone on a number from a signed contract" />
+        <Textarea id="as-evidence" aria-required value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="e.g. confirmed by phone on a number from a signed contract" />
       </div>
       {err && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{err}</p>}
-      <Button type="submit" size="sm" disabled={busy}>{busy ? "Adding…" : "Add as pending supplier"}</Button>
-    </form>
+      <Button type="button" size="sm" disabled={busy} onClick={() => void create()}>{busy ? "Adding…" : "Add as pending supplier"}</Button>
+    </div>
   );
 }
