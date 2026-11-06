@@ -366,7 +366,7 @@ function NewInvoice() {
                   <FieldSelect
                     id="supplier"
                     value={f.supplier}
-                    onChange={(v) => { console.error("DBG supplier onChange", JSON.stringify(v)); setF({ ...f, supplier: v }); markEdited("supplier"); }}
+                    onChange={(v) => { setF({ ...f, supplier: v }); markEdited("supplier"); }}
                     placeholder="Not matched to a supplier"
                     options={[
                       { value: "", label: "Not matched to a supplier" },
