@@ -7,7 +7,7 @@ import "@lovable.dev/cloud-auth-js/styles.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SandboxBanner, Wordmark, Req } from "@/components/brand";
+import { SandboxBanner, Wordmark, Req, RequiredNote } from "@/components/brand";
 import { PasswordInput } from "@/components/password-input";
 import { toast } from "sonner";
 
@@ -99,14 +99,15 @@ function AuthPage() {
           <p className="rounded-md bg-selected p-4 text-sm">If an account exists for {email}, a reset link is on its way. Open it on this device to choose a new password.</p>
         ) : (
           <form onSubmit={submit} className="space-y-4">
+            <RequiredNote />
             {mode === "signup" && (
               <div className="space-y-2">
-                <Label htmlFor="name">Your name</Label>
+                <Label htmlFor="name">Your name<Req /></Label>
                 <Input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email<Req /></Label>
               <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             {mode !== "forgot" && (

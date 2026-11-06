@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SandboxBanner, Wordmark, Req } from "@/components/brand";
+import { SandboxBanner, Wordmark, Req, RequiredNote } from "@/components/brand";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -100,6 +100,7 @@ function ResetPasswordPage() {
           <p className="rounded-md bg-selected p-4 text-sm">Your password is updated. Taking you to your workspace…</p>
         ) : (
           <form onSubmit={submit} className="space-y-4">
+            <RequiredNote />
             <div className="space-y-2">
               <Label htmlFor="new-password">New password<Req /></Label>
               <PasswordInput id="new-password" minLength={8} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />

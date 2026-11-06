@@ -10,7 +10,7 @@ import { formatMinor } from "@/lib/money";
 import { friendlyError } from "@/lib/friendly";
 import { STATUS_META, type PurchaseStatus } from "@/lib/status";
 import { applyPurchaseFilters, isDate, SORTS, type PurchaseFilters, type PurchaseSort } from "@/lib/purchase-filters";
-import { EmptyState, FixtureTag, PageHeader, StatusBadge, ToneBadge } from "@/components/brand";
+import { EmptyState, FixtureTag, PageHeader, StatusBadge, ToneBadge, Req, RequiredNote } from "@/components/brand";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -485,8 +485,13 @@ function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose
     setBusy(true);
     const out: NonNullable<typeof results> = [];
     for (const p of rejectable) {
-      const { error } = await supabase.rpc("cancel_purchase", { _pid: p.id, _reason: note.trim() });
-      out.push({ id: p.id, title: p.title, ok: !error, message: error ? friendlyError(error, "Rejection") : "Rejected (cancelled)" });
+      // Awaiting spending approval and decided by someone else: record a spending rejection.
+      // Anything else is a request cancellation, kept distinct from rejection.
+      const spending = p.status === "approval_required" && p.requested_by !== userId;
+      const { error } = spending
+        ? await supabase.rpc("reject_spending", { _pid: p.id, _version: p.version, _reason: note.trim() })
+        : await supabase.rpc("cancel_purchase", { _pid: p.id, _reason: note.trim() });
+      out.push({ id: p.id, title: p.title, ok: !error, message: error ? friendlyError(error, "Rejection") : spending ? "Spending rejected" : "Request cancelled" });
     }
     setResults(out);
     setBusy(false);
@@ -549,8 +554,10 @@ function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose
               </>
             )}
             <div className="mt-4 space-y-1">
-              <Label htmlFor="batch-note">{kind === "approve" ? "Note (optional)" : "Reason for rejection (required)"}</Label>
-              <Textarea id="batch-note" value={note} onChange={(e) => setNote(e.target.value)} />
+              {kind === "reject" && <RequiredNote />}
+              <Label htmlFor="batch-note">{kind === "approve" ? "Note (optional)" : <>Reason for rejection{<Req />}</>}</Label>
+              <Textarea id="batch-note" aria-required={kind === "reject"} aria-describedby="batch-note-help" value={note} onChange={(e) => setNote(e.target.value)} placeholder={kind === "reject" ? "Why are these being rejected?" : "Optional"} />
+              {kind === "reject" && <p id="batch-note-help" className={`text-xs ${note.trim() ? "text-muted-foreground" : "font-medium text-destructive"}`}>{note.trim() ? "Reason recorded with each rejection." : "Enter a reason to enable rejection."}</p>}
             </div>
             <div className="mt-4 flex gap-2">
               {kind === "approve"

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg, useProfiles } from "@/lib/org";
 import { useRefreshAll, useSuppliers } from "@/lib/queries";
-import { EmptyState, PageHeader, Panel, ToneBadge } from "@/components/brand";
+import { EmptyState, PageHeader, Panel, ToneBadge, Req, RequiredNote } from "@/components/brand";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,11 +93,12 @@ function AddSupplier({ onDone }: { onDone: () => void }) {
   return (
     <Panel title="Propose a supplier" className="mb-6">
       <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1"><Label htmlFor="sn">Legal or trading name</Label><Input id="sn" required value={f.name} onChange={set("name")} /></div>
-        <div className="space-y-1"><Label htmlFor="sm">PayPal merchant ID</Label><Input id="sm" required value={f.merchant} onChange={set("merchant")} /></div>
+        <div className="sm:col-span-2"><RequiredNote /></div>
+        <div className="space-y-1"><Label htmlFor="sn">Legal or trading name<Req /></Label><Input id="sn" required value={f.name} onChange={set("name")} /></div>
+        <div className="space-y-1"><Label htmlFor="sm">PayPal merchant ID<Req /></Label><Input id="sm" required value={f.merchant} onChange={set("merchant")} /></div>
         <div className="space-y-1"><Label htmlFor="se">Billing email</Label><Input id="se" type="email" value={f.email} onChange={set("email")} /></div>
         <div className="grid grid-cols-[auto,1fr] gap-2">
-          <div className="space-y-1"><Label htmlFor="sc">Trusted channel</Label>
+          <div className="space-y-1"><Label htmlFor="sc">Trusted channel<Req /></Label>
             <FieldSelect
               id="sc"
               value={f.channel}
@@ -105,9 +106,9 @@ function AddSupplier({ onDone }: { onDone: () => void }) {
               options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }, { value: "in_person", label: "In person" }]}
             />
           </div>
-          <div className="space-y-1"><Label htmlFor="sv">Trusted contact</Label><Input id="sv" required value={f.value} onChange={set("value")} /></div>
+          <div className="space-y-1"><Label htmlFor="sv">Trusted contact<Req /></Label><Input id="sv" required value={f.value} onChange={set("value")} /></div>
         </div>
-        <div className="space-y-1 sm:col-span-2"><Label htmlFor="sev">How was this relationship independently established?</Label><Textarea id="sev" required value={f.evidence} onChange={set("evidence")} /></div>
+        <div className="space-y-1 sm:col-span-2"><Label htmlFor="sev">How was this relationship independently established?<Req /></Label><Textarea id="sev" required value={f.evidence} onChange={set("evidence")} /></div>
         <p className="text-xs text-muted-foreground sm:col-span-2">A merchant ID identifies a PayPal account; it does not prove who owns it. New suppliers start unenrolled and cannot be paid until enrolment is complete.</p>
         <Button type="submit" className="sm:w-fit">Propose supplier</Button>
       </form>

@@ -10,7 +10,7 @@ import type { Excerpt, Extraction } from "@/lib/ai/schemas";
 import { useOrg, useProfiles } from "@/lib/org";
 import { useRefreshAll } from "@/lib/queries";
 import { formatMinor, minorToInput, parseToMinor } from "@/lib/money";
-import { FixtureTag, PageHeader, Panel, StatusBadge, ToneBadge } from "@/components/brand";
+import { FixtureTag, PageHeader, Panel, StatusBadge, ToneBadge, Req, RequiredNote } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -270,6 +270,16 @@ function Review() {
             ))}
           </ul>
         )}
+        {audits.filter((e) => e.action === "spending_rejected").map((e) => {
+          const d = (e.details ?? {}) as Record<string, unknown>;
+          return (
+            <div key={e.id} className="mb-4 rounded-md border p-3 text-sm">
+              <ToneBadge tone="blocked">Spending rejected</ToneBadge>
+              <p className="mt-1 text-muted-foreground">v{e.entity_version} · by {names[e.actor_id ?? ""] ?? "a team member"} · {new Date(e.created_at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}</p>
+              {typeof d["reason"] === "string" && <p className="mt-1">Reason: {d["reason"]}</p>}
+            </div>
+          );
+        })}
         <div className="flex flex-wrap gap-2">
           {p.status === "approval_required" && org.has("payer", "owner") && (
             p.requested_by === org.userId
@@ -345,6 +355,7 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
   );
   return (
     <form onSubmit={save} className="space-y-3">
+      <RequiredNote />
       <div className="grid gap-3 sm:grid-cols-2">
         {field("amount", "Amount")}{field("currency", "Currency")}{field("ref", "Invoice reference")}{field("category", "Category")}
         {field("invoiceDate", "Invoice date", "date")}{field("dueDate", "Due date", "date")}{field("buyer", "Buyer")}
@@ -352,8 +363,8 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
       </div>
       {field("recipient", "Recipient")}
       <div className="space-y-1">
-        <Label htmlFor="e-reason">Reason for this correction</Label>
-        <Textarea id="e-reason" required value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="Why is this changing? Recorded in Evidence history with your name." />
+        <Label htmlFor="e-reason">Reason for this correction<Req /></Label>
+        <Textarea id="e-reason" required aria-required="true" value={f.reason} onChange={(e) => setF({ ...f, reason: e.target.value })} placeholder="Why is this changing? Recorded in Evidence history with your name." />
       </div>
       {error && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{error}</p>}
       <p className="text-xs text-warning">Any change creates a new version and invalidates approvals. The uploaded document and the AI reading stay unchanged.</p>
@@ -362,7 +373,7 @@ function EditForm({ p, onDone }: { p: { id: string; total_minor: number; currenc
   );
 }
 
-type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decision_note: string | null; base_version_id: string };
+type CR = { id: string; status: string; proposed_recipient: string; proposed_contact: string | null; proposed_by: string; decided_by: string | null; decided_at: string | null; decision_note: string | null; base_version_id: string };
 type SV = { trusted_contact_channel: string; trusted_contact_value: string; paypal_merchant_id: string } | null;
 type VR = { id: string; channel: string; channel_value: string; person_contacted: string; contacted_at: string; outcome: string; evidence: string; reviewer_id: string; check_kind?: string };
 type Member = { user_id: string; role: string };
@@ -395,11 +406,12 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
   return (
     <form onSubmit={submit} className="space-y-3 rounded-md border border-dashed p-3">
       <h3 className="font-semibold">Sandbox account check (test only)</h3>
+      <RequiredNote />
       <p className="text-xs text-muted-foreground">This supplier and its phone number are fictional. Instead of calling, sign in to PayPal Developer, open Sandbox → Accounts, open the Business account linked to the connected app, and read its Merchant ID (Account ID) yourself. Type what you see; do not copy it from this request. This is recorded as a Sandbox account check only — not contact with, or verification of, a real supplier.</p>
-      <div className="space-y-1"><Label htmlFor="sb-m">Merchant ID shown in PayPal Developer</Label><Input id="sb-m" required value={f.merchant} onChange={(e) => setF({ ...f, merchant: e.target.value })} /></div>
-      <div className="space-y-1"><Label htmlFor="sb-a">Business Sandbox account email you opened</Label><Input id="sb-a" required value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} /></div>
+      <div className="space-y-1"><Label htmlFor="sb-m">Merchant ID shown in PayPal Developer<Req /></Label><Input id="sb-m" required value={f.merchant} onChange={(e) => setF({ ...f, merchant: e.target.value })} /></div>
+      <div className="space-y-1"><Label htmlFor="sb-a">Business Sandbox account email you opened<Req /></Label><Input id="sb-a" required value={f.account} onChange={(e) => setF({ ...f, account: e.target.value })} /></div>
       <div className="space-y-1">
-        <Label htmlFor="sb-o">Result</Label>
+        <Label htmlFor="sb-o">Result<Req /></Label>
         <FieldSelect
           id="sb-o"
           value={f.outcome}
@@ -410,7 +422,7 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
           ]}
         />
       </div>
-      <div className="space-y-1"><Label htmlFor="sb-n">Notes</Label><Textarea id="sb-n" required value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="App name checked, where the ID was shown, CAD listed in wallet" /></div>
+      <div className="space-y-1"><Label htmlFor="sb-n">Notes<Req /></Label><Textarea id="sb-n" required value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="App name checked, where the ID was shown, CAD listed in wallet" /></div>
       <Button type="submit">Record Sandbox account check</Button>
     </form>
   );
@@ -455,7 +467,14 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
       <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{humanize(cr.status)}</strong></p>
       {cr.status === "superseded"
         ? <p className="mt-1 text-sm text-muted-foreground">Closed automatically, not approved: {cr.decision_note}</p>
-        : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Decision by {names[cr.decided_by ?? ""] ?? "reviewer"}: {cr.decision_note}</p>}
+        : (cr.status === "approved" || cr.status === "rejected")
+          ? <div className="mt-2 rounded-md border p-3 text-sm">
+              <ToneBadge tone={cr.status === "approved" ? "success" : "blocked"}>{cr.status === "approved" ? "Supplier change verified" : "Supplier change rejected"}</ToneBadge>
+              <p className="mt-1 text-muted-foreground">By {names[cr.decided_by ?? ""] ?? "a reviewer"}{cr.decided_at ? ` · ${new Date(cr.decided_at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}` : ""}</p>
+              {cr.decision_note && <p className="mt-1">{cr.status === "rejected" ? "Reason" : "Note"}: {cr.decision_note}</p>}
+              {cr.status === "rejected" && <p className="mt-1 text-xs text-muted-foreground">Rejecting the supplier change did not cancel this request, change its recipient or make it payable.</p>}
+            </div>
+          : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Note: {cr.decision_note}</p>}
       {verifs.length > 0 && (
         <ul className="mt-3 space-y-2 text-sm">
           {verifs.map((v) => (
@@ -494,12 +513,13 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
           {!isDemo && (
           <form onSubmit={record} className="space-y-3">
             <h3 className="font-semibold">Record independent verification</h3>
+            <RequiredNote />
             <p className="text-xs text-muted-foreground">Use only the trusted contact on record: <strong>{sv?.trusted_contact_channel} {sv?.trusted_contact_value}</strong>. Do not use the contact details in the request.</p>
-            <div className="space-y-1"><Label htmlFor="cv">Contact used</Label><Input id="cv" required value={f.channel_value} onChange={(e) => setF({ ...f, channel_value: e.target.value })} placeholder={sv?.trusted_contact_value} /></div>
-            <div className="space-y-1"><Label htmlFor="pp">Person contacted</Label><Input id="pp" required value={f.person} onChange={(e) => setF({ ...f, person: e.target.value })} /></div>
-            <div className="space-y-1"><Label htmlFor="wh">When</Label><Input id="wh" type="datetime-local" required value={f.when} onChange={(e) => setF({ ...f, when: e.target.value })} /></div>
+            <div className="space-y-1"><Label htmlFor="cv">Contact used<Req /></Label><Input id="cv" required value={f.channel_value} onChange={(e) => setF({ ...f, channel_value: e.target.value })} placeholder={sv?.trusted_contact_value} /></div>
+            <div className="space-y-1"><Label htmlFor="pp">Person contacted<Req /></Label><Input id="pp" required value={f.person} onChange={(e) => setF({ ...f, person: e.target.value })} /></div>
+            <div className="space-y-1"><Label htmlFor="wh">When<Req /></Label><Input id="wh" type="datetime-local" required value={f.when} onChange={(e) => setF({ ...f, when: e.target.value })} /></div>
             <div className="space-y-1">
-              <Label htmlFor="oc">Outcome</Label>
+              <Label htmlFor="oc">Outcome<Req /></Label>
               <FieldSelect
                 id="oc"
                 value={f.outcome}
@@ -511,14 +531,15 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
                 ]}
               />
             </div>
-            <div className="space-y-1"><Label htmlFor="ev">Evidence</Label><Textarea id="ev" required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} placeholder="What was said, call reference, notes" /></div>
+            <div className="space-y-1"><Label htmlFor="ev">Evidence<Req /></Label><Textarea id="ev" required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} placeholder="What was said, call reference, notes" /></div>
             <Button type="submit">Record verification</Button>
           </form>
           )}
           <div className="space-y-3">
             <h3 className="font-semibold">Decide</h3>
+            <RequiredNote />
             <p className="text-xs text-muted-foreground">Reject if the requested recipient is not supported by the approved supplier record or independent evidence. Rejecting keeps the original supplier record, does not edit the request and does not make it payable.</p>
-            <div className="space-y-1"><Label htmlFor="dn">Reason (required to reject)</Label><Textarea id="dn" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Requested recipient TEST does not match the approved PayPal Merchant ID and no evidence supports it." /></div>
+            <div className="space-y-1"><Label htmlFor="dn">Reason (required to reject)<Req /></Label><Textarea id="dn" aria-describedby="dn-help" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Requested recipient TEST does not match the approved PayPal Merchant ID and no evidence supports it." /><p id="dn-help" className={`text-xs ${note.trim() ? "text-muted-foreground" : "font-medium text-destructive"}`}>{note.trim() ? "Reason entered. Rejecting does not cancel the request or change its recipient." : "Enter a reason to enable Reject supplier change. Not needed to verify."}</p></div>
             <RecentSignin />
             <div className="flex flex-wrap gap-2">
               <Button variant="destructive" disabled={!note.trim()} onClick={() => decide(false)}>Reject supplier change</Button>

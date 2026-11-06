@@ -1,3 +1,4 @@
+import { Req } from "@/components/brand";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/lib/org";
@@ -24,7 +25,7 @@ export function RecentSignin() {
     } finally { setBusy(false); }
   }
   return <div className="space-y-2 border-t pt-3">
-    <Label htmlFor="recent-password">Confirm your PayPatrol password</Label>
+    <Label htmlFor="recent-password">Confirm your PayPatrol password<Req /></Label>
     <div className="flex flex-wrap gap-2">
       <PasswordInput id="recent-password" autoComplete="current-password" className="w-full sm:w-64" value={password} onChange={e => setPassword(e.target.value)} />
       <Button type="button" variant="outline" disabled={!password || busy || !email} onClick={verify}>{busy ? "Verifying…" : "Confirm sign-in"}</Button>

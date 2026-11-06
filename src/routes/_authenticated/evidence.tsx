@@ -74,6 +74,14 @@ function summarize(r: AuditRow): string {
       return `Earlier approval no longer applies${typeof d["reason"] === "string" ? `: ${d["reason"]}` : "."}`;
     case "purchase_edited":
       return "Request details corrected; saved as a new version.";
+    case "purchase_approved":
+      return `Spending approved${money(d["amount_minor"], d["currency"]) ? ` for ${money(d["amount_minor"], d["currency"])}` : ""}${d["method"] === "batch" ? " (batch approval)" : ""}.`;
+    case "spending_rejected":
+      return `Spending rejected${money(d["amount_minor"], d["currency"]) ? ` (${money(d["amount_minor"], d["currency"])})` : ""}${typeof d["reason"] === "string" ? `. Reason: ${d["reason"]}` : "."}`;
+    case "supplier_change_approved":
+      return `Supplier change verified${typeof d["new_recipient"] === "string" ? ` — new recipient ${d["new_recipient"]}` : ""}.`;
+    case "supplier_change_rejected":
+      return `Supplier change rejected${typeof d["rejected_recipient"] === "string" ? ` (recipient ${d["rejected_recipient"]})` : ""}; original supplier record retained. Request not cancelled${typeof d["reason"] === "string" ? `. Reason: ${d["reason"]}` : "."}`;
     case "purchase_cancelled":
       return `Request cancelled${typeof d["reason"] === "string" ? `: ${d["reason"]}` : "."}`;
     case "policy_updated":

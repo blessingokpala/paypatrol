@@ -8,7 +8,7 @@ import { useOrg, useProfiles } from "@/lib/org";
 import { getIntegrationStatus } from "@/lib/integrations.functions";
 import { testAiConnection } from "@/lib/ai/ai.functions";
 import { ROLE_LABELS } from "@/lib/status";
-import { PageHeader, Panel, ToneBadge } from "@/components/brand";
+import { PageHeader, Panel, ToneBadge, Req, RequiredNote } from "@/components/brand";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,9 +119,10 @@ function Settings() {
                  <Button size="sm" variant="outline" disabled={status.isFetching} onClick={() => status.refetch()}>Check Sandbox connection</Button>
                  <ToneBadge tone={status.data?.webhookConfigured ? "success" : "warning"}>{status.data?.webhookConfigured ? "Webhook configured" : "Webhook registration required"}</ToneBadge>
                  <div className="space-y-3 border-t pt-3">
-                   <Label htmlFor="sandbox-merchant">Sandbox Business Merchant ID</Label>
+                   <RequiredNote />
+                   <Label htmlFor="sandbox-merchant">Sandbox Business Merchant ID<Req /></Label>
                    <Input id="sandbox-merchant" placeholder="13-character Merchant ID from PayPal Developer" value={merchantId} onChange={e => setMerchantId(e.target.value.trim())} maxLength={13} />
-                   <Label htmlFor="sandbox-supplier">Approved supplier represented by this Business account</Label>
+                   <Label htmlFor="sandbox-supplier">Approved supplier represented by this Business account<Req /></Label>
                    <FieldSelect
                      id="sandbox-supplier"
                      value={supplierId}
