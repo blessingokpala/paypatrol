@@ -520,8 +520,9 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
           )}
           <div className="space-y-3">
             <h3 className="font-semibold">Decide</h3>
+            <RequiredNote />
             <p className="text-xs text-muted-foreground">Reject if the requested recipient is not supported by the approved supplier record or independent evidence. Rejecting keeps the original supplier record, does not edit the request and does not make it payable.</p>
-            <div className="space-y-1"><Label htmlFor="dn">Reason (required to reject)<Req /></Label><Textarea id="dn" aria-describedby="dn-help" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Requested recipient TEST does not match the approved PayPal Merchant ID and no evidence supports it." /></div>
+            <div className="space-y-1"><Label htmlFor="dn">Reason (required to reject)<Req /></Label><Textarea id="dn" aria-describedby="dn-help" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Requested recipient TEST does not match the approved PayPal Merchant ID and no evidence supports it." /><p id="dn-help" className={`text-xs ${note.trim() ? "text-muted-foreground" : "font-medium text-destructive"}`}>{note.trim() ? "Reason entered. Rejecting does not cancel the request or change its recipient." : "Enter a reason to enable Reject supplier change. Not needed to verify."}</p></div>
             <RecentSignin />
             <div className="flex flex-wrap gap-2">
               <Button variant="destructive" disabled={!note.trim()} onClick={() => decide(false)}>Reject supplier change</Button>
