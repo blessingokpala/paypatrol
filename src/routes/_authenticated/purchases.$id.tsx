@@ -36,7 +36,7 @@ function useReview(id: string) {
   return useQuery({
     queryKey: ["review", id],
     queryFn: async () => {
-      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name, is_demo)").eq("id", id).single();
+      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name, is_demo, status, is_test_supplier)").eq("id", id).single();
       if (error) throw error;
       const [items, docs, findings, crs, approvals, res, sv, exs, members, audits] = await Promise.all([
         supabase.from("purchase_line_items").select("*").eq("purchase_id", id),
