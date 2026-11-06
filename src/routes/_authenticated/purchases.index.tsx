@@ -252,7 +252,7 @@ function Purchases() {
         </EmptyState>
       ) : (
         <>
-          <div className="mb-2 flex flex-wrap items-center gap-3 text-sm">
+          <div role="region" aria-label="Selection actions" className="sticky top-14 z-20 -mx-4 mb-2 flex flex-wrap items-center gap-2 border-b bg-background/95 px-4 py-2 text-sm backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
             <span className="text-muted-foreground">
               {visibleSelected.length === 0 ? "Select requests to review or export them." : `${visibleSelected.length} of ${rows.length} shown selected`}
             </span>
@@ -273,9 +273,43 @@ function Purchases() {
                 <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear selection</Button>
               </>
             )}
-            <span className="text-xs text-muted-foreground">Selection covers only the matching requests shown below and resets when search or filters change.</span>
+            <span className="w-full text-xs text-muted-foreground">Selection covers only the matching requests shown below and resets when search or filters change.</span>
+            {has("payer", "owner") && visibleSelected.some((p) => !approvable.includes(p)) && (
+              <div className="w-full rounded-md border border-warning/40 bg-warning-soft p-2 text-xs" aria-live="polite">
+                <p className="font-semibold text-foreground">Why some selected requests can't be approved here</p>
+                <ul className="mt-1 space-y-1">
+                  {visibleSelected.filter((p) => !approvable.includes(p)).map((p) => (
+                    <li key={p.id}>
+                      <span className="font-medium">{p.fixture_label ?? p.title}</span> ({formatMinor(p.total_minor, p.currency)}): {exclusionReason(p, userId)}{" "}
+                      <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} className="font-semibold text-brand-deep underline">{exclusionAction(p)}</Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-          <div className="relative overflow-x-auto rounded-lg border bg-card">
+          <ul className="space-y-2 sm:hidden" aria-label="Requests">
+            {rows.map((p) => (
+              <li key={p.id} className="flex gap-3 rounded-lg border bg-card p-3">
+                <Checkbox className="mt-1" aria-label={`Select ${p.title}`} checked={selected.has(p.id)} onCheckedChange={() => toggleOne(p.id)} />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} onClick={() => rememberScroll(here)} className="block font-medium text-brand-deep underline-offset-2 hover:underline">{p.title}</Link>
+                  {p.invoice_reference && <div className="text-xs text-muted-foreground">Ref {p.invoice_reference}</div>}
+                  {p.is_test_fixture && <FixtureTag label={p.fixture_label} />}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono tabular-nums font-semibold">{formatMinor(p.total_minor, p.currency)}</span>
+                    <StatusBadge status={p.status} />
+                  </div>
+                  {NEXT_ACTION[p.status as PurchaseStatus] && (
+                    <button type="button" onClick={() => setPanelFor(p as unknown as Row)} className="text-left text-sm text-brand-deep underline">
+                      Next: {NEXT_ACTION[p.status as PurchaseStatus]}
+                    </button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="relative hidden overflow-x-auto rounded-lg border bg-card sm:block">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -300,7 +334,7 @@ function Purchases() {
                     <td className="px-4 py-3">
                       <Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} onClick={() => rememberScroll(here)} className="font-medium text-brand-deep underline-offset-2 hover:underline">{p.title}</Link>
                       {p.invoice_reference && <div className="text-xs text-muted-foreground">Ref {p.invoice_reference}</div>}
-                      {p.is_test_fixture && <div className="mt-1"><FixtureTag /></div>}
+                      {p.is_test_fixture && <div className="mt-1"><FixtureTag label={p.fixture_label} /></div>}
                     </td>
                     <td className="px-4 py-3">{(p.suppliers as { name: string } | null)?.name ?? "Unmatched"}</td>
                     <td className="px-4 py-3 text-right font-mono tabular-nums">{formatMinor(p.total_minor, p.currency)}</td>
@@ -406,6 +440,20 @@ function whyNotApprove(p: Row, userId: string): string {
   if (p.status !== "approval_required") return `not awaiting spending approval (${STATUS_META[p.status as PurchaseStatus]?.label ?? p.status})`;
   if (p.requested_by === userId) return "you submitted it, so a different payer must approve it";
   return "";
+}
+function exclusionReason(p: Row, userId: string): string {
+  if (p.status === "verification_required") return "supplier payment details must be independently verified first — this is a separate review, not spending approval.";
+  if (p.status === "blocked") return "it breaks a hard spending rule, so no approval can override it. Revise or cancel it.";
+  if (p.status === "needs_clarification") return "details are missing and must be corrected first.";
+  if (p.status === "approval_required" && p.requested_by === userId) return "you submitted it, so a different Payer or Business owner must approve it.";
+  if (p.status !== "approval_required") return `it is not awaiting spending approval (${STATUS_META[p.status as PurchaseStatus]?.label ?? p.status}).`;
+  return "";
+}
+function exclusionAction(p: Row): string {
+  if (p.status === "verification_required") return "Open supplier review";
+  if (p.status === "blocked") return "See the failed rule";
+  if (p.status === "needs_clarification") return "Add missing details";
+  return "Open request";
 }
 function whyNotReject(p: Row): string {
   if (p.status === "payment_pending") return "payment outcome is uncertain — never cancelled in bulk";
