@@ -26,6 +26,7 @@ export type FilterableRow = {
   status: string;
   created_at: string;
   total_minor: number;
+  fixture_label?: string | null;
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -51,7 +52,7 @@ export function applyPurchaseFilters<T extends FilterableRow>(rows: T[], f: Purc
       if (f.dto && day > f.dto) return false;
     }
     if (q) {
-      const hay = [p.title, p.invoice_reference ?? "", p.suppliers?.name ?? ""].join("\n").toLowerCase();
+      const hay = [p.title, p.invoice_reference ?? "", p.suppliers?.name ?? "", p.fixture_label ?? ""].join("\n").toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
