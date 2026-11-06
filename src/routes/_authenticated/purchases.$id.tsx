@@ -107,7 +107,9 @@ function Review() {
       <PageHeader
         title={p.title}
         description={`${p.source === "invoice" ? "Invoice" : "AI proposal"} · version ${p.version} · submitted by ${names[p.requested_by] ?? "a team member"} on ${new Date(p.created_at).toLocaleString("en-CA")}`}
-        actions={<StatusBadge status={p.status} />}
+        actions={p.status === "cancelled" && audits.some((e) => e.action === "spending_rejected")
+          ? <ToneBadge tone="blocked">Spending rejected</ToneBadge>
+          : <StatusBadge status={p.status} />}
       />
       {p.is_test_fixture && <div className="mb-4"><FixtureTag label={p.fixture_label} /></div>}
 

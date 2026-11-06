@@ -169,9 +169,10 @@ function Evidence() {
     <>
       <PageHeader
         title="Evidence history"
-        description="Append-only record of requests, checks, reviews, changes and approvals. Payment identifiers will appear here once PayPal is connected."
+        description="Append-only record of requests, checks, reviews, changes and approvals. PayPal Sandbox order and capture identifiers appear here when recorded."
         actions={<Button variant="outline" onClick={exportCsv}>Export CSV</Button>}
       />
+      <p className="mb-4 rounded-md border bg-card p-3 text-sm text-muted-foreground">“Request cancelled” and “Spending rejected” are different records. Cancellations made before spending rejection existed stay recorded as cancellations and are not rewritten, so they do not appear under Approvals → Completed → Rejected.</p>
       <details className="mb-4">
         <summary className="cursor-pointer text-xs text-muted-foreground">About this log and its limits</summary>
         <p className="mt-2 max-w-2xl text-xs text-muted-foreground">

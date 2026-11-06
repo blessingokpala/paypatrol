@@ -200,3 +200,12 @@ Full 8-area review before partner testing. Statuses: **Implemented and verified*
 - Batch spending approval: **pending human action** — approval method is now recorded (individual/batch). Two new labelled test requests (ac8d1478, 7d392866) await a batch approval by a different Payer.
 - Supplier-change rejection/verification: **pending human action** — rejection now requires a reason, is refused for the request creator, and keeps the request blocked without editing it. CA$80 PP-CHECKOUT-20261103 v2 current review (84080591, recipient TEST) remains open. Its v1 review (9ab023d6) was marked superseded (earlier history, not verified) through an audited system transition because the request no longer asks for that recipient. Other open reviews still apply to their current request versions and remain enforced.
 - PayPal: **verified** — CA$25 PP-PAYMENT-TEST-001 order 6PP262896T830104W, capture 2X730686B0899582N COMPLETED; purchase Paid; one completed attempt; reservation consumed (two earlier uncaptured reservations released); genuine signed webhooks PAYMENT.CAPTURE.PENDING (2026-11-04 02:49 UTC) and PAYMENT.CAPTURE.COMPLETED (2026-11-05 02:49 UTC) verified and processed.
+
+## Update 2026-11-06 07:30 UTC — spending rejection verification
+- Server (rolled-back SQL test, Block 6 in `supabase/tests/payment_controls.sql`): requester, preparer-only and outsider refused; blank reason and stale version refused; one `spending_rejected` record, zero cancellation records; repeat, approval, reservation and payment after rejection all refused; no active reservation. All PASS.
+- Interface rejection by a different reviewer (individual and mixed batch): NOT yet performed — needs a second authorised person. Three labelled CA$135 requests prepared ("Spending rejection check — individual / batch 1 / batch 2").
+- Earlier cancellations remain recorded as cancellations; Evidence history and Approvals → Completed explain why they are not listed as rejections.
+- Pending tab now has search, review-type filter and oldest/newest sort; checked on the published site at phone width (no horizontal scroll; return navigation keeps filters).
+- Published and confirmed serving the new Pending controls. Basic security scan: no issues. Deep scan not run.
+- Batch approval: the two batch-test requests were approved one at a time (recorded method "individual", 06:35–06:36 UTC), so batch approval remains unverified.
+- Still pending: batch approval, successful independent supplier-change verification.
