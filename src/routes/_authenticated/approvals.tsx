@@ -126,7 +126,7 @@ function Pending({ here, search, setSearch }: { here: string; search: Search; se
   const qText = (search.q ?? "").trim().toLowerCase();
   const newest = search.sort === "newest";
   const spendRows = useMemo(() => {
-    const r = (q.data ?? []).filter((p) => matchesQ(qText, p.title, p.invoice_reference, (p.suppliers as { name: string } | null)?.name, p.requested_recipient));
+    const r = (q.data ?? []).filter((p) => matchesQ(qText, p.title, p.fixture_label, p.invoice_reference, (p.suppliers as { name: string } | null)?.name, p.requested_recipient));
     return newest ? [...r].reverse() : r;
   }, [q.data, qText, newest]);
   const [notes, setNotes] = useState<Record<string, string>>({});
