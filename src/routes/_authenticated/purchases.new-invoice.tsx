@@ -5,6 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useOrg } from "@/lib/org";
 import { useActivePolicy, useListings, useSuppliers, useRefreshAll } from "@/lib/queries";
 import { mapExtraction } from "@/lib/ai/invoice-mapping";
+import { CategoryField } from "@/components/category-field";
+import { toStored } from "@/lib/categories";
 import { formatMinor, parseToMinor } from "@/lib/money";
 import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
 import { AI_ERROR_COPY, type AiError, type Extraction } from "@/lib/ai/schemas";
@@ -59,7 +61,7 @@ function NewInvoice() {
   const refresh = useRefreshAll();
   const readInvoice = useServerFn(extractInvoiceDetails);
 
-  const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", recipientName: "", contact: "", category: "", description: "", message: "" });
+  const [f, setF] = useState({ supplier: "", ref: "", amount: "", currency: "CAD", recipient: "", recipientName: "", contact: "", category: "", categoryOther: "", description: "", message: "" });
   const [edited, setEdited] = useState<Set<keyof typeof f>>(new Set());
   const editedRef = useRef<Set<keyof typeof f>>(new Set());
   const markEdited = (k: keyof typeof f) => { editedRef.current = new Set(editedRef.current).add(k); setEdited(new Set(editedRef.current)); };
@@ -150,6 +152,7 @@ function NewInvoice() {
       recipient: mapped.recipient,
       recipientName: mapped.recipientName,
       category: mapped.category,
+      categoryOther: mapped.categoryOther,
       contact: ex.payment_change_instructions,
       description: ex.line_items[0]?.description ?? "",
     };
@@ -181,11 +184,10 @@ function NewInvoice() {
       amountRef.current?.focus();
       return;
     }
-    if (!f.category) {
-      setCategoryError(categoryStated && !mapped?.categoryPermitted
-        ? `The document says “${categoryStated}”, which your spending rules do not permit. Choose a permitted category.`
-        : "Choose a permitted category.");
-      document.getElementById("cat")?.focus();
+    const categoryToSave = toStored({ choice: f.category, other: f.categoryOther });
+    if (!categoryToSave) {
+      setCategoryError(f.category === "other" ? "Specify the category." : "Select a category.");
+      document.getElementById(f.category === "other" ? "cat-other" : "cat")?.focus();
       return;
     }
     if (applied && extraction) {
@@ -207,7 +209,7 @@ function NewInvoice() {
     if (file && !objectPath) { setBusy(false); return; }
     const { data, error } = await supabase.rpc("submit_invoice", {
       _org: orgId, _supplier: (f.supplier || null) as string, _invoice_ref: f.ref, _amount_minor: minor, _currency: f.currency,
-      _recipient: f.recipient, _contact: f.contact, _category: f.category, _description: f.description, _message: f.message,
+      _recipient: f.recipient, _contact: f.contact, _category: categoryToSave, _description: f.description, _message: f.message,
       _storage_path: objectPath as string, _file_name: (file?.name ?? null) as string,
       _listing: (quote.listing || null) as string, _quantity: (quote.listing ? Number(quote.quantity) : null) as number,
       _recipient_name: (f.recipientName.trim() || null) as string,
@@ -396,22 +398,20 @@ function NewInvoice() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="ref">Invoice reference</Label><Input id="ref" value={f.ref} onChange={set("ref")} /></div>
-              <div className="space-y-2">
-                <Label htmlFor="cat">Category<Req /></Label>
-                <FieldSelect
+              <div className="space-y-1">
+                <CategoryField
                   id="cat"
-                  value={f.category}
-                  onChange={(v) => { setF({ ...f, category: v }); markEdited("category"); setCategoryError(null); }}
-                  placeholder="Choose a permitted category"
-                  options={[{ value: "", label: "Choose a permitted category" }, ...allowedCategories.map((c) => ({ value: c, label: humanize(c) }))]}
+                  value={{ choice: f.category, other: f.categoryOther }}
+                  onChange={(v) => { setF((prev) => ({ ...prev, category: v.choice, categoryOther: v.other })); markEdited("category"); markEdited("categoryOther"); setCategoryError(null); }}
+                  existing={allowedCategories}
+                  error={categoryError}
                 />
                 {categoryStated && (
                   <p className="text-xs text-muted-foreground">
-                    Document says: <span className="font-medium text-foreground">{categoryStated}</span>
-                    {mapped?.categoryPermitted ? "" : " — not one of your permitted categories, so nothing was filled in. Choose one yourself."}
+                    Document says: <span className="font-medium text-foreground">{categoryStated}</span> (kept in the AI reading).
+                    {f.category && !mapped?.categoryPermitted ? " This category isn't in your spending rules, so the request will be held for review." : ""}
                   </p>
                 )}
-                {categoryError && <p id="cat-error" role="alert" className="text-xs text-blocked">{categoryError}</p>}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amt">Amount<Req /></Label>
