@@ -133,7 +133,7 @@ function Pending({ here }: { here: string }) {
                   <div className="mt-4 space-y-2">
                     <RequiredNote />
                     <Label htmlFor={`note-${p.id}`}>Note or reason (required to reject)<Req /></Label>
-                    <Textarea id={`note-${p.id}`} aria-required="false" aria-invalid={missing || undefined} aria-describedby={`note-help-${p.id}`}
+                    <Textarea id={`note-${p.id}`} aria-invalid={missing || undefined} aria-describedby={`note-help-${p.id}`}
                       placeholder="Optional when approving; explain why when rejecting" value={notes[p.id] ?? ""} onChange={(e) => setNotes({ ...notes, [p.id]: e.target.value })} className="sm:max-w-xl" />
                     <p id={`note-help-${p.id}`} className={`text-xs ${missing ? "font-medium text-destructive" : "text-muted-foreground"}`} role={missing ? "alert" : undefined}>
                       {missing ? "Enter a reason before rejecting this spending request." : "Optional for approval. Required only to reject."}
