@@ -96,11 +96,6 @@ function Review() {
     refresh();
   }
 
-  const openDoc = async (path: string) => {
-    const { data, error } = await supabase.storage.from("invoices").createSignedUrl(path, 120);
-    if (error) { toast.error(friendlyError(error)); return; }
-    window.open(data.signedUrl, "_blank", "noopener");
-  };
 
   return (
     <>
