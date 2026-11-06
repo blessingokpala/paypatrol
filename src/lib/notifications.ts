@@ -8,7 +8,7 @@ import { formatMinor } from "@/lib/money";
  */
 export type NotificationPriority = "urgent" | "action" | "update";
 
-export type NotificationLink = { kind: "purchase"; id: string } | { kind: "suppliers" };
+export type NotificationLink = { kind: "purchase"; id: string } | { kind: "suppliers" } | { kind: "notification"; id: string };
 
 export type AppNotification = {
   /** Stable per record + state, so repeated events deduplicate. */

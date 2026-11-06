@@ -37,8 +37,8 @@ const toneIcon: Record<Tone, typeof Info> = {
 export function ToneBadge({ tone, children }: { tone: Tone; children: ReactNode }) {
   const Icon = toneIcon[tone];
   return (
-    <span className={cn("inline-flex items-center gap-1 whitespace-nowrap rounded-md border px-2 py-0.5 text-xs font-semibold", toneClass[tone])}>
-      <Icon className="h-3.5 w-3.5" aria-hidden />
+    <span className={cn("inline-flex max-w-full items-center gap-1 whitespace-normal rounded-md border px-2 py-0.5 text-xs font-semibold", toneClass[tone])}>
+      <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
       {children}
     </span>
   );

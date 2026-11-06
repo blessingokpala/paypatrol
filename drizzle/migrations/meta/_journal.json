@@ -239,6 +239,13 @@
       "when": 1793980676379,
       "tag": "0033_fix_supplier_draft_missing_list",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793997293694,
+      "tag": "0034_durable_review_notifications",
+      "breakpoints": true
     }
   ]
 }

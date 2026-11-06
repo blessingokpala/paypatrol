@@ -1019,6 +1019,73 @@ export type Database = {
           },
         ]
       }
+      review_notifications: {
+        Row: {
+          change_request_id: string | null
+          created_at: string
+          detail: string
+          event_key: string
+          id: string
+          kind: string
+          org_id: string
+          purchase_id: string | null
+          purchase_version: number | null
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          change_request_id?: string | null
+          created_at?: string
+          detail: string
+          event_key: string
+          id?: string
+          kind: string
+          org_id: string
+          purchase_id?: string | null
+          purchase_version?: number | null
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          change_request_id?: string | null
+          created_at?: string
+          detail?: string
+          event_key?: string
+          id?: string
+          kind?: string
+          org_id?: string
+          purchase_id?: string | null
+          purchase_version?: number | null
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_notifications_change_request_id_fkey"
+            columns: ["change_request_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_change_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_notifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_notifications_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spending_policies: {
         Row: {
           allowed_categories: string[]
@@ -1416,6 +1483,10 @@ export type Database = {
         Returns: undefined
       }
       begin_sandbox_payment: { Args: { _pid: string }; Returns: Json }
+      can_read_review_notification: {
+        Args: { _kind: string; _org: string; _user: string }
+        Returns: boolean
+      }
       cancel_purchase: {
         Args: { _pid: string; _reason: string }
         Returns: undefined
@@ -1459,6 +1530,14 @@ export type Database = {
       }
       decide_supplier_change: {
         Args: { _approve: boolean; _cr: string; _note: string }
+        Returns: undefined
+      }
+      deliver_pending_purchase_review: {
+        Args: { _pid: string }
+        Returns: undefined
+      }
+      deliver_pending_supplier_review: {
+        Args: { _cid: string }
         Returns: undefined
       }
       edit_purchase: {
@@ -1516,6 +1595,10 @@ export type Database = {
           _ever: number
           _org: string
         }
+        Returns: undefined
+      }
+      mark_review_notification_read: {
+        Args: { _id: string }
         Returns: undefined
       }
       mark_sandbox_uncertain: { Args: { _attempt: string }; Returns: undefined }
