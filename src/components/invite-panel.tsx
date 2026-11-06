@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ToneBadge } from "@/components/brand";
+import { ToneBadge, Req, RequiredNote } from "@/components/brand";
 import { toast } from "sonner";
 
 const ROLE_HELP: Record<string, string> = {
@@ -64,7 +64,8 @@ export function InvitePanel() {
       <form onSubmit={send} className="space-y-3">
         <p className="font-semibold">Invite member</p>
         <div className="space-y-1">
-          <Label htmlFor="inv-email">Email address</Label>
+          <RequiredNote />
+          <Label htmlFor="inv-email">Email address<Req /></Label>
           <Input id="inv-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
           <p className="text-xs text-muted-foreground">Works for new people and for people who already have their own PayPatrol business.</p>
         </div>

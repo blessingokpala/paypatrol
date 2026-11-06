@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/lib/org";
 import { useActivePolicy, useRefreshAll, useSuppliers } from "@/lib/queries";
 import { formatMinor, minorToInput, parseToMinor } from "@/lib/money";
-import { PageHeader, Panel, ToneBadge } from "@/components/brand";
+import { PageHeader, Panel, ToneBadge, Req, RequiredNote } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,11 +51,12 @@ function Rules() {
         <Panel title={a ? `Current rules — version ${a.version}` : "No rules"}>
           <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
             <fieldset disabled={!isOwner} className="contents">
-              <div className="space-y-1"><Label htmlFor="r-o">Per-order limit</Label><Input id="r-o" value={f.order} onChange={(e) => setF({ ...f, order: e.target.value })} /></div>
-              <div className="space-y-1"><Label htmlFor="r-w">Weekly limit</Label><Input id="r-w" value={f.weekly} onChange={(e) => setF({ ...f, weekly: e.target.value })} /></div>
-              <div className="space-y-1"><Label htmlFor="r-t">Internal approval above</Label><Input id="r-t" value={f.threshold} onChange={(e) => setF({ ...f, threshold: e.target.value })} /></div>
-              <div className="space-y-1"><Label htmlFor="r-c">Currency</Label><Input id="r-c" maxLength={3} value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })} /></div>
-              <div className="space-y-1"><Label htmlFor="r-tz">Business timezone</Label><Input id="r-tz" value={f.timezone} onChange={(e) => setF({ ...f, timezone: e.target.value })} /></div>
+              <div className="sm:col-span-2"><RequiredNote /></div>
+              <div className="space-y-1"><Label htmlFor="r-o">Per-order limit<Req /></Label><Input id="r-o" required value={f.order} onChange={(e) => setF({ ...f, order: e.target.value })} /></div>
+              <div className="space-y-1"><Label htmlFor="r-w">Weekly limit<Req /></Label><Input id="r-w" required value={f.weekly} onChange={(e) => setF({ ...f, weekly: e.target.value })} /></div>
+              <div className="space-y-1"><Label htmlFor="r-t">Internal approval above<Req /></Label><Input id="r-t" required value={f.threshold} onChange={(e) => setF({ ...f, threshold: e.target.value })} /></div>
+              <div className="space-y-1"><Label htmlFor="r-c">Currency<Req /></Label><Input id="r-c" required maxLength={3} value={f.currency} onChange={(e) => setF({ ...f, currency: e.target.value })} /></div>
+              <div className="space-y-1"><Label htmlFor="r-tz">Business timezone<Req /></Label><Input id="r-tz" required value={f.timezone} onChange={(e) => setF({ ...f, timezone: e.target.value })} /></div>
               <div className="space-y-1"><Label htmlFor="r-cat">Allowed categories (comma-separated)</Label><Input id="r-cat" value={f.categories} onChange={(e) => setF({ ...f, categories: e.target.value })} /></div>
               <fieldset className="space-y-1 sm:col-span-2">
                 <legend className="text-sm font-medium">Allowed suppliers (none selected = any approved supplier)</legend>

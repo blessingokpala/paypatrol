@@ -100,6 +100,7 @@ function ResetPasswordPage() {
           <p className="rounded-md bg-selected p-4 text-sm">Your password is updated. Taking you to your workspace…</p>
         ) : (
           <form onSubmit={submit} className="space-y-4">
+            <RequiredNote />
             <div className="space-y-2">
               <Label htmlFor="new-password">New password<Req /></Label>
               <PasswordInput id="new-password" minLength={8} autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { OrgProvider, useMemberships, useOrg, errMsg } from "@/lib/org";
-import { SandboxPill, Wordmark } from "@/components/brand";
+import { SandboxPill, Wordmark, Req, RequiredNote } from "@/components/brand";
 import { NotificationBell } from "@/components/notifications";
 import { AccountMenu } from "@/components/account-menu";
 import { FieldSelect } from "@/components/field-select";
@@ -223,7 +223,8 @@ function Onboarding({ email }: { email: string }) {
           <form onSubmit={create} className="space-y-4 border-t pt-4">
             <p className="text-sm text-muted-foreground">Only create a business if you run your own. If a colleague already uses PayPatrol, ask them to invite you instead — creating a business will not give you access to theirs.</p>
             <div className="space-y-2">
-              <Label htmlFor="org">Business name</Label>
+              <RequiredNote />
+              <Label htmlFor="org">Business name<Req /></Label>
               <Input id="org" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Your business name" />
             </div>
             <label className="flex items-start gap-2 text-sm">

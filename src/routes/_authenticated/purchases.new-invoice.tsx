@@ -438,12 +438,13 @@ function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; su
   }
   const fld = (k: keyof typeof s, label: string, required = true) => (
     <div className="space-y-1">
-      <Label htmlFor={`as-${k}`}>{label}{required ? " *" : ""}</Label>
+      <Label htmlFor={`as-${k}`}>{label}{required ? <Req /> : null}</Label>
       <Input id={`as-${k}`} required={required} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} />
     </div>
   );
   return (
     <form onSubmit={create} className="mt-2 space-y-3 rounded-md border border-dashed p-3">
+      <RequiredNote />
       <p className="text-xs text-muted-foreground">
         Values read from the invoice are only suggestions — edit them. A new supplier starts unverified: an uploaded invoice or a
         matching Merchant ID never approves it. Sandbox limitation: only the supplier enrolled with the connected Sandbox Business
@@ -454,7 +455,7 @@ function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; su
       {fld("email", "Supplier email", false)}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label htmlFor="as-channel">Trusted contact channel *</Label>
+          <Label htmlFor="as-channel">Trusted contact channel<Req /></Label>
           <FieldSelect
             id="as-channel"
             value={s.channel}
@@ -465,7 +466,7 @@ function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; su
         {fld("channelValue", "Trusted contact value")}
       </div>
       <div className="space-y-1">
-        <Label htmlFor="as-evidence">How do you know this contact is genuine? *</Label>
+        <Label htmlFor="as-evidence">How do you know this contact is genuine?<Req /></Label>
         <Textarea id="as-evidence" required value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="e.g. confirmed by phone on a number from a signed contract" />
       </div>
       {err && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{err}</p>}

@@ -10,7 +10,7 @@ import { formatMinor } from "@/lib/money";
 import { friendlyError } from "@/lib/friendly";
 import { STATUS_META, type PurchaseStatus } from "@/lib/status";
 import { applyPurchaseFilters, isDate, SORTS, type PurchaseFilters, type PurchaseSort } from "@/lib/purchase-filters";
-import { EmptyState, FixtureTag, PageHeader, StatusBadge, ToneBadge } from "@/components/brand";
+import { EmptyState, FixtureTag, PageHeader, StatusBadge, ToneBadge, Req, RequiredNote } from "@/components/brand";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -549,7 +549,7 @@ function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose
               </>
             )}
             <div className="mt-4 space-y-1">
-              <Label htmlFor="batch-note">{kind === "approve" ? "Note (optional)" : "Reason for rejection (required)"}</Label>
+              <Label htmlFor="batch-note">{kind === "approve" ? "Note (optional)" : <>Reason for rejection{<Req />}</>}</Label>
               <Textarea id="batch-note" value={note} onChange={(e) => setNote(e.target.value)} />
             </div>
             <div className="mt-4 flex gap-2">
