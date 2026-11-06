@@ -209,3 +209,10 @@ Full 8-area review before partner testing. Statuses: **Implemented and verified*
 - Published and confirmed serving the new Pending controls. Basic security scan: no issues. Deep scan not run.
 - Batch approval: the two batch-test requests were approved one at a time (recorded method "individual", 06:35–06:36 UTC), so batch approval remains unverified.
 - Still pending: batch approval, successful independent supplier-change verification.
+
+## Final review — 2026-11-06 16:25 UTC
+- Live site (paypatrol.lovable.app) serves the optional payment-setup supplier form and "Check an invoice" action; unfamiliar Maple Lane invoice (no merchant ID) extracted live in 5.4s (MLO-TEST-0001, CA$40, CAD, recipient blank); detail page shows "Invoice checked. Payment is unavailable", "Cannot check: payment recipient…", no Reserve/Pay actions.
+- Partner decisions (records): 5 individual spending approvals on CA$135 test requests (none batch); 3 spending rejections with reasons; 1 supplier-change rejection (PP-CHECKOUT-20261103 v2, recipient TEST). Approvals created no reservations or payments. All 5 approvals were later invalidated when the owner saved spending rules v2 (2026-11-06 16:08 UTC, adding Maple Lane to allowed suppliers) — expected control behaviour.
+- CA$25 payment unchanged: capture 2X730686B0899582N COMPLETED, one consumed reservation, verified PENDING and COMPLETED webhooks, no active reservations.
+- Still unverified: batch approval by a second person; successful independent supplier-change verification (approve path). Payment demo supports only the configured Harbourside Sandbox merchant (one merchant per business).
+- Quick security scan clean; 56 automated tests pass.
