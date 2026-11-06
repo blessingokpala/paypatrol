@@ -4,6 +4,44 @@
 
 ## Completion assessment
 
+## Notification workflow checkpoint — 6 November 2026, 20:40 UTC
+
+### Actual failure and traced submissions
+
+The old bell derived alerts from the **currently selected business's current statuses**. No per-recipient task records were created, roles/requester exclusion were not applied, and decision outcomes were not delivered. Its read key lacked request/policy version, so an old read could hide a later review. Selecting the partner's own Graf Consulting business hid Ada's Grocery tasks. We cannot reconstruct her historical screen or prove which business she had selected. Her only saved read marker concerns the Maple Lane clarification invoice at 18:48 UTC—not a spending review. This is a delivery/design failure, not evidence she overlooked a notification.
+
+All following requests belong to **Ada's Grocery** and were submitted by UXAItion. Nnenna Nwokeabia is its only eligible other reviewer: **Payer** for spending; **Change approver** for supplier payment details. The submitter's Owner role does not make self-review eligible.
+
+| Reference | Current state/version | Notification obligation and correction |
+|---|---|---|
+| Independent-approval setup check; Batch-approval setup check 1 and 2 | Spending approval required, v1 | Three targeted pending-review records backfilled once. |
+| Batch approval check 1 and 2 — test data | Spending approval required, v1; prior individual approvals invalidated by policy v2 | Two fresh version/policy-keyed targeted records backfilled once. No batch approval performed. |
+| Spending rejection check — individual and batch 1/2 | Rejected spending; underlying current status cancelled, v1 | Already decided; no pending reviewer notification backfilled. Historical rejection reasons and decisions unchanged. Future outcomes now notify requester. |
+| WP-20261106-014 (81ff4eee…) | Needs clarification, v1 | No spending approval task; requester must supply missing details. |
+| WP-20261106-014 (2bfff00c…) | Blocked, v1; open TESTONLY00001 supplier change | One supplier-review notification created; independent review cannot make a fictional ID payable. |
+| Maple Lane MLO-TEST-0001 requests and MLO-FINAL-20261106-1644 | Clarification/blocked, v1 | Not eligible spending-review tasks; no spending notification created. |
+| PP-CHECKOUT-20261103 | Blocked, now v3 / CA$78 / recipient TEST; partner's rejection concerned v2 / CA$80 | No pending notification for the rejected or superseded changes. Decision/history/recipient unchanged. |
+
+Backfill created **14 unread partner records**: five spending reviews, nine still-open supplier reviews (including earlier demo records). Each supplier review was checked against the current requested recipient and excluded terminal purchases. Earlier pending demo reviews are not claimed as recent submissions. No old decided outcome was invented or replayed.
+
+### Implemented channels and safeguards
+
+- **In-app only.** No review/outcome email attempted; no browser push implemented. Account/invitation emails are separate and do not prove task email delivery.
+- Durable event-triggered records, unique recipient/event keys, spending version/policy keys, same-business role eligibility and requester exclusion; membership additions receive existing pending tasks. Removed role/membership prevents reading review notifications.
+- Bell includes authorised businesses regardless of selected business; each item identifies business, request, review type/action, notified version and current request/review state. Opening resolves recipient-only permission, selects the correct business, and opens the current request. Existing payment/decision permission checks remain authoritative.
+- Opening the bell does not mark read. Opening one item animates it away and saves just that read status; explicit Mark all as read remains separate. Polls every 15 seconds and refetches on focus. No claim of instantaneous push delivery.
+- New spending approval/rejection, supplier verified/rejected and approval-invalidation events notify the requester, retaining recorded rejection reasons. Notifications do not grant approval, verify identity or execute payment.
+
+### Executed tests and live evidence
+
+- **59 existing automated tests passed.** Added isolated SQL notification regression suite at `supabase/tests/review_notifications.sql`: role routing (Payer/Change approver/Owner), submitter/preparer exclusion, recipient-only access, retries/deduplication, persistent reads, spending approved/rejected outcomes, supplier rejection with reason, revoked membership and unchanged payment restrictions all passed. Scripted identities only; deliberate final exception rolled all fixtures back. Positive supplier-verification delivery is implemented via its existing audited decision event but not exercised as genuine verification.
+- Published version positively identified by new notification route. Owner account could not open partner-owned notification; unavailable state displayed. Published bell open preserved unread count; opening one requester alert reduced 2 to 1 after refresh. Desktop and 390px mobile bell inspected, mobile overview had no sideways overflow.
+- One new owner submission on the published origin via authenticated normal `submit_invoice` RPC: **PP-NOTIFY-20261106-001**, CA$135 CAD, v1, approval_required; explicitly labelled fictional/do not reserve or pay. Saved page refreshed successfully. Exactly **one unread spending-review notification** exists for partner, no self-notification: `9e165ea7-2593-4f70-a248-143e4b6c9605`.
+- Partner-only direct link: https://paypatrol.lovable.app/notifications/9e165ea7-2593-4f70-a248-143e4b6c9605 . After signing into her own account, it should select Ada's Grocery and open PP-NOTIFY-20261106-001. Bell item: Spending review required, Ada's Grocery, reference, current v1/approval-required state, approve-or-reject action. She may review/reject this fictional task with a reason; **do not reserve or pay**.
+- No partner session used and no decision submitted on her behalf. Her actual bell display, read persistence and decision-to-owner return remain **awaiting her confirmation**; database delivery is verified, recipient UI is not falsely claimed tested. Cross-business routing implemented; multi-business recipient navigation not exercised as partner.
+
+The new test has zero reservations/payment attempts; existing decisions, business rules, supplier baseline and blocked checkout request are preserved. Subsequent publication also includes wrapping long status labels to prevent the unrelated mobile recipient-status overflow found during notification navigation.
+
 Verified for invoice checking and the demonstrated payment controls, but **not fully closed**: the partner’s genuine batch approval, a legitimate positive supplier-change verification path, and disposition of one disputed deep-security finding remain outstanding. No new payment, reservation, supplier decision or spending-rule change was performed in this review.
 
 ## Verified workflows
