@@ -8,7 +8,6 @@ import { usePurchases } from "@/lib/queries";
 import { deriveNotifications, unreadCount, PRIORITY_META, type AppNotification, type NotificationPriority } from "@/lib/notifications";
 import { useHere } from "@/components/back-link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const priorityIcon: Record<NotificationPriority, typeof Info> = {
