@@ -23,7 +23,7 @@ import { toast } from "sonner";
 type Row = {
   id: string; title: string; invoice_reference: string | null; total_minor: number; currency: string;
   source: string; status: string; created_at: string; version: number; requested_by: string;
-  is_test_fixture: boolean; supplier_id: string | null; suppliers: { name: string } | null;
+  is_test_fixture: boolean; fixture_label: string | null; supplier_id: string | null; suppliers: { name: string } | null;
 };
 
 // Descriptive next-action labels; null means there is nothing to do.
