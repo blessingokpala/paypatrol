@@ -146,7 +146,7 @@ function Purchases() {
         new Date(p.created_at).toLocaleDateString("en-CA"),
         STATUS_META[p.status as PurchaseStatus]?.label ?? p.status,
         STATUS_META[p.status as PurchaseStatus]?.next ?? "",
-      ].map((v) => `"${String(v).replaceAll('"', '""')}"`).join(","));
+      ].map(csvCell).join(","));
     }
     const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
     const a = document.createElement("a");

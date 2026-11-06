@@ -1,4 +1,5 @@
 import { fromSearch } from "@/lib/return-to";
+import { csvCell } from "@/lib/csv";
 import { humanize } from "@/lib/friendly";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -160,7 +161,7 @@ function Evidence() {
 
   function exportCsv() {
     const lines = [["time", "actor", "action", "entity", "entity_id", "version", "details", "hash"].join(",")];
-    for (const r of rows) lines.push([r.created_at, actor(r), r.action, r.entity_type, r.entity_id ?? "", r.entity_version ?? "", JSON.stringify(r.details).replaceAll('"', '""'), r.hash ?? ""].map((v) => `"${v}"`).join(","));
+    for (const r of rows) lines.push([r.created_at, actor(r), r.action, r.entity_type, r.entity_id ?? "", r.entity_version ?? "", JSON.stringify(r.details), r.hash ?? ""].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = "paypatrol-evidence.csv"; a.click(); URL.revokeObjectURL(url);
   }
