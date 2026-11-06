@@ -232,6 +232,13 @@
       "when": 1793980534947,
       "tag": "0032_supplier_drafts_and_unchecked_recipient",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793980676379,
+      "tag": "0033_fix_supplier_draft_missing_list",
+      "breakpoints": true
     }
   ]
 }
