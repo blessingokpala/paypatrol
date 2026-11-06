@@ -7,7 +7,7 @@ import "@lovable.dev/cloud-auth-js/styles.css";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SandboxBanner, Wordmark, Req } from "@/components/brand";
+import { SandboxBanner, Wordmark, Req, RequiredNote } from "@/components/brand";
 import { PasswordInput } from "@/components/password-input";
 import { toast } from "sonner";
 

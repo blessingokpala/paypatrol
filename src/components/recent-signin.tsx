@@ -1,4 +1,4 @@
-import { Req, RequiredNote } from "@/components/brand";
+import { Req } from "@/components/brand";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/lib/org";
