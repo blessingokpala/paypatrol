@@ -10,6 +10,8 @@
 - [x] Export fixes submitted for publication.
 
 ## Pending with explicit blockers
+- [ ] Trace missed partner notifications; implement durable eligible-reviewer delivery, outcomes, cross-business links, read persistence and deduplication; backfill only pending eligible reviews.
+- [ ] Publish and verify notification workflow with owner-labelled request; inspect partner record without acting as partner; update completion report.
 - [ ] Partner: perform one genuine two-request batch approval; then verify saved batch methods, refresh persistence, zero reservations/payments.
 - [ ] Positive supplier-change verification: requires an isolated scenario with genuine independently evidenced replacement account and supported merchant/onboarding verification; do not assign unsupported TEST approval.
 - [ ] Disposition of disputed Critical scan finding: authenticated authoritative PayPal API confirmation is mistaken for a browser-only Paid assertion; retained for owner/independent review, not ignored automatically.
