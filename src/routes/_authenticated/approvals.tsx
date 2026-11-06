@@ -71,13 +71,45 @@ function Approvals() {
         })}
       </div>
       <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "completed" ? <Completed here={here} search={search} setSearch={setSearch} /> : <Pending here={here} />}
+        {tab === "completed" ? <Completed here={here} search={search} setSearch={setSearch} /> : <Pending here={here} search={search} setSearch={setSearch} />}
       </div>
     </>
   );
 }
 
-function Pending({ here }: { here: string }) {
+function matchesQ(qText: string, ...fields: (string | null | undefined)[]) {
+  return !qText || fields.some((f) => (f ?? "").toLowerCase().includes(qText));
+}
+
+function PendingFilters({ search, setSearch, count }: { search: Search; setSearch: (p: Patch) => void; count: number | null }) {
+  const [qDraft, setQDraft] = useState(search.q ?? "");
+  useEffect(() => { setQDraft(search.q ?? ""); }, [search.q]);
+  const active = !!(search.q || search.type || search.sort);
+  return (
+    <>
+      <div className="mb-3 grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-3">
+        <div className="space-y-1">
+          <Label htmlFor="pd-q">Search</Label>
+          <form onSubmit={(e) => { e.preventDefault(); setSearch({ q: qDraft.trim() || undefined }); }}>
+            <Input id="pd-q" type="search" value={qDraft} onChange={(e) => setQDraft(e.target.value)} onBlur={() => setSearch({ q: qDraft.trim() || undefined })} placeholder="Title, reference, supplier or recipient" />
+          </form>
+        </div>
+        <div className="space-y-1"><Label htmlFor="pd-type">Review type</Label>
+          <FieldSelect id="pd-type" value={search.type ?? "all"} onChange={(v) => setSearch({ type: v === "all" ? undefined : (v as Search["type"]) })}
+            options={[{ value: "all", label: "All types" }, { value: "spending", label: "Spending" }, { value: "supplier", label: "Supplier payment details" }]} /></div>
+        <div className="space-y-1"><Label htmlFor="pd-sort">Sort</Label>
+          <FieldSelect id="pd-sort" value={search.sort ?? "oldest"} onChange={(v) => setSearch({ sort: v === "oldest" ? undefined : "newest" })}
+            options={[{ value: "oldest", label: "Oldest waiting first" }, { value: "newest", label: "Newest first" }]} /></div>
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm" aria-live="polite">
+        {count !== null && <span className="font-semibold">{count} awaiting a decision</span>}
+        {active && <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setSearch({ type: undefined, q: undefined, sort: undefined })}>Clear filters</Button>}
+      </div>
+    </>
+  );
+}
+
+function Pending({ here, search, setSearch }: { here: string; search: Search; setSearch: (p: Patch) => void }) {
   const org = useOrg();
   const names = useProfiles(org.orgId).data ?? {};
   const refresh = useRefreshAll();
@@ -91,6 +123,12 @@ function Pending({ here }: { here: string }) {
       return (data ?? []).map((p) => ({ ...p, findings: (f.data ?? []).filter((x) => x.purchase_id === p.id && x.purchase_version === p.version) }));
     },
   });
+  const qText = (search.q ?? "").trim().toLowerCase();
+  const newest = search.sort === "newest";
+  const spendRows = useMemo(() => {
+    const r = (q.data ?? []).filter((p) => matchesQ(qText, p.title, p.invoice_reference, (p.suppliers as { name: string } | null)?.name, p.requested_recipient));
+    return newest ? [...r].reverse() : r;
+  }, [q.data, qText, newest]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [tried, setTried] = useState<Record<string, boolean>>({});
 
@@ -112,11 +150,13 @@ function Pending({ here }: { here: string }) {
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">Two queues: <a href="#spending" className="font-medium text-brand-deep underline">Spending approvals</a> (Payer or Business owner) and <a href="#supplier-reviews" className="font-medium text-brand-deep underline">Supplier payment-detail reviews</a> (Change approver or Business owner). Nobody can approve or verify their own request.</p>
+      <PendingFilters search={search} setSearch={setSearch} count={null} />
+      {search.type !== "supplier" && <>
       <h2 id="spending" className="mb-3 text-lg font-bold">Spending approvals</h2>
       {!org.has("payer", "owner") && <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">You can view this queue but only payers or owners can approve or reject spending.</p>}
-      {q.isLoading ? <p className="text-sm">Loading…</p> : (q.data ?? []).length === 0 ? <EmptyState>No spending requests awaiting approval. This does not mean there are no supplier reviews — see below.</EmptyState> : (
+      {q.isLoading ? <p className="text-sm">Loading…</p> : spendRows.length === 0 ? <EmptyState>{qText ? "No spending requests awaiting approval match this search." : "No spending requests awaiting approval. This does not mean there are no supplier reviews — see below."}</EmptyState> : (
         <div className="space-y-4">
-          {(q.data ?? []).map((p) => {
+          {spendRows.map((p) => {
             const sv = p.supplier_versions as { version: number; paypal_merchant_id: string } | null;
             const own = p.requested_by === org.userId;
             const missing = tried[p.id] && !(notes[p.id] ?? "").trim();
@@ -158,12 +198,13 @@ function Pending({ here }: { here: string }) {
           })}
         </div>
       )}
-      <SupplierReviews here={here} />
+      </>}
+      {search.type !== "spending" && <SupplierReviews here={here} qText={qText} newest={newest} />}
     </>
   );
 }
 
-function SupplierReviews({ here }: { here: string }) {
+function SupplierReviews({ here, qText, newest }: { here: string; qText: string; newest: boolean }) {
   const org = useOrg();
   const names = useProfiles(org.orgId).data ?? {};
   const q = useQuery({
@@ -175,13 +216,17 @@ function SupplierReviews({ here }: { here: string }) {
     },
   });
   const canReview = org.has("change_approver", "owner");
+  const rows = useMemo(() => {
+    const r = (q.data ?? []).filter((c) => matchesQ(qText, (c.purchases as { title: string } | null)?.title, (c.suppliers as { name: string } | null)?.name, c.proposed_recipient));
+    return newest ? r : [...r].reverse();
+  }, [q.data, qText, newest]);
   return (
     <section className="mt-8">
       <h2 id="supplier-reviews" className="mb-3 text-lg font-bold">Supplier payment-detail reviews</h2>
       {!canReview && <p className="mb-4 rounded-md bg-warning-soft p-3 text-sm text-warning">Only change approvers or owners can verify supplier payment details.</p>}
-      {q.isLoading ? <p className="text-sm">Loading…</p> : (q.data ?? []).length === 0 ? <EmptyState>No supplier payment-detail changes awaiting review.</EmptyState> : (
+      {q.isLoading ? <p className="text-sm">Loading…</p> : rows.length === 0 ? <EmptyState>{qText ? "No supplier payment-detail reviews match this search." : "No supplier payment-detail changes awaiting review."}</EmptyState> : (
         <ul className="space-y-3">
-          {(q.data ?? []).map((c) => {
+          {rows.map((c) => {
             const pur = c.purchases as { title: string; version: number; requested_by: string; requested_recipient: string | null; is_test_fixture: boolean } | null;
             const appliesNow = !pur || (pur.requested_recipient ?? "").trim().toLowerCase() === c.proposed_recipient.trim().toLowerCase();
             const own = c.proposed_by === org.userId || pur?.requested_by === org.userId;
