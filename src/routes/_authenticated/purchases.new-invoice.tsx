@@ -199,7 +199,6 @@ function NewInvoice() {
       const stillEmpty = [
         !f.ref.trim() && "invoice_reference",
         !f.currency.trim() && "currency",
-        !f.recipient.trim() && "PayPal merchant ID",
       ].filter(Boolean) as string[];
       const unresolved = [...new Set([...blocked, ...stillEmpty])];
       if (unresolved.length) { toast.error(`Fix these first: ${unresolved.join(", ")}`); return; }
@@ -304,7 +303,7 @@ function NewInvoice() {
                     <dt className="text-muted-foreground">{label}</dt>
                     <dd className="flex flex-wrap items-center gap-2">
                       <span className={value ? "" : "italic text-muted-foreground"}>{value || "Not found in document"}</span>
-                      {flag(key) === "missing" && <ToneBadge tone="warning">{["total", "currency", "requested_payment_recipient", "paypal_merchant_id", "invoice_reference"].includes(key) ? "Required before proceeding" : "Optional — not found in document"}</ToneBadge>}
+                      {flag(key) === "missing" && <ToneBadge tone="warning">{["total", "currency", "invoice_reference"].includes(key) ? "Required before proceeding" : "Optional — not found in document"}</ToneBadge>}
                       {flag(key) === "uncertain" && <ToneBadge tone="warning">Hard to read — check it</ToneBadge>}
                     </dd>
                   </div>
@@ -363,7 +362,7 @@ function NewInvoice() {
                     placeholder="Not matched to a supplier"
                     options={[
                       { value: "", label: "Not matched to a supplier" },
-                      ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: s.status === "active" ? `${s.name} — Approved` : `${s.name} — Pending verification (not approved)` })),
+                      ...(suppliers.data ?? []).map((s) => ({ value: s.id, label: `${s.name}${s.is_test_supplier ? " [test supplier]" : ""} — ${s.status === "active" ? "Approved" : s.status === "draft" ? "Draft, unverified (not payable)" : "Pending verification (not approved)"}` })),
                     ]}
                   />
                 </div>
@@ -379,20 +378,20 @@ function NewInvoice() {
               )}
               {matchedSupplier && matchedSupplier.status !== "active" && (
                 <div className="rounded-md border border-warning/40 bg-warning-soft p-3 text-xs space-y-1">
-                  <p className="font-semibold">Pending supplier — not approved and not payable.</p>
+                  <p className="font-semibold">{matchedSupplier.status === "draft" ? "Draft supplier — unverified and not payable." : "Pending supplier — not approved and not payable."}</p>
+                  {matchedSupplier.status === "draft" && <p>Next: a Business owner completes the missing verification details on the Suppliers page and submits it for approval.</p>}
                   <p>Next step: a <span className="font-medium">different</span> team member with the Business owner or Change approver role reviews it on the Suppliers page. The person who proposed it cannot approve it.</p>
                   <p>Approval alone does not make it payable: its PayPal merchant ID must also complete enrolment. An uploaded invoice never approves a supplier or its payment details.</p>
                 </div>
               )}
               {addSupplier && (
-                has("owner") ? (
+                (
                   <AddSupplierInline
+                    canSubmit={has("owner")}
                     orgId={orgId}
                     suggestion={{ name: mapped?.recipientName || extraction?.supplier_name || "", merchant: f.recipient || mapped?.recipient || "" }}
                     onCreated={(id) => { refresh(); setF((prev) => ({ ...prev, supplier: id })); markEdited("supplier"); setAddSupplier(false); }}
                   />
-                ) : (
-                  <p id="add-supplier" className="rounded-md border p-3 text-sm">Only a Business owner can propose a new supplier. Ask an owner to add it; your invoice entries stay here.</p>
                 )
               )}
             </div>
@@ -426,10 +425,10 @@ function NewInvoice() {
                 <Input id="recname" value={f.recipientName} onChange={set("recipientName")} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rec">PayPal merchant ID on the invoice</Label>
+                <Label htmlFor="rec">PayPal merchant ID on the invoice (optional)</Label>
                 <Input id="rec" className="font-mono" value={f.recipient} onChange={set("recipient")} />
               </div>
-              <p className="text-xs text-muted-foreground sm:col-span-2">Kept exactly as the invoice states them. Never replaced by the approved supplier record or the connected Sandbox account.</p>
+              <p className="text-xs text-muted-foreground sm:col-span-2">Leave the merchant ID empty if the invoice has none — the invoice is still checked, but payment stays unavailable. Kept exactly as the invoice states them. Never replaced by the approved supplier record or the connected Sandbox account.</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="contact">Contact details given in the invoice or message</Label>
@@ -471,61 +470,79 @@ function NewInvoice() {
   );
 }
 
-/** Inline pending-supplier creation that keeps the invoice draft on screen. */
-function AddSupplierInline({ orgId, suggestion, onCreated }: { orgId: string; suggestion: { name: string; merchant: string }; onCreated: (id: string) => void }) {
-  const [s, setS] = useState({ name: suggestion.name, merchant: suggestion.merchant, email: "", channel: "phone", channelValue: "", evidence: "" });
+/** Inline supplier draft creation that keeps the invoice draft on screen. */
+function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId: string; canSubmit: boolean; suggestion: { name: string; merchant: string }; onCreated: (id: string) => void }) {
+  const [s, setS] = useState({ name: suggestion.name, merchant: suggestion.merchant, email: "", channel: "phone", channelValue: "", evidence: "", isTest: false });
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  async function create() {
+  const missing = [!s.merchant.trim() && "PayPal merchant ID", !s.channelValue.trim() && "trusted contact", !s.evidence.trim() && "independent verification evidence"].filter(Boolean) as string[];
+  async function save(submit: boolean) {
     setErr(null);
-    const missing = [!s.name.trim() && "supplier name", !s.merchant.trim() && "PayPal Merchant ID", !s.channelValue.trim() && "trusted contact value", !s.evidence.trim() && "how you know the contact is genuine"].filter(Boolean);
-    if (missing.length) { setErr(`Complete: ${missing.join(", ")}.`); return; }
+    if (!s.name.trim()) { setErr("Enter the supplier name to save a draft."); return; }
+    if (submit && missing.length) { setErr(`To request approval, complete: ${missing.join(", ")}. You can save a draft instead.`); return; }
     setBusy(true);
-    const { data, error } = await supabase.rpc("create_supplier", {
+    const { data, error } = await supabase.rpc("save_supplier_draft", {
       _org: orgId, _name: s.name, _merchant: s.merchant, _email: s.email,
-      _channel: s.channel, _channel_value: s.channelValue, _evidence: s.evidence,
+      _channel: s.channel, _channel_value: s.channelValue, _evidence: s.evidence, _is_test: s.isTest,
     });
+    if (error) { setBusy(false); setErr(`${friendlyError(error, "Saving the supplier")} Your invoice entries are still here.`); return; }
+    if (submit) {
+      const sub = await supabase.rpc("submit_supplier_draft", { _supplier: data as string, _merchant: s.merchant, _channel: s.channel, _channel_value: s.channelValue, _evidence: s.evidence });
+      if (sub.error) { setBusy(false); setErr(`Saved as a draft, but approval could not be requested: ${friendlyError(sub.error)}`); onCreated(data as string); return; }
+    }
     setBusy(false);
-    if (error) { setErr(friendlyError(error, "Adding the supplier")); return; }
-    toast.success("Supplier added as pending. It must pass independent verification before it can be approved or paid.");
+    toast.success(submit ? "Supplier submitted for approval. A different owner or change approver must approve it; it stays unpayable until then." : "Supplier saved as a draft. It is unverified and cannot be paid.");
     onCreated(data as string);
   }
-  const fld = (k: keyof typeof s, label: string, required = true) => (
-    <div className="space-y-1">
-      <Label htmlFor={`as-${k}`}>{label}{required ? <Req /> : null}</Label>
-      <Input id={`as-${k}`} aria-required={required} value={s[k]} onChange={(e) => setS({ ...s, [k]: e.target.value })} />
-    </div>
-  );
+  const hint = (t: string) => <p className="text-xs text-muted-foreground">{t}</p>;
   return (
-    <div id="add-supplier" role="group" aria-label="Add a pending supplier" className="mt-2 space-y-3 rounded-md border border-dashed p-3">
-      <RequiredNote />
+    <div id="add-supplier" role="group" aria-label="Add a supplier" className="mt-2 space-y-3 rounded-md border border-dashed p-3">
+      <p className="text-xs"><span className="text-blocked">*</span> Required to save a draft. Other fields can stay empty; a draft is unverified and can never be paid.</p>
       <p className="text-xs text-muted-foreground">
-        Values read from the invoice are only suggestions — edit them. A new supplier starts unverified: an uploaded invoice or a
-        matching Merchant ID never approves it. Sandbox limitation: only the supplier enrolled with the connected Sandbox Business
-        account can actually receive a Sandbox payment; any other supplier stays unpayable until enrolment.
+        Saving a supplier is not approving it. Before payment, a Business owner adds independent verification details and requests approval; a different Business owner or Change approver then approves it, and its PayPal merchant ID must complete enrolment.
       </p>
-      <p className="text-xs">Approval step: a different Business owner or Change approver must review this supplier on the Suppliers page. Merchant IDs starting with TESTONLY are fictional and can never be enrolled for payment.</p>
-      {fld("name", "Supplier legal name")}
-      {fld("merchant", "PayPal Merchant ID")}
-      {fld("email", "Supplier email", false)}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label htmlFor="as-channel">Trusted contact channel<Req /></Label>
-          <FieldSelect
-            id="as-channel"
-            value={s.channel}
-            onChange={(v) => setS({ ...s, channel: v })}
-            options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }]}
-          />
-        </div>
-        {fld("channelValue", "Trusted contact value")}
+      <div className="space-y-1">
+        <Label htmlFor="as-name">Supplier name<Req /></Label>
+        <Input id="as-name" aria-required value={s.name} onChange={(e) => setS({ ...s, name: e.target.value })} />
+        {hint("From the invoice. A name on an invoice does not prove who the supplier is.")}
       </div>
       <div className="space-y-1">
-        <Label htmlFor="as-evidence">How do you know this contact is genuine?<Req /></Label>
-        <Textarea id="as-evidence" aria-required value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="e.g. confirmed by phone on a number from a signed contract" />
+        <Label htmlFor="as-merchant">PayPal merchant ID</Label>
+        <Input id="as-merchant" className="font-mono" value={s.merchant} onChange={(e) => setS({ ...s, merchant: e.target.value })} />
+        {hint("From the invoice if printed. Unverified until confirmed with the supplier through a trusted channel. IDs starting with TESTONLY are fictional and can never be paid.")}
       </div>
+      <div className="space-y-1">
+        <Label htmlFor="as-email">Supplier email</Label>
+        <Input id="as-email" type="email" value={s.email} onChange={(e) => setS({ ...s, email: e.target.value })} />
+        {hint("Billing email for reference only. Never used to verify payment details.")}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="as-channel">Trusted contact channel</Label>
+          <FieldSelect id="as-channel" value={s.channel} onChange={(v) => setS({ ...s, channel: v })} options={[{ value: "phone", label: "Phone" }, { value: "email", label: "Email" }]} />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="as-channelValue">Trusted contact</Label>
+          <Input id="as-channelValue" value={s.channelValue} onChange={(e) => setS({ ...s, channelValue: e.target.value })} />
+        </div>
+      </div>
+      {hint("Must come from a source you already trust (signed contract, earlier verified records) — not from this invoice or its message.")}
+      <div className="space-y-1">
+        <Label htmlFor="as-evidence">Independent verification evidence</Label>
+        <Textarea id="as-evidence" value={s.evidence} onChange={(e) => setS({ ...s, evidence: e.target.value })} placeholder="Leave empty if no independent check has happened yet." />
+        {hint("Only describe a check that actually happened. Invoice details, dummy merchant IDs and fictional contacts are not evidence.")}
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={s.isTest} onChange={(e) => setS({ ...s, isTest: e.target.checked })} />
+        Fictional test supplier (label it as test data)
+      </label>
+      {missing.length > 0 && <p className="text-xs">Still missing for approval: {missing.join(", ")}.</p>}
       {err && <p role="alert" className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm">{err}</p>}
-      <Button type="button" size="sm" disabled={busy} onClick={() => void create()}>{busy ? "Adding…" : "Add as pending supplier"}</Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" disabled={busy} onClick={() => void save(false)}>{busy ? "Saving…" : "Save as draft"}</Button>
+        {canSubmit && <Button type="button" size="sm" variant="outline" disabled={busy || missing.length > 0} onClick={() => void save(true)}>Save and request approval</Button>}
+      </div>
+      {canSubmit && missing.length > 0 && <p className="text-xs text-muted-foreground">“Save and request approval” is available once the merchant ID, trusted contact and verification evidence are filled in.</p>}
     </div>
   );
 }
