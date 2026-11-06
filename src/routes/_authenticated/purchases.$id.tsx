@@ -255,7 +255,7 @@ function Review() {
 
       {crs.map((cr) => (
         <ChangeReview key={cr.id} cr={cr} sv={sv} isDemo={isDemo} members={members} purchaseRequestedBy={p.requested_by}
-          current={cr.base_version_id === p.supplier_version_id && cr.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()}
+          current={cr.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()}
           verifs={verifs.filter((v) => v.change_request_id === cr.id)} names={names} onDone={refresh} />
       ))}
 
@@ -449,7 +449,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
       </div>
       {!current && (
         <p className="mb-2 text-sm text-muted-foreground">
-          This record concerns an earlier version of the request and is kept for history. It stays open and enforced, but the hold on the current version comes from the record marked “Applies to the current version of this request”.
+          This record concerns an earlier version of the request and is kept for history.{open ? " It stays open and enforced until decided." : ""}
         </p>
       )}
       <p className="text-sm">Proposed recipient <span className="font-mono">{cr.proposed_recipient}</span> · submitted by {names[cr.proposed_by] ?? "a team member"} · status <strong>{humanize(cr.status)}</strong></p>
