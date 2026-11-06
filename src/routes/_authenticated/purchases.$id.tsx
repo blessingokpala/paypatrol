@@ -36,7 +36,7 @@ function useReview(id: string) {
   return useQuery({
     queryKey: ["review", id],
     queryFn: async () => {
-      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name, is_demo)").eq("id", id).single();
+      const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name, is_demo, status, is_test_supplier)").eq("id", id).single();
       if (error) throw error;
       const [items, docs, findings, crs, approvals, res, sv, exs, members, audits] = await Promise.all([
         supabase.from("purchase_line_items").select("*").eq("purchase_id", id),
@@ -77,6 +77,10 @@ function Review() {
   const firstDoc = docs[0];
   const isTestData = p.is_test_fixture && (p.fixture_label ?? "").toLowerCase().includes("do not reserve or pay");
   const isDemo = Boolean((p.suppliers as { is_demo?: boolean } | null)?.is_demo);
+  const supStatus = (p.suppliers as { status?: string } | null)?.status;
+  const paymentSetupMissing = p.source === "invoice" && (!p.supplier_id || supStatus !== "active" || !p.requested_recipient?.trim());
+  const SPENDING_CODES = ["ORDER_LIMIT", "WEEKLY_LIMIT", "CATEGORY_NOT_ALLOWED", "CURRENCY_NOT_ALLOWED", "SUPPLIER_NOT_ALLOWED", "APPROVAL_REQUIRED", "NO_POLICY"];
+  const spendingFindings = (findings as { id: string; code: string; severity: string; message: string; purchase_version: number }[]).filter((x) => x.purchase_version === p.version && SPENDING_CODES.includes(x.code));
   const edits = audits.filter((a) => a.action === "purchase_edited");
   const ex = (latestExtraction?.extracted ?? null) as Extraction | null;
   // A value counts as user-provided when the request holds a value the AI reading did not supply or read differently.
@@ -110,6 +114,18 @@ function Review() {
           : <StatusBadge status={p.status} />}
       />
       {p.is_test_fixture && <div className="mb-4"><FixtureTag label={p.fixture_label} /></div>}
+      {paymentSetupMissing && !["paid", "payment_pending", "cancelled", "failed"].includes(p.status) && (
+        <div className="mb-4 rounded-md border border-warning/40 bg-warning-soft p-4 text-sm" role="status">
+          <p className="font-semibold">Invoice checked. Payment is unavailable until supplier onboarding and recipient verification are complete.</p>
+          <p className="mt-1">Recipient verification: Cannot check: payment recipient or approved supplier record missing.</p>
+          <div className="mt-2">
+            <p className="font-medium">Spending rules</p>
+            {spendingFindings.length === 0
+              ? <p className="text-muted-foreground">No spending rule failed.</p>
+              : <ul className="list-disc pl-5">{spendingFindings.map((x) => <li key={x.id}>{x.severity === "info" ? "Needs approval: " : "Failed: "}{x.message}</li>)}</ul>}
+          </div>
+        </div>
+      )}
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <Panel title={p.source === "invoice" ? "Source document and message" : "Proposal content"}>
@@ -229,7 +245,7 @@ function Review() {
             {p.requested_recipient_name?.trim() && <p className="mt-1 text-sm"><span className="text-muted-foreground">Name: </span>{p.requested_recipient_name}</p>}
             {p.requested_recipient?.trim()
               ? <p className="mt-1 font-mono text-sm"><span className="font-sans text-muted-foreground">PayPal merchant ID: </span>{p.requested_recipient}</p>
-              : <p className="mt-1 text-sm italic text-muted-foreground">No payment recipient provided.</p>}
+              : <p className="mt-1 text-sm italic text-muted-foreground">Payment recipient not provided</p>}
             {p.requested_contact && <p className="mt-2 text-xs">Contact given: {p.requested_contact} <span className="text-warning">(not usable for verification)</span></p>}
           </div>
           <div className="rounded-md border bg-selected p-4">
@@ -240,7 +256,7 @@ function Review() {
             {sv && <p className="mt-2 text-xs">Trusted contact: {sv.trusted_contact_channel} {sv.trusted_contact_value}{isDemo ? " (fictional — use the Sandbox account check below)" : ""} · enrolment: {humanize(sv.enrolment_status)}</p>}
           </div>
         </div>
-        <p className="mt-3 text-sm">{!sv ? (p.supplier_id ? "Supplier record is loading." : "No approved supplier to compare against. Match this request to an approved supplier or add the supplier through verification.") : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
+        <p className="mt-3 text-sm">{!sv || !p.requested_recipient?.trim() || (p.suppliers as { status?: string } | null)?.status !== "active" ? <ToneBadge tone="warning">Cannot check: payment recipient or approved supplier record missing</ToneBadge> : recipientDiffers ? <ToneBadge tone="warning">Recipient differs — verification required</ToneBadge> : <ToneBadge tone="success">Recipient matches approved record</ToneBadge>}</p>
       </Panel>
 
       <Panel title="Findings and next actions" className="mt-6">
