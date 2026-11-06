@@ -12,6 +12,10 @@
 - Mobile business strip shows full name; Approvals page splits spending approvals from supplier reviews; "Request checks passed" vs "Payment setup incomplete"; lighter italic placeholders
 - Two more labelled CA$135 approval test requests for batch approval (a0a398f9…, f04fa0dc…)
 
+## Done (Nov 6)
+- Mobile Purchases: sticky selection toolbar, card summaries, per-request exclusion reasons with links; search matches test labels ("setup check")
+- Root cause: partner's Payer invitation still pending; she was viewing her own Graf Consulting demo data
+
 ## Open — need a human
 - [ ] Owner invites partner (Payer) from Team & integrations and sends link; partner accepts, approves CA$135 a7ec5854… individually, then batch-approves the other two
 - [ ] Invitation emails need a sender domain (none set up) — links shared manually until then
