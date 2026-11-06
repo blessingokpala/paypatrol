@@ -10,8 +10,10 @@
 - [x] Export fixes submitted for publication.
 
 ## Pending with explicit blockers
-- [ ] Trace missed partner notifications; implement durable eligible-reviewer delivery, outcomes, cross-business links, read persistence and deduplication; backfill only pending eligible reviews.
-- [ ] Publish and verify notification workflow with owner-labelled request; inspect partner record without acting as partner; update completion report.
+- [x] Trace missed notifications; durable eligible-reviewer delivery/outcomes, business-aware links/read persistence/deduplication implemented; 14 eligible pending partner records backfilled once.
+- [x] Published notification core verified using owner-labelled PP-NOTIFY-20261106-001; exactly one unread partner record, zero reservations/payments; report updated. No partner session used.
+- [ ] Partner confirms her bell, opens assigned notification and reports outcome; recipient-side end-to-end check cannot be performed without her action.
+- [ ] Final small publication (long status wrapping, exact unread number and direct-link count refresh) scheduled; final live version not rechecked because user chose to wrap up for credits.
 - [ ] Partner: perform one genuine two-request batch approval; then verify saved batch methods, refresh persistence, zero reservations/payments.
 - [ ] Positive supplier-change verification: requires an isolated scenario with genuine independently evidenced replacement account and supported merchant/onboarding verification; do not assign unsupported TEST approval.
 - [ ] Disposition of disputed Critical scan finding: authenticated authoritative PayPal API confirmation is mistaken for a browser-only Paid assertion; retained for owner/independent review, not ignored automatically.
