@@ -207,4 +207,5 @@ Full 8-area review before partner testing. Statuses: **Implemented and verified*
 - Earlier cancellations remain recorded as cancellations; Evidence history and Approvals → Completed explain why they are not listed as rejections.
 - Pending tab now has search, review-type filter and oldest/newest sort; checked on the published site at phone width (no horizontal scroll; return navigation keeps filters).
 - Published and confirmed serving the new Pending controls. Basic security scan: no issues. Deep scan not run.
-- Still pending: batch approval evidence (method recorded only for new approvals), successful independent supplier-change verification.
+- Batch approval: the two batch-test requests were approved one at a time (recorded method "individual", 06:35–06:36 UTC), so batch approval remains unverified.
+- Still pending: batch approval, successful independent supplier-change verification.
