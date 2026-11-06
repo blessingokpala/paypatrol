@@ -236,7 +236,7 @@ function NewInvoice() {
         title="Check an invoice"
         description="Attach the invoice and AI starts reading it straight away, or type the details yourself. Nothing is checked until you confirm what you see."
       />
-      <form onSubmit={submit} className="grid gap-6 lg:grid-cols-2">
+      <form onSubmit={submit} className="grid grid-cols-1 gap-6 lg:grid-cols-2 [&>*]:min-w-0">
         <div className="space-y-6">
           <Panel title="Source document and message">
             <div className="space-y-4">
