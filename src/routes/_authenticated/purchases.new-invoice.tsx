@@ -517,14 +517,18 @@ function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId:
         {hint("From the invoice. A name on an invoice does not prove who the supplier is.")}
       </div>
       <div className="space-y-1">
-        <Label htmlFor="as-merchant">PayPal merchant ID</Label>
-        <Input id="as-merchant" className="font-mono" value={s.merchant} onChange={(e) => setS({ ...s, merchant: e.target.value })} />
-        {hint("From the invoice if printed. Unverified until confirmed with the supplier through a trusted channel. IDs starting with TESTONLY are fictional and can never be paid.")}
-      </div>
-      <div className="space-y-1">
         <Label htmlFor="as-email">Supplier email</Label>
         <Input id="as-email" type="email" value={s.email} onChange={(e) => setS({ ...s, email: e.target.value })} />
         {hint("Billing email for reference only. Never used to verify payment details.")}
+      </div>
+      <details className="rounded-md border bg-muted/30 p-3">
+        <summary className="cursor-pointer text-sm font-semibold">Set up this supplier for payment</summary>
+        <p className="mt-1 text-xs text-muted-foreground">Optional for invoice checking. Required before this supplier can receive payment.</p>
+        <div className="mt-3 space-y-3">
+      <div className="space-y-1">
+        <Label htmlFor="as-merchant">PayPal merchant ID</Label>
+        <Input id="as-merchant" className="font-mono" value={s.merchant} onChange={(e) => setS({ ...s, merchant: e.target.value })} />
+        {hint("From the invoice if printed. Unverified until confirmed with the supplier through a trusted channel. IDs starting with TESTONLY are fictional and can never be paid.")}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
@@ -552,6 +556,8 @@ function AddSupplierInline({ orgId, canSubmit, suggestion, onCreated }: { orgId:
         <Button type="button" size="sm" disabled={busy} onClick={() => void save(false)}>{busy ? "Saving…" : "Save as draft"}</Button>
         {canSubmit && <Button type="button" size="sm" variant="outline" disabled={busy || missing.length > 0} onClick={() => void save(true)}>Save and request approval</Button>}
       </div>
+        </div>
+      </details>
       {canSubmit && missing.length > 0 && <p className="text-xs text-muted-foreground">“Save and request approval” is available once the merchant ID, trusted contact and verification evidence are filled in.</p>}
     </div>
   );
