@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertOctagon, AlertTriangle, Bell, Info } from "lucide-react";
@@ -8,7 +8,6 @@ import { usePurchases } from "@/lib/queries";
 import { deriveNotifications, unreadCount, PRIORITY_META, type AppNotification, type NotificationPriority } from "@/lib/notifications";
 import { useHere } from "@/components/back-link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const priorityIcon: Record<NotificationPriority, typeof Info> = {
@@ -77,6 +76,9 @@ export function NotificationBell() {
   const readKeys = reads.data ?? new Set<string>();
   const unread = unreadCount(notifications, readKeys);
 
+  // Keys that were unread when the panel opened, so they stay highlighted while it is open.
+  const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set());
+
   const markRead = useMutation({
     mutationFn: async (keys: string[]) => {
       if (!keys.length) return;
@@ -86,7 +88,10 @@ export function NotificationBell() {
       );
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notification-reads", org.orgId] }),
+    onMutate: (keys: string[]) => {
+      qc.setQueryData<Set<string>>(["notification-reads", org.orgId], (prev) => new Set([...(prev ?? []), ...keys]));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["notification-reads", org.orgId] }),
   });
 
   function open(n: AppNotification) {
@@ -99,7 +104,17 @@ export function NotificationBell() {
   }
 
   return (
-    <Popover>
+    <Popover
+      onOpenChange={(isOpen) => {
+        if (isOpen) {
+          const unreadKeys = notifications.filter((n) => !readKeys.has(n.key)).map((n) => n.key);
+          setFreshKeys(new Set(unreadKeys));
+          if (unreadKeys.length) markRead.mutate(unreadKeys);
+        } else {
+          setFreshKeys(new Set());
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -117,11 +132,7 @@ export function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0 sm:w-96">
         <div className="flex items-center justify-between border-b px-4 py-2.5">
           <h2 className="text-sm font-semibold">Notifications</h2>
-          {unread > 0 && (
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => markRead.mutate(notifications.map((n) => n.key))}>
-              Mark all as read
-            </Button>
-          )}
+          {freshKeys.size > 0 && <span className="text-xs text-muted-foreground">{freshKeys.size} new</span>}
         </div>
         <div className="max-h-96 overflow-y-auto">
           {notifications.length === 0 ? (
@@ -132,7 +143,7 @@ export function NotificationBell() {
             <ul>
               {notifications.map((n) => {
                 const Icon = priorityIcon[n.priority];
-                const isUnread = !readKeys.has(n.key);
+                const isUnread = freshKeys.has(n.key) || !readKeys.has(n.key);
                 return (
                   <li key={n.key}>
                     <button
