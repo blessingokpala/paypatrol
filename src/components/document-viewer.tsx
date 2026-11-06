@@ -8,8 +8,10 @@ type Kind = "pdf" | "image" | "other";
 type Loaded = { url: string; kind: Kind; size: number; type: string };
 
 function kindOf(type: string, name: string): Kind {
-  if (type === "application/pdf" || /\.pdf$/i.test(name)) return "pdf";
-  if (type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(name)) return "image";
+  if (type === "application/pdf") return "pdf";
+  if (type.startsWith("image/")) return "image";
+  if (/\.pdf$/i.test(name)) return "pdf";
+  if (/\.(png|jpe?g|webp|gif)$/i.test(name)) return "image";
   return "other";
 }
 function fmtSize(b: number) {
@@ -63,7 +65,7 @@ function PdfPages({ url, zoom, page, setPages, onError }: { url: string; zoom: n
     (async () => {
       try {
         const pg = await doc.getPage(page);
-        const width = c.parentElement?.clientWidth ?? 600;
+        const width = (c.parentElement?.clientWidth ?? 616) - 16;
         const base = pg.getViewport({ scale: 1 });
         const scale = (width / base.width) * zoom;
         const dpr = window.devicePixelRatio || 1;
@@ -147,7 +149,7 @@ export function DocumentViewer({ path, fileName, uploadedAt, uploadedBy }: { pat
             <Button className="w-full" onClick={() => setOpen(true)}><Maximize2 className="mr-1 h-4 w-4" />View document</Button>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogContent className="max-h-[100dvh] w-[100vw] max-w-[100vw] gap-2 p-3 sm:max-w-3xl">
+            <DialogContent className="max-h-[100dvh] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] gap-2 overflow-hidden p-3 sm:max-w-3xl">
               <DialogTitle className="truncate pr-8 text-sm">{fileName}</DialogTitle>
               <DialogDescription className="sr-only">Original uploaded document</DialogDescription>
               <Viewer doc={state} tall />
