@@ -8,6 +8,7 @@ import { usePurchases } from "@/lib/queries";
 import { deriveNotifications, unreadCount, PRIORITY_META, type AppNotification, type NotificationPriority } from "@/lib/notifications";
 import { useHere } from "@/components/back-link";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const priorityIcon: Record<NotificationPriority, typeof Info> = {
@@ -74,10 +75,11 @@ export function NotificationBell() {
     [purchases.data, changes.data],
   );
   const readKeys = reads.data ?? new Set<string>();
-  const unread = unreadCount(notifications, readKeys);
+  const visible = notifications.filter((n) => !readKeys.has(n.key));
+  const unread = unreadCount(notifications, new Set([...readKeys, ...leaving]));
 
-  // Keys that were unread when the panel opened, so they stay highlighted while it is open.
-  const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set());
+  // Items fading out of the panel after being opened.
+  const [leaving, setLeaving] = useState<Set<string>>(new Set());
 
   const markRead = useMutation({
     mutationFn: async (keys: string[]) => {
@@ -95,7 +97,15 @@ export function NotificationBell() {
   });
 
   function open(n: AppNotification) {
-    markRead.mutate([n.key]);
+    setLeaving((prev) => new Set(prev).add(n.key));
+    window.setTimeout(() => {
+      markRead.mutate([n.key]);
+      setLeaving((prev) => {
+        const next = new Set(prev);
+        next.delete(n.key);
+        return next;
+      });
+    }, 300);
     if (n.link.kind === "purchase") {
       navigate({ to: "/purchases/$id", params: { id: n.link.id }, search: { from: here } });
     } else {
@@ -104,17 +114,7 @@ export function NotificationBell() {
   }
 
   return (
-    <Popover
-      onOpenChange={(isOpen) => {
-        if (isOpen) {
-          const unreadKeys = notifications.filter((n) => !readKeys.has(n.key)).map((n) => n.key);
-          setFreshKeys(new Set(unreadKeys));
-          if (unreadKeys.length) markRead.mutate(unreadKeys);
-        } else {
-          setFreshKeys(new Set());
-        }
-      }}
-    >
+    <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -132,30 +132,35 @@ export function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0 sm:w-96">
         <div className="flex items-center justify-between border-b px-4 py-2.5">
           <h2 className="text-sm font-semibold">Notifications</h2>
-          {freshKeys.size > 0 && <span className="text-xs text-muted-foreground">{freshKeys.size} new</span>}
+          {unread > 0 && (
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => markRead.mutate(visible.map((n) => n.key))}>
+              Mark all as read
+            </Button>
+          )}
         </div>
         <div className="max-h-96 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {visible.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              No notifications. New requests, supplier changes, approvals and payment outcomes for this business will appear here.
+              No unread notifications. New requests, supplier changes, approvals and payment outcomes for this business will appear here.
             </p>
           ) : (
             <ul>
-              {notifications.map((n) => {
+              {visible.map((n) => {
                 const Icon = priorityIcon[n.priority];
-                const isUnread = freshKeys.has(n.key) || !readKeys.has(n.key);
+                const isLeaving = leaving.has(n.key);
                 return (
-                  <li key={n.key}>
+                  <li key={n.key} className={cn("grid transition-all duration-300 ease-out", isLeaving ? "grid-rows-[0fr] opacity-0 -translate-x-4" : "grid-rows-[1fr] opacity-100")}>
+                    <div className="overflow-hidden">
                     <button
                       type="button"
-                      onClick={() => open(n)}
-                      className={cn("flex w-full items-start gap-3 border-b px-4 py-3 text-left last:border-b-0 hover:bg-selected", isUnread && "bg-secondary/50")}
+                      onClick={() => !isLeaving && open(n)}
+                      className={cn("flex w-full items-start gap-3 border-b px-4 py-3 text-left last:border-b-0 hover:bg-selected", "bg-secondary/50")}
                     >
                       <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", priorityClass[n.priority])} aria-hidden />
                       <span className="min-w-0 flex-1">
                         <span className="flex items-center gap-2">
-                          <span className={cn("truncate text-sm", isUnread ? "font-semibold" : "font-medium")}>{n.title}</span>
-                          {isUnread && <span className="h-2 w-2 shrink-0 rounded-full bg-brand-bright" aria-label="Unread" />}
+                          <span className={cn("truncate text-sm", "font-semibold")}>{n.title}</span>
+                          {<span className="h-2 w-2 shrink-0 rounded-full bg-brand-bright" aria-label="Unread" />}
                         </span>
                         <span className="mt-0.5 block text-xs text-muted-foreground">{n.detail}</span>
                         <span className="mt-1 block text-[11px] text-muted-foreground">
@@ -163,6 +168,7 @@ export function NotificationBell() {
                         </span>
                       </span>
                     </button>
+                    </div>
                   </li>
                 );
               })}
