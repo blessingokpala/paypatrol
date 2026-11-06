@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { RecentSignin } from "@/components/recent-signin";
 import { SandboxCheckout } from "@/components/sandbox-checkout";
 import { PaymentReadiness } from "@/components/payment-readiness";
+import { DocumentViewer } from "@/components/document-viewer";
 import { BackLink, useHere } from "@/components/back-link";
 import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
@@ -138,19 +139,19 @@ function Review() {
           {editing ? <EditForm p={p} onDone={() => { setEditing(false); refresh(); }} /> : (
             <>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-2 [&>div>dt]:text-xs [&>div>dt]:text-muted-foreground">
-              <dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name ?? "Not matched"}</dd>
-              <dt className="text-muted-foreground">Amount</dt><dd className="flex flex-wrap items-center gap-2 font-semibold">{formatMinor(p.total_minor, p.currency)}{moneyFromUser(p.total_minor, ex?.total) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
-              <dt className="text-muted-foreground">Currency</dt><dd className="flex flex-wrap items-center gap-2">{p.currency}{fromUser(p.currency, ex?.currency) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
-              {p.source === "invoice" && <><dt className="text-muted-foreground">Invoice reference</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_reference, ex?.invoice_reference) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></>}
-              <dt className="text-muted-foreground">Category</dt><dd>{p.category || <span className="text-muted-foreground">Not provided</span>}</dd>
+              <div><dt className="text-muted-foreground">Supplier</dt><dd>{(p.suppliers as { name: string } | null)?.name ?? "Not matched"}</dd></div>
+              <div><dt className="text-muted-foreground">Amount</dt><dd className="flex flex-wrap items-center gap-2 font-semibold">{formatMinor(p.total_minor, p.currency)}{moneyFromUser(p.total_minor, ex?.total) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
+              <div><dt className="text-muted-foreground">Currency</dt><dd className="flex flex-wrap items-center gap-2">{p.currency}{fromUser(p.currency, ex?.currency) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
+              {p.source === "invoice" && <><div><dt className="text-muted-foreground">Invoice reference</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_reference || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_reference, ex?.invoice_reference) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div></>}
+              <div><dt className="text-muted-foreground">Category</dt><dd>{p.category || <span className="text-muted-foreground">Not provided</span>}</dd></div>
               {p.source === "invoice" && (
                 <>
-                  <dt className="text-muted-foreground">Invoice date</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_date, ex?.invoice_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
-                  <dt className="text-muted-foreground">Due date</dt><dd className="flex flex-wrap items-center gap-2">{p.due_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.due_date, ex?.due_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
-                  <dt className="text-muted-foreground">Buyer</dt><dd className="flex flex-wrap items-center gap-2">{p.buyer_name || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.buyer_name, ex?.buyer_name) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
-                  <dt className="text-muted-foreground">Subtotal</dt><dd className="flex flex-wrap items-center gap-2">{p.subtotal_minor !== null ? formatMinor(p.subtotal_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.subtotal_minor, ex?.subtotal) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
-                  <dt className="text-muted-foreground">Tax</dt><dd className="flex flex-wrap items-center gap-2">{p.tax_minor !== null ? formatMinor(p.tax_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.tax_minor, ex?.tax) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
-                  <dt className="text-muted-foreground">Shipping</dt><dd className="flex flex-wrap items-center gap-2">{p.shipping_minor !== null ? formatMinor(p.shipping_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.shipping_minor, ex?.shipping) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd>
+                  <div><dt className="text-muted-foreground">Invoice date</dt><dd className="flex flex-wrap items-center gap-2">{p.invoice_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.invoice_date, ex?.invoice_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
+                  <div><dt className="text-muted-foreground">Due date</dt><dd className="flex flex-wrap items-center gap-2">{p.due_date || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.due_date, ex?.due_date) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
+                  <div><dt className="text-muted-foreground">Buyer</dt><dd className="flex flex-wrap items-center gap-2">{p.buyer_name || <span className="text-muted-foreground">Not provided</span>}{fromUser(p.buyer_name, ex?.buyer_name) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
+                  <div><dt className="text-muted-foreground">Subtotal</dt><dd className="flex flex-wrap items-center gap-2">{p.subtotal_minor !== null ? formatMinor(p.subtotal_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.subtotal_minor, ex?.subtotal) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
+                  <div><dt className="text-muted-foreground">Tax</dt><dd className="flex flex-wrap items-center gap-2">{p.tax_minor !== null ? formatMinor(p.tax_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.tax_minor, ex?.tax) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
+                  <div><dt className="text-muted-foreground">Shipping</dt><dd className="flex flex-wrap items-center gap-2">{p.shipping_minor !== null ? formatMinor(p.shipping_minor, p.currency) : <span className="text-muted-foreground">Not provided</span>}{moneyFromUser(p.shipping_minor, ex?.shipping) && <ToneBadge tone="info">Provided by user</ToneBadge>}</dd></div>
                 </>
               )}
             </dl>
