@@ -20,6 +20,8 @@ import type { Tone } from "@/lib/status";
 
 type Search = { from?: string; tab?: "completed"; type?: "spending" | "supplier"; outcome?: "approved" | "rejected" | "history"; q?: string; sort?: "oldest" | "newest" };
 
+type Patch = { [K in keyof Search]?: Search[K] | undefined };
+
 function parseSearch(s: Record<string, unknown>): Search {
   const out: Search = {};
   const f = safeReturn(s["from"]); if (f) out.from = f;
@@ -42,7 +44,14 @@ function Approvals() {
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/approvals" });
   const tab = search.tab === "completed" ? "completed" : "pending";
-  const setSearch = (patch: Partial<Search>) => navigate({ search: (prev) => ({ ...prev, ...patch }), replace: true });
+  const setSearch = (patch: Patch) => navigate({
+    search: (prev) => {
+      const next: Record<string, unknown> = { ...prev, ...patch };
+      for (const k of Object.keys(next)) if (next[k] === undefined) delete next[k];
+      return next as Search;
+    },
+    replace: true,
+  });
 
   return (
     <>
@@ -226,7 +235,7 @@ type Decision = {
 const OUTCOME_WORD: Record<string, string> = { approved: "approved or verified", rejected: "rejected", history: "earlier-history" };
 const TYPE_WORD: Record<string, string> = { spending: "spending", supplier: "supplier review" };
 
-function Completed({ here, search, setSearch }: { here: string; search: Search; setSearch: (p: Partial<Search>) => void }) {
+function Completed({ here, search, setSearch }: { here: string; search: Search; setSearch: (p: Patch) => void }) {
   const org = useOrg();
   const names = useProfiles(org.orgId).data ?? {};
   const data = useQuery({
@@ -305,7 +314,7 @@ function Completed({ here, search, setSearch }: { here: string; search: Search; 
 
   const [qDraft, setQDraft] = useState(search.q ?? "");
   useEffect(() => { setQDraft(search.q ?? ""); }, [search.q]);
-  const chips: { label: string; clear: Partial<Search> }[] = [];
+  const chips: { label: string; clear: Patch }[] = [];
   if (search.type) chips.push({ label: search.type === "spending" ? "Spending" : "Supplier payment details", clear: { type: undefined } });
   if (search.outcome) chips.push({ label: search.outcome === "approved" ? "Approved / Verified" : search.outcome === "rejected" ? "Rejected" : "Earlier history", clear: { outcome: undefined } });
   if (search.q) chips.push({ label: `“${search.q}”`, clear: { q: undefined } });
@@ -356,7 +365,7 @@ function Completed({ here, search, setSearch }: { here: string; search: Search; 
               {d.reason && <p className="mt-1">{d.reasonLabel}: {d.reason}</p>}
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 {d.fixture && <FixtureTag />}
-                {d.purchaseId && <Link to="/purchases/$id" params={{ id: d.purchaseId }} search={{ from: here }} hash={d.hash} onClick={() => rememberScroll(here)} className="font-medium text-brand-deep underline">Open request</Link>}
+                {d.purchaseId && <Link to="/purchases/$id" params={{ id: d.purchaseId }} search={{ from: here }} {...(d.hash ? { hash: d.hash } : {})} onClick={() => rememberScroll(here)} className="font-medium text-brand-deep underline">Open request</Link>}
               </div>
             </li>
           ))}
