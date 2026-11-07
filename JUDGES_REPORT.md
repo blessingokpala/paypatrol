@@ -4,6 +4,15 @@
 
 ## Completion assessment
 
+## Spending decision visibility — 7 November 2026
+
+- Individual requests and Approvals → Pending share the same decision control: “Awaiting spending approval”, supplier/amount/currency and current policy findings above equal-width, 48px-high Reject (outlined, left) and Approve (primary blue, right). Request-detail controls remain visible below the header during phone-sized scrolling.
+- Reject opens an accessible Reason * form with Confirm rejection and an inline blank-reason error. Approval explicitly states that payment is a separate step. Saved outcomes link to Completed; existing approvals/rejections and Evidence history remain unchanged.
+- Batch selection exposes paired eligible counts and disabled explanations. Both actions now include only approval_required requests from another requester where the viewer has Payer or owner permission. Batch rejection calls reject_spending only; it never silently cancels blocked, self-submitted or otherwise ineligible requests. Supplier actions remain distinct: Reject supplier change / Verify supplier change.
+- **68 automated tests passed**, including nine eligibility/reason checks. Preview build reports build OK. Published desktop (1280px) and phone (390px) layout, rejection error and long-request sticky controls checked using explicitly scripted GET-response fixtures, with all decision writes blocked. No horizontal overflow; no partner session used.
+- **Actual-data limitation:** Ada's Grocery currently has no approval_required requests, so a genuine eligible-reviewer save/refresh/Evidence/accounting flow was not executed for these UI changes. The old batch test pair is now split between cleared_for_checkout and cancelled; no decision was altered or repeated. Published real-data empty state and actual request access checked separately. Fixture visibility is not evidence of a new approval or rejection. No request, reservation or payment was created.
+- Publication was requested and the updated review controls were observed on https://paypatrol.lovable.app. Genuine reviewer execution remains dependent on a future eligible submission and the reviewer's own action.
+
 ## Notification workflow checkpoint — 6 November 2026, 20:40 UTC
 
 ### Actual failure and traced submissions

@@ -10,7 +10,8 @@
 - [x] Export fixes submitted for publication.
 
 ## Pending with explicit blockers
-- [ ] Make individual and batch spending decisions clear: Reject left, Approve right, required rejection reason, mobile-visible review actions; verify without impersonating independent reviewers.
+- [x] Clear individual/batch spending decisions published; 68 tests pass; published desktop/mobile read-only fixture checks confirm paired buttons, reason error and sticky layout. No decisions/reservations/payments created.
+- [ ] Genuine eligible reviewer save/refresh/Evidence verification for new decision controls: Ada's Grocery currently has no awaiting spending approvals; requires a future submission and reviewer's own action, not impersonation.
 - [x] Trace missed notifications; durable eligible-reviewer delivery/outcomes, business-aware links/read persistence/deduplication implemented; 14 eligible pending partner records backfilled once.
 - [x] Published notification core verified using owner-labelled PP-NOTIFY-20261106-001; exactly one unread partner record, zero reservations/payments; report updated. No partner session used.
 - [ ] Partner confirms her bell, opens assigned notification and reports outcome; recipient-side end-to-end check cannot be performed without her action.
