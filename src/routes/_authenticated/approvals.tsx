@@ -141,7 +141,7 @@ function Pending({ here, search, setSearch }: { here: string; search: Search; se
           {spendRows.map((p) => {
             const sv = p.supplier_versions as { version: number; paypal_merchant_id: string } | null;
             return (
-              <Panel key={p.id} title={p.title} actions={<Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} className="text-sm text-brand-bright underline">Full review</Link>}>
+              <Panel key={p.id} title={p.title} actions={<Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here, review: "spending" }} className="text-sm text-brand-bright underline">Full review</Link>}>
                 {p.is_test_fixture && <div className="mb-2"><FixtureTag /></div>}
                 <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   <div><dt className="text-muted-foreground">Request version</dt><dd className="font-semibold">v{p.version}</dd></div>
@@ -205,7 +205,7 @@ function SupplierReviews({ here, qText, newest }: { here: string; qText: string;
                 {own && <p className="mt-1 text-muted-foreground">You raised or requested this, so a different reviewer must verify it.</p>}
                 <div className="mt-2">
                   {c.purchase_id
-                    ? <Link to="/purchases/$id" params={{ id: c.purchase_id }} search={{ from: here }} hash="supplier-change" className="font-medium text-brand-deep underline">{canReview && !own ? "Open review" : "View request"}</Link>
+                    ? <Link to="/purchases/$id" params={{ id: c.purchase_id }} search={{ from: here, review: "supplier", change: c.id }} className="font-medium text-brand-deep underline">{canReview && !own ? "Open review" : "View request"}</Link>
                     : <Link to="/suppliers" className="font-medium text-brand-deep underline">Open Suppliers</Link>}
                 </div>
               </li>

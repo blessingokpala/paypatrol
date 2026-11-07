@@ -37,7 +37,7 @@ function OpenNotification() {
     const n = notification.data;
     if (!n || !org.orgs.some(o => o.id === n.org_id)) return;
     if (org.orgId !== n.org_id) { org.setOrgId(n.org_id); return; }
-    if (n.purchase_id) navigate({ to: "/purchases/$id", params: { id: n.purchase_id }, search: { from: "/approvals" }, replace: true });
+    if (n.purchase_id) navigate({ to: "/purchases/$id", params: { id: n.purchase_id }, search: { from: "/approvals", review: n.change_request_id ? "supplier" : "spending", change: n.change_request_id ?? undefined }, replace: true });
     else navigate({ to: "/suppliers", search: { from: "/approvals" }, replace: true });
   }, [notification.data, org.orgId, org.orgs, navigate]);
   if (notification.isError || (notification.data && !org.orgs.some(o => o.id === notification.data.org_id))) return <div role="alert" className="space-y-3"><h1 className="text-xl font-semibold">Notification unavailable</h1><p>Your review permission or business membership may have changed. No request or decision was changed.</p><Button onClick={() => navigate({ to: "/overview" })}>Back to overview</Button></div>;

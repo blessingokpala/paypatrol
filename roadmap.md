@@ -1,5 +1,10 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
+## Review-first workflow — 7 November 2026
+- [ ] Trace new member's 10 notifications and distinguish unread events from current tasks.
+- [ ] Put relevant supplier/spending review first; reveal separate rejection/evidence paths; retain server guards.
+- [ ] Verify notification/Pending links, desktop/mobile, unsupported recipient and saved outcome refresh; publish and capture first screens.
+
 ## Judge evaluation guide — 7 November 2026
 - [x] Published public entry/settings and authorised evidence checked; genuine no-merchant invoice extracted in 5.0s, saved/reopened on desktop/mobile; zero reservations/attempts.
 - [x] Current decisions, individual-only methods, task/outcome read timestamps and one completed CA$25 capture/consumed reservation reconciled.

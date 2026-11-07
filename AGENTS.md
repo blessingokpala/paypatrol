@@ -12,6 +12,7 @@
 ## Architecture rules
 - Individual spending decisions use the shared SpendingDecision control on the pending queue and request detail, with frontend eligibility mirroring existing RPC guards. Why: notification and queue links must expose identical decisions without bypassing server checks.
 - Review notifications are persisted by database event triggers with per-recipient event keys and eligibility-scoped reads; links resolve the authorised business before opening a request. Why: selected-business inference cannot deliver durable reviewer tasks or outcomes.
+- Review links carry an explicit review type and change-record identifier; shared current-task eligibility is independent of notification read state. Why: historical alerts must not become tasks, and notification/Pending links must land on the same review-first panel.
 - Spreadsheet exports use the shared CSV cell encoder for quoting and formula neutralization; stored evidence stays unchanged. Why: untrusted invoice and profile text must not execute in spreadsheets.
 - All payment-control writes go through SECURITY DEFINER SQL functions (RPC); app tables grant only SELECT to signed-in users. Why: browser writes must never mark Paid, approve changes, or edit trusted records.
 - Money is stored and compared as integer minor units; the server recomputes totals. Why: avoids float errors and client tampering.
