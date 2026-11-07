@@ -1,10 +1,11 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
 ## Judge evaluation guide — 7 November 2026
-- [ ] Verify published public entry, authorised evidence, desktop/mobile invoice upload, save and reopen without merchant ID.
-- [ ] Reconcile current review decisions, batch methods, notification delivery and completed payment accounting.
-- [ ] Deliver dated quick-start, guided steps, evidence table and confidential-data-free sample invoice.
-- [ ] Identify human-only access/reviewer checks and remaining limitations without changing working decisions or payments.
+- [x] Published public entry/settings and authorised evidence checked; genuine no-merchant invoice extracted in 5.0s, saved/reopened on desktop/mobile; zero reservations/attempts.
+- [x] Current decisions, individual-only methods, task/outcome read timestamps and one completed CA$25 capture/consumed reservation reconciled.
+- [x] Six-page guide and one-page fictional sample visually inspected and saved in Files with Markdown; collection references pending upload at creation.
+- [x] Human-only access/reviewer checks and integration/security limitations explicitly documented; no decisions/payments changed.
+- [ ] Fresh external judge signup/email confirmation and isolated business/invitation acceptance: needs a judge-controlled email and their own confirmation.
 
 ## Completed
 - [x] Two existing CA$135 requests identified; partner-authorised 390px mobile selection enables Approve eligible (2), without submitting a decision.
@@ -20,12 +21,12 @@
 - [ ] Genuine eligible reviewer save/refresh/Evidence verification for new decision controls: Ada's Grocery currently has no awaiting spending approvals; requires a future submission and reviewer's own action, not impersonation.
 - [x] Trace missed notifications; durable eligible-reviewer delivery/outcomes, business-aware links/read persistence/deduplication implemented; 14 eligible pending partner records backfilled once.
 - [x] Published notification core verified using owner-labelled PP-NOTIFY-20261106-001; exactly one unread partner record, zero reservations/payments; report updated. No partner session used.
-- [ ] Partner confirms her bell, opens assigned notification and reports outcome; recipient-side end-to-end check cannot be performed without her action.
-- [ ] Final small publication (long status wrapping, exact unread number and direct-link count refresh) scheduled; final live version not rechecked because user chose to wrap up for credits.
-- [ ] Partner: perform one genuine two-request batch approval; then verify saved batch methods, refresh persistence, zero reservations/payments.
+- [ ] Partner confirms actual device bell behaviour; existing task was opened/read and individually approved, requester outcome delivered/read; device rendering not inferred from records.
+- [x] Current published screens verified; landing payment-scope correction and capture/order Evidence details published and observed.
+- [ ] Genuine batch approval needs a fresh eligible pair and independent reviewer: old pair is approved/rejected, zero batch methods; do not repeat it.
 - [ ] Positive supplier-change verification: requires an isolated scenario with genuine independently evidenced replacement account and supported merchant/onboarding verification; do not assign unsupported TEST approval.
 - [ ] Disposition of disputed Critical scan finding: authenticated authoritative PayPal API confirmation is mistaken for a browser-only Paid assertion; retained for owner/independent review, not ignored automatically.
-- [ ] Confirm published export fixes serve live.
+- [x] Current Evidence CSV download and completed capture contents confirmed on published site; previously inspected shared encoder retained.
 
 ## Standing constraints
 - No spending-rule changes during final testing unless fixing a defect.
