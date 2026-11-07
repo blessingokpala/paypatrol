@@ -14,7 +14,7 @@
 - Newly observed separate CA$25 request 3fb48c87-56e3-4f82-b79d-974d39feaf58 is Payment pending. It was not created or paid in this review; it must not replace the completed demonstration or be retried as a fresh payment. Existing attempt should be reconciled by its authorised presenter before any optional new checkout.
 - Main handoff blocker: fresh external judge registration/isolated workspace acceptance has not been performed. Actual invoice-checking flow on published owner account works; this is not falsely described as a completed outside-judge onboarding test. Disputed security finding and physical-device/email-delivery limitations remain as previously documented.
 
-Guide deliverables: PayPatrol_Judge_Evaluation_Guide.pdf, matching Markdown, and PayPatrol_Maple_Lane_Sample_Invoice.pdf in Files. They distinguish published checks, saved backend evidence, prior preview/automated tests and human-only checks.
+Guide deliverables: PayPatrol_Judge_Evaluation_Guide.pdf (six inspected pages), matching Markdown, and PayPatrol_Maple_Lane_Sample_Invoice.pdf (one inspected page) in Files. They distinguish published checks, saved backend evidence, prior preview/automated tests and human-only checks. Published landing clarification and visible order/capture details were positively observed; actual PDF canvas and mobile document dialog rendered. Basic backend safety scan today returned zero findings (not a clearance of the earlier disputed deep finding). Collection references returned pending at creation; files are saved locally.
 
 ## Completion assessment
 
