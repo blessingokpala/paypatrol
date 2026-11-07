@@ -11,6 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { currentReviewTask } from "@/lib/review-task";
 
 const priorityIcon: Record<NotificationPriority, typeof Info> = {
   urgent: AlertOctagon,
@@ -49,7 +50,7 @@ export function NotificationBell() {
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase.from("review_notifications")
-        .select("*, organizations(name), purchases(status, version), supplier_change_requests(status)")
+        .select("*, organizations(name), purchases(status, version, requested_by, requested_recipient, created_at), supplier_change_requests(status, proposed_by, proposed_recipient)")
         .eq("user_id", org.userId).order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -63,6 +64,20 @@ export function NotificationBell() {
       return new Set((data ?? []).map((r) => r.notification_key));
     },
   });
+  const membershipTimes = useQuery({
+    queryKey: ["notification-memberships", org.userId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("memberships").select("org_id, role, created_at").eq("user_id", org.userId);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const taskFor = (n: NonNullable<typeof inbox.data>[number]) => {
+    const permitted = (membershipTimes.data ?? []).some(m => m.org_id === n.org_id && (m.role === "owner" || m.role === (n.kind === "supplier_review" ? "change_approver" : "payer")));
+    return currentReviewTask(n.kind, n.purchases, n.supplier_change_requests, org.userId, permitted);
+  };
+  const currentTasks = new Set((inbox.data ?? []).filter(n => n.org_id === org.orgId && taskFor(n)).map(n => n.change_request_id ?? n.purchase_id)).size;
+  const isExisting = (n: NonNullable<typeof inbox.data>[number]) => (membershipTimes.data ?? []).some(m => m.org_id === n.org_id && m.created_at === n.created_at);
 
   const notifications = useMemo(() => {
     const legacy = deriveNotifications({
@@ -72,13 +87,13 @@ export function NotificationBell() {
     const delivered: AppNotification[] = (inbox.data ?? []).map(n => ({
       key: `inbox:${n.id}`,
       priority: n.kind === "outcome" ? "update" : "action",
-      title: n.title,
-      detail: `${n.organizations?.name ?? "Business"} · ${n.detail} ${n.purchase_version ? `Notification concerns v${n.purchase_version}. ` : ""}${n.purchases ? `Current request: ${n.purchases.status.replaceAll("_", " ")}, v${n.purchases.version}.` : ""}${n.supplier_change_requests ? ` Supplier review: ${n.supplier_change_requests.status.replaceAll("_", " ")}.` : ""}`,
+      title: n.kind === "outcome" || taskFor(n) ? n.title : "Review update — no current decision required",
+      detail: `${isExisting(n) ? "Existing requests awaiting your review · " : ""}${n.organizations?.name ?? "Business"} · ${n.detail} ${n.purchases ? `Originally submitted ${new Date(n.purchases.created_at).toLocaleString("en-CA")}. ` : ""}${n.purchase_version ? `Notification concerns v${n.purchase_version}. ` : ""}${n.purchases ? `Current request: ${n.purchases.status.replaceAll("_", " ")}, v${n.purchases.version}.` : ""}${n.supplier_change_requests ? ` Supplier review: ${n.supplier_change_requests.status.replaceAll("_", " ")}.` : ""}${n.kind !== "outcome" && !taskFor(n) ? " This alert is retained as history; open it to see what changed." : ""}`,
       at: n.created_at,
       link: { kind: "notification", id: n.id },
     }));
     return [...delivered, ...legacy];
-  }, [purchases.data, inbox.data, org.userId]);
+  }, [purchases.data, inbox.data, org.userId, membershipTimes.data]);
   const readKeys = new Set([...(reads.data ?? []), ...(inbox.data ?? []).filter(n => n.read_at).map(n => `inbox:${n.id}`)]);
   const visible = notifications.filter((n) => !readKeys.has(n.key));
   const unread = unreadCount(notifications, new Set([...readKeys, ...leaving]));
@@ -152,6 +167,7 @@ export function NotificationBell() {
             </Button>
           )}
         </div>
+        <div className="border-b px-4 py-2 text-xs text-muted-foreground"><p>{unread} unread notifications · {currentTasks} current review tasks in {org.orgName}</p><p>Reading an alert does not remove a pending review task.</p><Button variant="link" className="h-auto p-0 text-xs" onClick={() => navigate({ to: "/approvals" })}>Open pending reviews</Button></div>
         <div className="max-h-96 overflow-y-auto">
           {inbox.isError ? <p role="alert" className="p-4 text-sm text-blocked">Notifications could not load. <Button variant="link" onClick={() => inbox.refetch()}>Try again</Button></p> : inbox.isLoading ? <p role="status" className="p-4 text-sm text-muted-foreground">Loading notifications…</p> : visible.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">

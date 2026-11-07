@@ -53,7 +53,7 @@ export function SpendingDecision({ request, supplier, findings, onDone, sticky =
   </div>;
   if (request.status !== "approval_required") return <p className="mt-4 text-sm text-muted-foreground">{block}</p>;
   return <>
-    <section aria-label="Spending decision" className={sticky ? "sticky top-16 z-20 my-6 rounded-md border bg-card p-4 lg:static" : "mt-4 border-t pt-4"}>
+    <section aria-label="Spending decision" className={sticky ? "my-4 rounded-md border bg-card p-4" : "mt-4 border-t pt-4"}>
       <ToneBadge tone="warning">Awaiting spending approval</ToneBadge>
       <div className="my-3 grid grid-cols-[minmax(0,1fr)_auto] gap-3 text-sm">
         <p className="min-w-0 break-words font-medium">{supplier}</p>
@@ -61,7 +61,7 @@ export function SpendingDecision({ request, supplier, findings, onDone, sticky =
       </div>
       {findings.length > 0 && <ul className="mb-3 max-h-24 space-y-1 overflow-y-auto text-xs text-muted-foreground" aria-label="Spending policy findings">{findings.map((f) => <li key={f.id}>{f.message}</li>)}</ul>}
       {block ? <p className="text-sm text-muted-foreground">{block}</p> : <>
-        <div className="grid grid-cols-2 gap-3">
+        <div className={sticky ? "sticky top-28 z-10 grid grid-cols-2 gap-3 bg-card py-2 lg:static" : "grid grid-cols-2 gap-3"}>
           <Button variant="outline" className="min-h-12 border-2 border-foreground bg-card text-foreground" disabled={busy} onClick={() => { setError(null); setRejecting(true); }}>Reject</Button>
           <Button className="min-h-12" disabled={busy} onClick={() => decide(true)}>{busy ? "Saving…" : "Approve"}</Button>
         </div>
