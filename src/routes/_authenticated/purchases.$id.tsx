@@ -1,3 +1,4 @@
+import { supplierConfirmationSupported } from "@/lib/review-task";
 import { SpendingDecision } from "@/components/spending-decision";
 import { CategoryField } from "@/components/category-field";
 import { categoryLabel, fromStored, toStored } from "@/lib/categories";
@@ -5,7 +6,7 @@ import { friendlyError, humanize } from "@/lib/friendly";
 import type { Database } from "@/integrations/supabase/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { extractInvoiceDetails } from "@/lib/ai/ai.functions";
@@ -28,7 +29,7 @@ import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
-  validateSearch: fromSearch,
+  validateSearch: (s: Record<string, unknown>) => ({ ...fromSearch(s), review: s["review"] === "supplier" || s["review"] === "spending" ? s["review"] : undefined, change: typeof s["change"] === "string" && /^[0-9a-f-]{36}$/i.test(s["change"]) ? s["change"] : undefined }),
   head: () => ({ meta: [{ title: "Request review — PayPatrol" }, { name: "description", content: "Compare a request against approved records." }, { property: "og:title", content: "Request review — PayPatrol" }, { property: "og:description", content: "Invoice evidence, recipient comparison and payment controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Review,
 });
@@ -39,7 +40,7 @@ function useReview(id: string) {
     queryFn: async () => {
       const { data: p, error } = await supabase.from("purchases").select("*, suppliers(name, is_demo, status, is_test_supplier)").eq("id", id).single();
       if (error) throw error;
-      const [items, docs, findings, crs, approvals, res, sv, exs, members, audits] = await Promise.all([
+      const [items, docs, findings, crs, approvals, res, sv, exs, members, audits, config] = await Promise.all([
         supabase.from("purchase_line_items").select("*").eq("purchase_id", id),
         supabase.from("invoice_documents").select("*").eq("purchase_id", id),
         supabase.from("findings").select("*").eq("purchase_id", id).eq("purchase_version", p.version).order("created_at"),
@@ -50,10 +51,11 @@ function useReview(id: string) {
         supabase.from("ai_extractions").select("*").eq("purchase_id", id).order("created_at", { ascending: false }),
         supabase.from("memberships").select("user_id, role").eq("org_id", p.org_id),
         supabase.from("audit_events").select("*").eq("entity_type", "purchase").eq("entity_id", id).order("created_at"),
+        supabase.from("paypal_merchant_configs").select("merchant_id, supplier_id").eq("org_id", p.org_id).maybeSingle(),
       ]);
       const crIds = (crs.data ?? []).map((c) => c.id);
       const verifs = crIds.length ? await supabase.from("verification_records").select("*").in("change_request_id", crIds).order("created_at") : { data: [] };
-      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [], members: members.data ?? [], audits: audits.data ?? [] };
+      return { p, items: items.data ?? [], docs: docs.data ?? [], findings: findings.data ?? [], crs: crs.data ?? [], approvals: approvals.data ?? [], res: res.data ?? [], sv: sv.data, verifs: verifs.data ?? [], exs: exs.data ?? [], members: members.data ?? [], audits: audits.data ?? [], config: config.data };
     },
   });
 }
@@ -66,12 +68,14 @@ function Review() {
   const here = useHere();
   const refresh = useRefreshAll();
   const [editing, setEditing] = useState(false);
+  const search = Route.useSearch();
+  useEffect(() => { if (search.review) window.scrollTo({ top: 0, behavior: "instant" }); }, [search.review, id]);
   const readInvoice = useServerFn(extractInvoiceDetails);
   const [reading, setReading] = useState(false);
 
   if (q.isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (q.error || !q.data) return <p className="text-sm text-blocked">Request not found or not available to you.</p>;
-  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs, members, audits } = q.data;
+  const { p, items, docs, findings, crs, approvals, res, sv, verifs, exs, members, audits, config } = q.data;
   const recipientDiffers = sv && p.requested_recipient && p.requested_recipient.trim().toLowerCase() !== sv.paypal_merchant_id.toLowerCase();
   const activeRes = res.find((r) => r.status === "active");
   const latestExtraction = exs[0];
@@ -95,6 +99,9 @@ function Review() {
   const exTotalMinor = ex?.total ? parseToMinor(ex.total) : null;
   const amountDiffersFromExtraction = exTotalMinor !== null && exTotalMinor !== p.total_minor;
   const eligibleReviewers = [...new Set(members.filter((m) => (m.role === "change_approver" || m.role === "owner") && m.user_id !== p.requested_by).map((m) => m.user_id))];
+  const firstChange = crs.find(c => c.id === search.change) ?? crs.find(c => ["pending_verification", "verified_pending_decision"].includes(c.status) && c.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()) ?? (search.review === "supplier" ? crs[0] : undefined);
+  const reviewProps = { sv, isDemo, members, purchaseRequestedBy: p.requested_by, names, onDone: refresh, supplier: (p.suppliers as { name: string } | null)?.name ?? "Not matched", amount: formatMinor(p.total_minor, p.currency), purchaseStatus: p.status, merchant: config?.supplier_id === p.supplier_id ? config.merchant_id : null };
+
 
   async function call(fn: () => PromiseLike<{ error: { message: string } | null }>, ok: string) {
     const { error } = await fn();
@@ -115,6 +122,7 @@ function Review() {
           : <StatusBadge status={p.status} />}
       />
       {p.is_test_fixture && <div className="mb-4"><FixtureTag label={p.fixture_label} /></div>}
+      {firstChange && <ChangeReview key={firstChange.id} cr={firstChange} {...reviewProps} current={firstChange.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()} verifs={verifs.filter(v => v.change_request_id === firstChange.id)} primary />}
       {paymentSetupMissing && !["paid", "payment_pending", "cancelled", "failed"].includes(p.status) && (
         <div className="mb-4 rounded-md border border-warning/40 bg-warning-soft p-4 text-sm" role="status">
           <p className="font-semibold">Invoice checked. Payment is unavailable until supplier onboarding and recipient verification are complete.</p>
@@ -130,7 +138,8 @@ function Review() {
 
       {p.status === "approval_required" && <SpendingDecision key={`${p.id}-${p.version}`} request={p} supplier={(p.suppliers as { name: string } | null)?.name ?? "Not matched"} findings={spendingFindings} onDone={refresh} sticky />}
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <Button variant="outline" className="mb-4" onClick={() => document.getElementById("source-document")?.scrollIntoView({ behavior: "smooth" })}>View source document</Button>
+      <div id="source-document" className="scroll-mt-28 grid items-start gap-6 lg:grid-cols-2">
         <Panel title={p.source === "invoice" ? "Source document and message" : "Proposal content"}>
           {p.source === "invoice" ? (
             <div className="space-y-4">
@@ -278,11 +287,7 @@ function Review() {
         )}
       </Panel>
 
-      {crs.map((cr) => (
-        <ChangeReview key={cr.id} cr={cr} sv={sv} isDemo={isDemo} members={members} purchaseRequestedBy={p.requested_by}
-          current={cr.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()}
-          verifs={verifs.filter((v) => v.change_request_id === cr.id)} names={names} onDone={refresh} />
-      ))}
+      {crs.filter(cr => cr.id !== firstChange?.id).map(cr => <ChangeReview key={cr.id} cr={cr} {...reviewProps} current={cr.proposed_recipient.trim().toLowerCase() === (p.requested_recipient ?? "").trim().toLowerCase()} verifs={verifs.filter(v => v.change_request_id === cr.id)} />)}
 
       <Panel title="Approvals and checkout" className="mt-6">
         {p.status !== "approval_required" && <p className="mb-3 text-sm text-muted-foreground">Spending decisions are available only while awaiting spending approval. Current status: {humanize(p.status)}. Saved decisions are in <Link to="/approvals" search={{ tab: "completed", type: "spending" }} className="font-semibold text-primary underline">Approvals → Completed</Link> and Evidence history.</p>}
@@ -448,10 +453,13 @@ function SandboxCheck({ cr, onDone }: { cr: CR; onDone: () => void }) {
   );
 }
 
-function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members, purchaseRequestedBy }: { cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void; current: boolean; isDemo: boolean; members: Member[]; purchaseRequestedBy?: string }) {
+function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members, purchaseRequestedBy, supplier, amount, purchaseStatus, merchant, primary = false }: { supplier: string; amount: string; purchaseStatus: string; merchant: string | null; primary?: boolean; cr: CR; sv: SV; verifs: VR[]; names: Record<string, string>; onDone: () => void; current: boolean; isDemo: boolean; members: Member[]; purchaseRequestedBy?: string }) {
   const org = useOrg();
   const canReview = org.has("change_approver", "owner") && cr.proposed_by !== org.userId && purchaseRequestedBy !== org.userId;
-  const open = cr.status === "pending_verification" || cr.status === "verified_pending_decision";
+  const open = current && !["paid", "cancelled", "failed"].includes(purchaseStatus) && (cr.status === "pending_verification" || cr.status === "verified_pending_decision");
+  const [path, setPath] = useState<"reject" | "verify" | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const supported = supplierConfirmationSupported(cr.status, cr.proposed_recipient, merchant, verifs.filter(v => v.outcome === "confirmed").map(v => v.channel_value), isDemo);
   const [f, setF] = useState({ channel_value: "", person: "", when: new Date().toISOString().slice(0, 16), outcome: "denied", evidence: "" });
   const [note, setNote] = useState("");
 
@@ -466,6 +474,9 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
     onDone();
   }
   async function decide(approve: boolean) {
+    if (!canReview || !open) return;
+    if (!approve && !note.trim()) { setError("Enter a reason for rejecting this supplier change."); return; }
+    if (approve && !supported) { setError("A confirmed independent check supporting this recipient is required."); return; }
     const { error } = await supabase.rpc("decide_supplier_change", { _cr: cr.id, _approve: approve, _note: note });
     if (error) { toast.error(friendlyError(error)); return; }
     toast.success(approve ? "Supplier change verified. The new recipient stays unpayable until PayPal enrolment. The decision is listed under Approvals → Completed." : "Supplier change rejected. The original supplier record is kept and this request stays blocked — it was not edited or made payable. The decision is listed under Approvals → Completed.", { duration: 10000 });
@@ -473,7 +484,11 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
   }
 
   return (
-    <Panel title="Supplier payment-detail change" className="mt-6">
+    <Panel title="Supplier payment-detail review" className={primary ? "mb-4" : "mt-6"}>
+      <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-sm"><p className="font-semibold">{supplier}</p><p className="font-bold">{amount}</p></div>
+      <p className="mb-3 text-sm">Payment is held until this recipient change is independently reviewed. Current request: {humanize(purchaseStatus)}.</p>
+      <dl className="mb-3 grid grid-cols-2 gap-3 text-xs"><div className="min-w-0"><dt className="text-muted-foreground">Approved recipient</dt><dd className="break-all font-mono">{sv?.paypal_merchant_id ?? "Not provided"}</dd></div><div className="min-w-0"><dt className="text-muted-foreground">Proposed recipient</dt><dd className="break-all font-mono">{cr.proposed_recipient}</dd></div></dl>
+      {open && canReview && <div className="sticky top-28 z-10 mb-4 border-y bg-card py-2 lg:static"><div className="grid grid-cols-2 gap-3"><Button variant="outline" className="min-h-12 whitespace-normal" onClick={() => { setPath("reject"); setError(null); }}>Reject supplier change</Button><Button className="min-h-12 whitespace-normal" onClick={() => { setPath("verify"); setError(null); }}>Verify supplier change</Button></div><p className="mt-1 text-xs text-muted-foreground">Choose a path. Verify opens the evidence step; it does not save a decision.</p></div>}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {current
           ? <ToneBadge tone="warning">Applies to the current version of this request</ToneBadge>
@@ -492,6 +507,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
               <ToneBadge tone={cr.status === "approved" ? "success" : "blocked"}>{cr.status === "approved" ? "Supplier change verified" : "Supplier change rejected"}</ToneBadge>
               <p className="mt-1 text-muted-foreground">By {names[cr.decided_by ?? ""] ?? "a reviewer"}{cr.decided_at ? ` · ${new Date(cr.decided_at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" })}` : ""}</p>
               {cr.decision_note && <p className="mt-1">{cr.status === "rejected" ? "Reason" : "Note"}: {cr.decision_note}</p>}
+              <p className="mt-2">Current request: {humanize(purchaseStatus)}. <Link to="/approvals" search={{ tab: "completed", type: "supplier", outcome: cr.status === "approved" ? "approved" : "rejected" }} className="font-semibold text-primary underline">Approvals → Completed</Link></p>
               {cr.status === "rejected" && <p className="mt-1 text-xs text-muted-foreground">Rejecting the supplier change did not cancel this request, change its recipient or make it payable.</p>}
             </div>
           : cr.decision_note && <p className="mt-1 text-sm text-muted-foreground">Note: {cr.decision_note}</p>}
@@ -527,49 +543,34 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
           )}
         </div>
       )}
-      {open && canReview && (
-        <div className="mt-4 grid gap-6 lg:grid-cols-2">
+      {open && canReview && path === "reject" && <form noValidate onSubmit={e => { e.preventDefault(); void decide(false); }} className="space-y-3">
+        <RequiredNote />
+        <Label htmlFor={`reason-${cr.id}`}>Reason (required to reject)<Req /></Label>
+        <Textarea id={`reason-${cr.id}`} required aria-required="true" aria-invalid={!!error} value={note} onChange={e => { setNote(e.target.value); setError(null); }} />
+        <p className="text-xs text-muted-foreground">Reject unsupported details without recording a verification check. The request and approved recipient are not changed.</p>
+        <RecentSignin />
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+        <Button type="submit" variant="destructive" className="min-h-12">Confirm supplier change rejection</Button>
+      </form>}
+      {open && canReview && path === "verify" && <div className="space-y-3">
+        <p className="text-sm">Obtain independent evidence before confirming. Invoice text and dummy recipients never establish supplier identity.</p>
+        {isDemo && merchant ? <>
+          {cr.proposed_recipient.toUpperCase() !== merchant.toUpperCase() && <p role="alert" className="text-sm text-warning">Verification unavailable for this proposed recipient: it does not match the configured Sandbox merchant. A not-confirmed check can be recorded; rejection remains available above.</p>}
           <SandboxCheck cr={cr} onDone={onDone} />
-          {!isDemo && (
-          <form onSubmit={record} className="space-y-3">
-            <h3 className="font-semibold">Record independent verification</h3>
-            <RequiredNote />
-            <p className="text-xs text-muted-foreground">Use only the trusted contact on record: <strong>{sv?.trusted_contact_channel} {sv?.trusted_contact_value}</strong>. Do not use the contact details in the request.</p>
-            <div className="space-y-1"><Label htmlFor="cv">Contact used<Req /></Label><Input id="cv" required value={f.channel_value} onChange={(e) => setF({ ...f, channel_value: e.target.value })} placeholder={sv?.trusted_contact_value} /></div>
-            <div className="space-y-1"><Label htmlFor="pp">Person contacted<Req /></Label><Input id="pp" required value={f.person} onChange={(e) => setF({ ...f, person: e.target.value })} /></div>
-            <div className="space-y-1"><Label htmlFor="wh">When<Req /></Label><Input id="wh" type="datetime-local" required value={f.when} onChange={(e) => setF({ ...f, when: e.target.value })} /></div>
-            <div className="space-y-1">
-              <Label htmlFor="oc">Outcome<Req /></Label>
-              <FieldSelect
-                id="oc"
-                value={f.outcome}
-                onChange={(v) => setF({ ...f, outcome: v })}
-                options={[
-                  { value: "denied", label: "Supplier denies the change" },
-                  { value: "confirmed", label: "Supplier confirms the change" },
-                  { value: "unreachable", label: "Could not reach supplier" },
-                ]}
-              />
-            </div>
-            <div className="space-y-1"><Label htmlFor="ev">Evidence<Req /></Label><Textarea id="ev" required value={f.evidence} onChange={(e) => setF({ ...f, evidence: e.target.value })} placeholder="What was said, call reference, notes" /></div>
-            <Button type="submit">Record verification</Button>
-          </form>
-          )}
-          <div className="space-y-3">
-            <h3 className="font-semibold">Decide</h3>
-            <RequiredNote />
-            <p className="text-xs text-muted-foreground">Reject if the requested recipient is not supported by the approved supplier record or independent evidence. Rejecting keeps the original supplier record, does not edit the request and does not make it payable.</p>
-            <div className="space-y-1"><Label htmlFor="dn">Reason (required to reject)<Req /></Label><Textarea id="dn" aria-describedby="dn-help" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Requested recipient TEST does not match the approved PayPal Merchant ID and no evidence supports it." /><p id="dn-help" className={`text-xs ${note.trim() ? "text-muted-foreground" : "font-medium text-destructive"}`}>{note.trim() ? "Reason entered. Rejecting does not cancel the request or change its recipient." : "Enter a reason to enable Reject supplier change. Not needed to verify."}</p></div>
-            <RecentSignin />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="destructive" disabled={!note.trim()} onClick={() => decide(false)}>Reject supplier change</Button>
-              {cr.status === "verified_pending_decision" && <Button variant="outline" onClick={() => decide(true)}>Verify supplier change</Button>}
-            </div>
-            {!note.trim() && <p className="text-xs text-muted-foreground">Enter a reason to enable rejection.</p>}
-            <p className="text-xs text-muted-foreground">{cr.status === "verified_pending_decision" ? "Approval requires a confirmed verification. An approved new recipient cannot be paid until PayPal enrolment is complete." : "Approval is only offered after a confirmed check is recorded."}</p>
-          </div>
-        </div>
-      )}
+        </> : isDemo ? <p className="text-sm text-warning">No Sandbox account is configured for this supplier. This check does not apply; reject unsupported details instead.</p> : <form onSubmit={record} className="space-y-3">
+          <h3 className="font-semibold">Record independent verification</h3><RequiredNote />
+          <p className="text-xs">Use the trusted contact already on record: {sv?.trusted_contact_channel} {sv?.trusted_contact_value}. Never use invoice contact details.</p>
+          <Label htmlFor={`contact-${cr.id}`}>Contact used<Req /></Label><Input id={`contact-${cr.id}`} required value={f.channel_value} onChange={e => setF({ ...f, channel_value: e.target.value })} />
+          <Label htmlFor={`person-${cr.id}`}>Person contacted<Req /></Label><Input id={`person-${cr.id}`} required value={f.person} onChange={e => setF({ ...f, person: e.target.value })} />
+          <Label htmlFor={`when-${cr.id}`}>When<Req /></Label><Input id={`when-${cr.id}`} type="datetime-local" required value={f.when} onChange={e => setF({ ...f, when: e.target.value })} />
+          <Label>Outcome<Req /></Label><FieldSelect value={f.outcome} onChange={v => setF({ ...f, outcome: v })} options={[{ value: "denied", label: "Supplier denies the change" }, { value: "confirmed", label: "Supplier confirms the change" }, { value: "unreachable", label: "Could not reach supplier" }]} />
+          <Label htmlFor={`evidence-${cr.id}`}>Evidence<Req /></Label><Textarea id={`evidence-${cr.id}`} required value={f.evidence} onChange={e => setF({ ...f, evidence: e.target.value })} />
+          <Button type="submit">Record verification</Button>
+        </form>}
+        {supported ? <><RecentSignin /><Button className="min-h-12" onClick={() => decide(true)}>Confirm supplier change verification</Button></> : <p className="text-sm text-muted-foreground">Final verification is unavailable until a confirmed independent check supports this recipient. Payment remains a separate step.</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      </div>}
+
     </Panel>
   );
 }
