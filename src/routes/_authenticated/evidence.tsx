@@ -97,6 +97,12 @@ function summarize(r: AuditRow): string {
       return "PayPal Sandbox order created. Not a completed payment.";
     case "payment_capture_completed":
       return "PayPal Sandbox capture completed.";
+    case "sandbox_capture_completed":
+      return `PayPal Sandbox capture completed${money(d["amount_minor"], "CAD") ? ` (${money(d["amount_minor"], "CAD")})` : ""}.`;
+    case "sandbox_payment_started":
+      return "PayPal Sandbox payment attempt started. Not a completed payment.";
+    case "sandbox_checkout_cancelled":
+      return "Uncaptured Sandbox checkout cancelled; its reservation released. Not a spending rejection.";
     case "payment_capture_declined":
       return "PayPal Sandbox capture declined or denied. Budget stays reserved for review.";
     case "budget_reserved":
@@ -250,6 +256,10 @@ function FragmentRow({ r, isOpen, toggle, actor, pairs, reason }: { r: AuditRow;
                 </div>
               )}
               {reason && <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">Recorded reason</dt><dd>{reason}</dd></div>}
+              {([['order_id', 'PayPal order'], ['capture_id', 'PayPal capture']] as const).map(([key, label]) => {
+                const value = r.details?.[key];
+                return typeof value === "string" && value ? <div key={key}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="break-all font-mono">{value}</dd></div> : null;
+              })}
             </dl>
           </td>
         </tr>

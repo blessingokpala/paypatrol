@@ -53,7 +53,7 @@ function Index() {
             </li>
           ))}
         </ul>
-        <p className="mt-10 text-xs text-muted-foreground">Sandbox test mode. Gemini invoice reading is available. PayPal checkout remains locked pending merchant verification. Demonstration data is fictional.</p>
+        <p className="mt-10 text-xs text-muted-foreground">Sandbox test mode. Check invoices without PayPal setup. Payment demonstrations are limited to the configured Harbourside Sandbox merchant and require all payment checks to pass. Demonstration data is fictional.</p>
       </main>
     </div>
   );
