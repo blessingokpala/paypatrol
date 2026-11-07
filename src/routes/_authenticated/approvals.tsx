@@ -1,6 +1,6 @@
 import { BackLink, useHere } from "@/components/back-link";
 import { rememberScroll, safeReturn, takeScroll } from "@/lib/return-to";
-import { friendlyError, humanize } from "@/lib/friendly";
+import { humanize } from "@/lib/friendly";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
@@ -8,14 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrg, useProfiles } from "@/lib/org";
 import { useRefreshAll } from "@/lib/queries";
 import { formatMinor } from "@/lib/money";
-import { EmptyState, FixtureTag, PageHeader, Panel, Req, RequiredNote, ToneBadge } from "@/components/brand";
+import { EmptyState, FixtureTag, PageHeader, Panel, ToneBadge } from "@/components/brand";
 import { FieldSelect } from "@/components/field-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { SpendingDecision } from "@/components/spending-decision";
 import { CheckCircle2, Clock, X } from "lucide-react";
-import { toast } from "sonner";
 import type { Tone } from "@/lib/status";
 
 type Search = { from?: string; tab?: "completed"; type?: "spending" | "supplier"; outcome?: "approved" | "rejected" | "history"; q?: string; sort?: "oldest" | "newest" };
@@ -129,23 +128,6 @@ function Pending({ here, search, setSearch }: { here: string; search: Search; se
     const r = (q.data ?? []).filter((p) => matchesQ(qText, p.title, p.fixture_label, p.invoice_reference, (p.suppliers as { name: string } | null)?.name, p.requested_recipient));
     return newest ? [...r].reverse() : r;
   }, [q.data, qText, newest]);
-  const [notes, setNotes] = useState<Record<string, string>>({});
-  const [tried, setTried] = useState<Record<string, boolean>>({});
-
-  async function approve(id: string, version: number) {
-    const { error } = await supabase.rpc("approve_purchase", { _pid: id, _version: version, _note: notes[id] ?? "", _via: "individual" });
-    if (error) { toast.error(friendlyError(error)); return; }
-    toast.success("Spending approved for this exact version. This does not verify the recipient or pay anything. The record is under Completed.", { duration: 10000 });
-    refresh();
-  }
-  async function reject(id: string, version: number) {
-    const reason = (notes[id] ?? "").trim();
-    if (!reason) { setTried({ ...tried, [id]: true }); return; }
-    const { error } = await supabase.rpc("reject_spending", { _pid: id, _version: version, _reason: reason });
-    if (error) { toast.error(friendlyError(error)); return; }
-    toast.success("Spending rejected. The decision and reason are under Completed and in Evidence history.", { duration: 10000 });
-    refresh();
-  }
 
   return (
     <>
@@ -158,8 +140,6 @@ function Pending({ here, search, setSearch }: { here: string; search: Search; se
         <div className="space-y-4">
           {spendRows.map((p) => {
             const sv = p.supplier_versions as { version: number; paypal_merchant_id: string } | null;
-            const own = p.requested_by === org.userId;
-            const missing = tried[p.id] && !(notes[p.id] ?? "").trim();
             return (
               <Panel key={p.id} title={p.title} actions={<Link to="/purchases/$id" params={{ id: p.id }} search={{ from: here }} className="text-sm text-brand-bright underline">Full review</Link>}>
                 {p.is_test_fixture && <div className="mb-2"><FixtureTag /></div>}
@@ -173,26 +153,7 @@ function Pending({ here, search, setSearch }: { here: string; search: Search; se
                   <div><dt className="text-muted-foreground">Requested by</dt><dd>{names[p.requested_by] ?? "Team member"}</dd></div>
                   <div><dt className="text-muted-foreground">Fingerprint</dt><dd className="font-mono text-xs">{p.digest?.slice(0, 12)}</dd></div>
                 </dl>
-                <ul className="mt-3 space-y-1 text-sm">
-                  {p.findings.map((f) => <li key={f.id}><ToneBadge tone="info">Note</ToneBadge> {f.message}</li>)}
-                </ul>
-                {org.has("payer", "owner") && (own ? (
-                  <p className="mt-3 text-sm text-muted-foreground">You submitted this request. Another payer must approve or reject it.</p>
-                ) : (
-                  <div className="mt-4 space-y-2">
-                    <RequiredNote />
-                    <Label htmlFor={`note-${p.id}`}>Note or reason (required to reject)<Req /></Label>
-                    <Textarea id={`note-${p.id}`} aria-invalid={missing || undefined} aria-describedby={`note-help-${p.id}`}
-                      placeholder="Optional when approving; explain why when rejecting" value={notes[p.id] ?? ""} onChange={(e) => setNotes({ ...notes, [p.id]: e.target.value })} className="sm:max-w-xl" />
-                    <p id={`note-help-${p.id}`} className={`text-xs ${missing ? "font-medium text-destructive" : "text-muted-foreground"}`} role={missing ? "alert" : undefined}>
-                      {missing ? "Enter a reason before rejecting this spending request." : "Optional for approval. Required only to reject."}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button onClick={() => approve(p.id, p.version)}>Approve v{p.version} for {formatMinor(p.total_minor, p.currency)}</Button>
-                      <Button variant="outline" onClick={() => reject(p.id, p.version)}>Reject spending</Button>
-                    </div>
-                  </div>
-                ))}
+                <SpendingDecision request={p} supplier={(p.suppliers as { name: string } | null)?.name ?? "Not matched"} findings={p.findings} onDone={refresh} />
               </Panel>
             );
           })}

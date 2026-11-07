@@ -1,3 +1,4 @@
+import { SpendingDecision } from "@/components/spending-decision";
 import { CategoryField } from "@/components/category-field";
 import { categoryLabel, fromStored, toStored } from "@/lib/categories";
 import { friendlyError, humanize } from "@/lib/friendly";
@@ -126,6 +127,8 @@ function Review() {
           </div>
         </div>
       )}
+
+      {p.status === "approval_required" && <SpendingDecision key={`${p.id}-${p.version}`} request={p} supplier={(p.suppliers as { name: string } | null)?.name ?? "Not matched"} findings={spendingFindings} onDone={refresh} sticky />}
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <Panel title={p.source === "invoice" ? "Source document and message" : "Proposal content"}>
@@ -282,6 +285,7 @@ function Review() {
       ))}
 
       <Panel title="Approvals and checkout" className="mt-6">
+        {p.status !== "approval_required" && <p className="mb-3 text-sm text-muted-foreground">Spending decisions are available only while awaiting spending approval. Current status: {humanize(p.status)}. Saved decisions are in <Link to="/approvals" search={{ tab: "completed", type: "spending" }} className="font-semibold text-primary underline">Approvals → Completed</Link> and Evidence history.</p>}
         {approvals.length > 0 && (
           <ul className="mb-4 space-y-2 text-sm">
             {approvals.map((a) => (
@@ -303,16 +307,6 @@ function Review() {
           );
         })}
         <div className="flex flex-wrap gap-2">
-          {p.status === "approval_required" && org.has("payer", "owner") && (
-            p.requested_by === org.userId
-              ? <p className="text-sm text-muted-foreground">You submitted this request, so a different payer must approve it.</p>
-              : <Button asChild><Link to="/approvals" search={{ from: here }}>Review in Approvals</Link></Button>
-          )}
-          {p.status === "approval_required" && !org.has("payer", "owner") && (
-            <p className="text-sm text-muted-foreground">
-              Spending approval needs the Payer or Business owner role in {org.orgName}. Your roles here: {org.roles.join(", ").replace(/_/g, " ") || "none"}. Accept a Payer invitation from the owner to approve it.
-            </p>
-          )}
           {p.status === "cleared_for_checkout" && org.has("payer", "owner") && !activeRes && !isTestData && (
             <Button onClick={() => call(() => supabase.rpc("reserve_budget", { _pid: p.id }), "Budget reserved")}>Reserve budget for checkout</Button>
           )}
@@ -569,7 +563,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
             <RecentSignin />
             <div className="flex flex-wrap gap-2">
               <Button variant="destructive" disabled={!note.trim()} onClick={() => decide(false)}>Reject supplier change</Button>
-              {cr.status === "verified_pending_decision" && <Button variant="outline" onClick={() => decide(true)}>Approve change</Button>}
+              {cr.status === "verified_pending_decision" && <Button variant="outline" onClick={() => decide(true)}>Verify supplier change</Button>}
             </div>
             {!note.trim() && <p className="text-xs text-muted-foreground">Enter a reason to enable rejection.</p>}
             <p className="text-xs text-muted-foreground">{cr.status === "verified_pending_decision" ? "Approval requires a confirmed verification. An approved new recipient cannot be paid until PayPal enrolment is complete." : "Approval is only offered after a confirmed check is recorded."}</p>
