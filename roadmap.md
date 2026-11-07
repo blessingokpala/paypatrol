@@ -1,5 +1,11 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
+## Judge evaluation guide — 7 November 2026
+- [ ] Verify published public entry, authorised evidence, desktop/mobile invoice upload, save and reopen without merchant ID.
+- [ ] Reconcile current review decisions, batch methods, notification delivery and completed payment accounting.
+- [ ] Deliver dated quick-start, guided steps, evidence table and confidential-data-free sample invoice.
+- [ ] Identify human-only access/reviewer checks and remaining limitations without changing working decisions or payments.
+
 ## Completed
 - [x] Two existing CA$135 requests identified; partner-authorised 390px mobile selection enables Approve eligible (2), without submitting a decision.
 - [x] Five historical approvals retained with invalidation reason; current rules v2 unchanged; Maple Lane remains draft/unverified.
