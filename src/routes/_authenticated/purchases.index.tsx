@@ -1,3 +1,4 @@
+import { spendingReviewBlock } from "@/lib/spending-review";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { csvCell } from "@/lib/csv";
 import { useEffect, useMemo, useState } from "react";
@@ -122,8 +123,8 @@ function Purchases() {
   const [panelFor, setPanelFor] = useState<Row | null>(null);
   const [batch, setBatch] = useState<null | "review" | "approve" | "reject">(null);
   // Eligibility is re-checked on the server by the RPCs; these lists only decide what is offered.
-  const approvable = visibleSelected.filter((p) => p.status === "approval_required" && p.requested_by !== userId); // labelled test data may be approved: approval never reserves budget or pays
-  const rejectable = visibleSelected.filter((p) => ["draft", "needs_clarification", "blocked", "verification_required", "approval_required", "cleared_for_checkout"].includes(p.status));
+  const approvable = visibleSelected.filter((p) => !spendingReviewBlock(p, userId, has("payer", "owner"))); // labelled test data may be approved: approval never reserves budget or pays
+  const rejectable = visibleSelected.filter((p) => !spendingReviewBlock(p, userId, has("payer", "owner")));
 
   function toggleAll() {
     setSelected(allChecked ? new Set() : new Set(rows.map((p) => p.id)));
@@ -261,22 +262,23 @@ function Purchases() {
               <>
                 <Button size="sm" variant="outline" onClick={() => setBatch("review")}>Review selected</Button>
                 <Button size="sm" variant="outline" onClick={exportSelected}>Export selected (CSV)</Button>
-                {has("payer", "owner") && (
-                  <Button size="sm" variant="outline" disabled={approvable.length === 0} onClick={() => setBatch("approve")}>
-                    Approve eligible ({approvable.length})
-                  </Button>
-                )}
-                {has("preparer", "owner") && (
-                  <Button size="sm" variant="outline" disabled={rejectable.length === 0} onClick={() => setBatch("reject")}>
-                    Reject eligible ({rejectable.length})
-                  </Button>
-                )}
+                <div className="grid w-full grid-cols-2 gap-3" aria-label="Batch spending decisions">
+                  <div className="min-w-0">
+                    <Button className="min-h-12 w-full whitespace-normal border-2 border-foreground bg-card text-foreground" variant="outline" aria-describedby="reject-eligible-help" disabled={rejectable.length === 0} onClick={() => setBatch("reject")}>Reject eligible ({rejectable.length})</Button>
+                    {rejectable.length === 0 && <p id="reject-eligible-help" className="mt-1 text-xs text-muted-foreground">{has("payer", "owner") ? "Select requests awaiting spending approval that you did not submit." : "Payer or Business owner role required."}</p>}
+                  </div>
+                  <div className="min-w-0">
+                    <Button className="min-h-12 w-full whitespace-normal" aria-describedby="approve-eligible-help" disabled={approvable.length === 0} onClick={() => setBatch("approve")}>Approve eligible ({approvable.length})</Button>
+                    {approvable.length === 0 && <p id="approve-eligible-help" className="mt-1 text-xs text-muted-foreground">{has("payer", "owner") ? "Select requests awaiting spending approval that you did not submit." : "Payer or Business owner role required."}</p>}
+                  </div>
+                </div>
+                <p className="w-full text-xs text-muted-foreground">Approving records your spending decision. Payment is a separate step.</p>
                 <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear selection</Button>
               </>
             )}
             <span className="w-full text-xs text-muted-foreground">Selection covers only the matching requests shown below and resets when search or filters change.</span>
             {has("payer", "owner") && visibleSelected.some((p) => !approvable.includes(p)) && (
-              <div className="w-full rounded-md border border-warning/40 bg-warning-soft p-2 text-xs" aria-live="polite">
+              <div className="max-h-24 w-full overflow-y-auto rounded-md border border-warning/40 bg-warning-soft p-2 text-xs" aria-live="polite">
                 <p className="font-semibold text-foreground">Why some selected requests can't be approved here</p>
                 <ul className="mt-1 space-y-1">
                   {visibleSelected.filter((p) => !approvable.includes(p)).map((p) => (
@@ -416,7 +418,7 @@ function NextActionPanel({ p, here, onClose }: { p: Row; here: string; onClose: 
             : <p className="text-sm text-muted-foreground">A request preparer or owner must complete the missing details.</p>)}
           {status === "verification_required" && <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Open supplier-change review</Link></Button>}
           {status === "approval_required" && (has("payer", "owner") && p.requested_by !== userId
-            ? <Button asChild size="sm"><Link to="/approvals" search={{ from: here }}>Review in Approvals</Link></Button>
+            ? <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Review spending request</Link></Button>
             : <p className="text-sm text-muted-foreground">A different team member with the payer or owner role must approve this exact version.</p>)}
           {status === "cleared_for_checkout" && (has("payer", "owner")
             ? <Button asChild size="sm"><Link {...detail} onClick={() => rememberScroll(here)}>Open checkout</Link></Button>
@@ -456,12 +458,6 @@ function exclusionAction(p: Row): string {
   if (p.status === "needs_clarification") return "Add missing details";
   return "Open request";
 }
-function whyNotReject(p: Row): string {
-  if (p.status === "payment_pending") return "payment outcome is uncertain — never cancelled in bulk";
-  if (["paid", "failed", "cancelled"].includes(p.status)) return `already ${(STATUS_META[p.status as PurchaseStatus]?.label ?? p.status).toLowerCase()}`;
-  return "";
-}
-
 /** Controlled batch review: approve or reject only genuinely eligible requests, re-validated by the server. */
 function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose, onDone }: {
   kind: "review" | "approve" | "reject"; rows: Row[]; approvable: Row[]; rejectable: Row[]; userId: string; here: string;
@@ -486,13 +482,8 @@ function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose
     setBusy(true);
     const out: NonNullable<typeof results> = [];
     for (const p of rejectable) {
-      // Awaiting spending approval and decided by someone else: record a spending rejection.
-      // Anything else is a request cancellation, kept distinct from rejection.
-      const spending = p.status === "approval_required" && p.requested_by !== userId;
-      const { error } = spending
-        ? await supabase.rpc("reject_spending", { _pid: p.id, _version: p.version, _reason: note.trim() })
-        : await supabase.rpc("cancel_purchase", { _pid: p.id, _reason: note.trim() });
-      out.push({ id: p.id, title: p.title, ok: !error, message: error ? friendlyError(error, "Rejection") : spending ? "Spending rejected" : "Request cancelled" });
+      const { error } = await supabase.rpc("reject_spending", { _pid: p.id, _version: p.version, _reason: note.trim() });
+      out.push({ id: p.id, title: p.title, ok: !error, message: error ? friendlyError(error, "Rejection") : "Spending rejected" });
     }
     setResults(out);
     setBusy(false);
@@ -500,7 +491,7 @@ function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose
 
   const eligible = kind === "approve" ? approvable : rejectable;
   const excluded = rows.filter((r) => !eligible.some((a) => a.id === r.id));
-  const why = (p: Row) => (kind === "approve" ? whyNotApprove(p, userId) : whyNotReject(p));
+  const why = (p: Row) => (kind === "approve" ? whyNotApprove(p, userId) : whyNotApprove(p, userId));
 
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-center sm:items-center" role="dialog" aria-modal="true"
@@ -539,7 +530,7 @@ function BatchDialog({ kind, rows, approvable, rejectable, userId, here, onClose
             <p className="mt-3 text-sm text-muted-foreground">
               {kind === "approve"
                 ? "Approval applies only to the exact current version of each request. Spending limits, supplier holds and missing information are re-checked when each approval runs — selecting a request never overrides them."
-                : "Rejection cancels the request and keeps its history. Requests with an uncertain payment outcome are never included."}
+                : "Rejects only eligible requests awaiting spending approval, with a recorded reason. Supplier payment-detail decisions and request cancellations are separate. Find the saved decisions under Approvals → Completed and Evidence history."}
             </p>
             <h3 className="mt-4 text-xs font-semibold uppercase text-muted-foreground">Eligible ({eligible.length})</h3>
             <ul className="mt-2 space-y-1 text-sm">
