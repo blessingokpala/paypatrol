@@ -34,7 +34,14 @@ export async function recordVerifiedSandboxOrder(admin: SupabaseClient<Database>
   if (capture && ["COMPLETED", "PENDING"].includes(capture.status)) {
     const { error } = await admin.rpc("record_sandbox_capture", { _attempt: attempt.id, _order: order.id, _capture: capture.id, _status: capture.status, _merchant: attempt.merchant_id, _amount: attempt.amount_minor, _currency: attempt.currency });
     if (error) throw new Error("Payment confirmation could not be recorded safely");
-    return { status: capture.status === "COMPLETED" ? "paid" as const : "pending" as const, orderId: order.id, captureId: capture.id };
+    // A synchronous capture response alone never completes the payment: the
+    // recorder requires the verified signed webhook for this exact capture.
+    // Report Paid only when the attempt actually reached completed.
+    if (capture.status === "COMPLETED") {
+      const { data: saved } = await admin.from("payment_attempts").select("status").eq("id", attempt.id).single();
+      if (saved?.status === "completed") return { status: "paid" as const, orderId: order.id, captureId: capture.id };
+    }
+    return { status: "pending" as const, orderId: order.id, captureId: capture.id };
   }
   // DENIED/DECLINED: never marks Paid and never releases budget; the reservation
   // stays held for owner review because the provider outcome is not a completed payment.

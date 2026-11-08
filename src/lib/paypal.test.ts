@@ -34,14 +34,23 @@ describe("authorised order comparison", () => {
   it("rejects non-CAD currency", () => { const o = order(); const u = o.purchase_units[0]; if (u) u.amount.currency_code = "USD"; expect(() => validateOrder(o, attempt)).toThrow(); });
   it("rejects a different provider order ID", () => expect(() => validateOrder(order(), attempt, "OTHER-ORDER")).toThrow());
   const capturedOrder = (status = "COMPLETED", value = "75.00") => ({ ...order(), status: "COMPLETED", purchase_units: order().purchase_units.map(u => ({ ...u, payments: { captures: [{ id: "CAPTURE-1", status, amount: { currency_code: "CAD", value } }] } })) });
-  function adminFixture() {
+  function adminFixture(attemptStatus = "completed") {
     const rpc = vi.fn().mockResolvedValue({ error: null });
-    return { rpc, admin: { rpc } as unknown as SupabaseClient<Database> };
+    const single = vi.fn().mockResolvedValue({ data: { status: attemptStatus } });
+    const eq = vi.fn().mockReturnValue({ single });
+    const select = vi.fn().mockReturnValue({ eq });
+    const from = vi.fn().mockReturnValue({ select });
+    return { rpc, from, admin: { rpc, from } as unknown as SupabaseClient<Database> };
   }
-  it("records Paid only from a verified completed CA$75 capture", async () => {
-    const { rpc, admin } = adminFixture();
+  it("records Paid only when the verified signed webhook completed the attempt", async () => {
+    const { rpc, admin } = adminFixture("completed");
     expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder())).status).toBe("paid");
     expect(rpc).toHaveBeenCalledWith("record_sandbox_capture", expect.objectContaining({ _capture: "CAPTURE-1", _amount: 7500, _currency: "CAD", _merchant: "L8SVBX42QHT3U", _status: "COMPLETED" }));
+  });
+  it("a completed capture response without the verified webhook stays pending, never Paid", async () => {
+    const { rpc, admin } = adminFixture("confirmation_pending");
+    expect((await recordVerifiedSandboxOrder(admin, attempt, "ORDER-1", capturedOrder())).status).toBe("pending");
+    expect(rpc).toHaveBeenCalledWith("record_sandbox_capture", expect.objectContaining({ _status: "COMPLETED" }));
   });
   it("a pending capture never returns Paid", async () => {
     const { admin } = adminFixture();

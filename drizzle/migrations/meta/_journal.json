@@ -246,6 +246,13 @@
       "when": 1793997293694,
       "tag": "0034_durable_review_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794104780975,
+      "tag": "0035_webhook_gated_capture_completion",
+      "breakpoints": true
     }
   ]
 }

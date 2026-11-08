@@ -1677,7 +1677,12 @@ export type Database = {
         Returns: string
       }
       record_verified_sandbox_event: {
-        Args: { _event: string; _order: string; _type: string }
+        Args: {
+          _capture?: string
+          _event: string
+          _order: string
+          _type: string
+        }
         Returns: boolean
       }
       reject_spending: {
