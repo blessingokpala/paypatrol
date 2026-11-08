@@ -17,7 +17,8 @@
 - [x] Published refresh/Completed/Evidence export, desktop/mobile buttons and one-item 13→12 notification persistence checked; 76 tests pass.
 - [x] Both pending attempts reconciled via maintenance job against live PayPal (02:20 UTC): captures 9DS69868M5318110G (CA$135) and 015079546D223270G (CA$25) still PENDING at PayPal; attempts confirmation_pending; both reservations active; no replacement payment created.
 - [x] Webhook gate 0035 implemented; release continuation found and fixed recreated-recorder PUBLIC privilege in 0036. 13 rollback SQL checks PASS and 82 unit tests pass. Critical closure still requires release/genuine-event/deep-scan evidence.
-- [ ] Release tasks now tracked above; Nnenna physical-phone check remains open: /notifications/73048a1f-949c-43df-b01d-10717ce39295.
+- [x] 08:55 UTC final handoff: Nnenna confirmed on her physical phone that Reject and Approve are visible side by side on the CA$135 spending request — mobile button visibility VERIFIED by reviewer (her written confirmation is the evidence; no repeat requested). Physical-phone notification countdown remains a separate OPEN check: /notifications/73048a1f-949c-43df-b01d-10717ce39295.
+- [x] 08:55 UTC live records re-confirmed: completed CA$25 (order 6PP262896T830104W, capture 2X730686B0899582N, verified COMPLETED event WH-2P19156481704070K-9975648204500261Y, exactly one consumed reservation); CA$135 and older CA$25 attempts still confirmation_pending with active reservations. Release still awaits Blessing's publish approval; HEAD cfe8b30 is documentation-only over tested application revision 558c82a.
 
 ## Full published-scope assessment — 8 November 2026
 - [x] Assessed uploaded requirement matrix against published screens, live records, genuine no-merchant extraction/correction/reopen, 76 tests and fresh direct negative guards; saved dated assessment/screenshots.
