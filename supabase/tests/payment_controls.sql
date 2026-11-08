@@ -276,6 +276,7 @@ begin
   v_org := public.create_organization('Webhook Gate Test', true);
   insert into public.memberships(org_id,user_id,role) values (v_org,b,'payer');
   select s.id into v_sup from public.suppliers s where s.org_id=v_org limit 1;
+  perform public.configure_sandbox_merchant(v_org, v_sup, 'DEMO-MERCHANT-HARBOUR-001', a);
   v_p := public.submit_invoice(v_org, v_sup, 'INV-GATE', 12000, 'CAD', 'DEMO-MERCHANT-HARBOUR-001', null, 'packaging', 'T', null, null, null);
   perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
   perform public.approve_purchase(v_p,1,'ok');
