@@ -1,5 +1,40 @@
 # PayPatrol — Judges’ Verification Report
 
+## Release follow-up — 8 November 2026, 03:10 UTC
+
+This checkpoint supersedes the earlier suggestion that the connected app already targets preview. No publication, provider configuration change, event resend, new request, reservation, capture or checkout was performed.
+
+### Confirmed release results
+
+- Hosted release candidate commit 8781ff71339c17c9702389350f5bc7bdbdb0dc45 is in sync. Build br_967c2fa1-8a58-40d6-be1c-95d1b8f1dcf8 succeeded at 03:03:25 UTC; its structured diagnostics contain no compiler errors and no failed targets. This is a successful hosted production-mode preview build, not a new published deployment. The supported build interface exposes no separately named typecheck stage/transcript; independent typecheck evidence remains unavailable. No prohibited manual build/typecheck was run and no independent typecheck pass is claimed.
+- Full unit suite rerun: 82/82 tests, 14 files, passed at 03:09 UTC. Provider responses in unit tests remain scripted.
+- Migrations 0035 and 0036 are effective in the one shared Lovable Cloud database used by preview and published site. Fresh function-definition/privilege reads prove exact verified order/capture gating and anon/authenticated EXECUTE=false, service_role=true for event and capture recorders. Actual signed-in event/capture/Paid writes again returned 42501. Historical completed CA$25 remains Paid after preview refresh; zero page errors.
+- Published unsigned/forged webhook probes return 401 Invalid signature. Hosted preview GET and POST return generic 401 Unauthorized, unlike the application's signature response. Public delivery to that preview is blocked before useful handler verification. Local preview executes revised handler and returns Invalid signature, but localhost cannot be reached by PayPal.
+- Read-only authenticated PayPal Sandbox API inspection confirmed exactly one webhook on the connected app, with the configured webhook ID, targeting https://paypatrol.lovable.app/api/public/paypal/webhook. The URL, subscribed events and configured ID were not changed. Original completed event GET returned 200 and matches WH-2P19156481704070K-9975648204500261Y / PAYMENT.CAPTURE.COMPLETED / order 6PP262896T830104W / capture 2X730686B0899582N.
+- Fresh authoritative capture GETs: 9DS69868M5318110G=PENDING; 015079546D223270G=PENDING; 2X730686B0899582N=COMPLETED. Both pending reservations remain active; no reconciliation mutation was needed while provider statuses remained unchanged. Default judge evidence retains one completed CA$25 attempt, one consumed reservation and its genuine processed completion event. Two batch approvals remain Verified.
+- Basic security checks report no findings. Retained Critical remains active; no post-publication deep scan or genuine revised-handler delivery has occurred. Do not close it yet. The 120-second document-link revocation warning remains separate and unresolved.
+
+### Genuine delivery versus state transition
+
+Neither genuine replay delivery through the revised handler nor genuine Pending-to-Paid through that handler is verified yet. The original completed event is already processed: its replay should pass cryptographic verification, return Already processed and leave exactly one budget charge, but cannot prove a new transition.
+
+Do NOT ask Blessing to resend into the current hosted preview: delivery is blocked and the app is configured for published delivery. PayPal's same-app resend API supports explicit webhook_ids, but the dashboard documentation does not guarantee retargeting. A second subscription would need its own verification ID; adding it without receiver configuration would fail verification.
+
+Isolated alternative, not implemented: provision a publicly reachable staging receiver running this candidate, with its own environment-specific verification ID and restricted staging evidence access; add a second webhook subscription to the SAME Sandbox app without editing/deleting the published subscription. Use the documented resend API with only the staging webhook ID, or confirm the dashboard event details show the staging destination before Resend. A cloned database alone must not be claimed to preserve original payment evidence or prove production accounting; prepare explicit isolated evidence/expected accounting first. Do not overwrite global PAYPAL_WEBHOOK_ID to make staging work. Lovable owns setup and verification.
+
+Simpler alternative after release approval: publish the paired server changes and use the existing unchanged destination for the original completed event. Developer Dashboard -> Sandbox -> Webhooks Events -> select the connected REST app -> filter PAYMENT.CAPTURE.COMPLETED -> open WH-2P19156481704070K-9975648204500261Y -> verify capture 2X730686B0899582N and destination https://paypatrol.lovable.app/api/public/paypal/webhook -> Resend. Expect a delivery success response and no new money movement; Lovable must verify actual HTTP acceptance and unchanged accounting, not rely on the dashboard button alone. This is a future instruction, NOT a request to act now.
+
+A fresh genuine transition should first use either existing pending attempt if PayPal later completes it; verify signed matching completion and one consumed reservation. If neither completes, proposed separate scenario (not created/started): PP-WEBHOOK-TRANSITION-20261108-001, CA$25.00 CAD, approved Harbourside merchant L8SVBX42QHT3U, requester different from reviewer, all controls and budget verified before checkout. Only after Lovable confirms eligibility and obtains express checkout authorisation: authorised Payer opens the provided request, separate Sandbox Personal buyer approves CA$25 CAD to the confirmed merchant, then Lovable checks matching signed event, Paid persistence and single accounting charge. No link or eligible request is claimed to exist yet.
+
+### Release ownership and current action
+
+Lovable/platform: obtain separately identifiable typecheck evidence or explicitly agree the successful hosted compiler/build evidence is sufficient; prepare reachable isolation if prepublication genuine delivery is mandatory. Lovable: publish revised webhook capture-ID handling and persisted-payment status reporting together, with already-live migrations 0035/0036; verify deployed handler and permission refusals, then run basic/deep security scans and close Critical only with evidence. Blessing: no resend or checkout action needed now. Publication has not been requested because outstanding explicit release checks are not all satisfied.
+
+Fresh judge onboarding (judge/presenter), Nnenna's physical-phone notification countdown (Nnenna), successful independent verification of a legitimate replacement supplier (Lovable + business owner + different reviewer), and document-link revocation remediation (Lovable) remain visibly open.
+
+References: https://developer.paypal.com/api/webhooks/v1/webhooks-events-resend ; https://developer.paypal.com/api/rest/webhooks/events-dashboard
+
+
 # PayPatrol internal release assessment — v3
 
 Checkpoint: 8 November 2026, 03:01 UTC. This supersedes earlier current-state claims, not historical evidence. Release is **not yet cleared for publication**. No fresh checkout, reservation, spending decision or supplier decision was created.
