@@ -1,10 +1,15 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
+## Final readiness update — 8 November 2026
+- [x] Record batch verification in completion table and versioned Judge Evaluation Guide; include exact references and matching Evidence locations.
+- [x] Published refresh/Completed/Evidence export, desktop/mobile buttons and one-item 13→12 notification persistence checked; 76 tests pass.
+- [ ] New -001 CA$135 pending checkout requires authorised existing-attempt reconciliation; no repeat payment.
+
 ## Full published-scope assessment — 8 November 2026
 - [x] Assessed uploaded requirement matrix against published screens, live records, genuine no-merchant extraction/correction/reopen, 76 tests and fresh direct negative guards; saved dated assessment/screenshots.
 - [x] Confirmed TisVisitor's own sample approved individually at 01:21:43 UTC; zero reservations/attempts. Nnenna sample still pending.
 - [x] Prepared fresh independent batch pair PP-BATCH-ASSESS-20261108-001/-002 via UXAItion published form; current policy/approved recipient, only approval finding; TisVisitor desktop/mobile eligible (2), no decisions/payments performed.
-- [ ] Nnenna or TisVisitor executes genuine batch once, then Lovable verifies method, outcomes, refresh and zero accounting mutations; exact filtered link in current report.
+- [x] TisVisitor completed batch at 01:51 UTC; both valid batch approvals and Evidence persist. Initial zero accounting records confirmed; separate -001 pending payment began later at 01:57 UTC, explicitly documented.
 - [ ] Fresh outside judge confirms own email and isolated business/invoice flow; no judge-controlled inbox/email available here.
 - [ ] Lovable provides legitimate positive supplier scenario/integration support before assigning independent reviewer; single recipient configuration cannot prove replacement verification.
 - [ ] Lovable investigates fresh retained Critical provider-confirmation finding and new 120-second signed-fallback revocation Warning; both active, no clean security certification.
@@ -40,7 +45,7 @@
 - [x] Published notification core verified using owner-labelled PP-NOTIFY-20261106-001; exactly one unread partner record, zero reservations/payments; report updated. No partner session used.
 - [ ] Partner confirms actual device bell behaviour; existing task was opened/read and individually approved, requester outcome delivered/read; device rendering not inferred from records.
 - [x] Current published screens verified; landing payment-scope correction and capture/order Evidence details published and observed.
-- [ ] Genuine batch approval: fresh PP-BATCH-ASSESS-20261108-001/-002 ready for independent reviewer; zero batch methods; never repeat obsolete historical pair.
+- [x] Genuine batch approval: PP-BATCH-ASSESS-20261108-001/-002 verified by saved batch methods, published Completed/refresh/Evidence; do not repeat.
 - [ ] Positive supplier-change verification: requires an isolated scenario with genuine independently evidenced replacement account and supported merchant/onboarding verification; do not assign unsupported TEST approval.
 - [ ] Disposition of disputed Critical scan finding: authenticated authoritative PayPal API confirmation is mistaken for a browser-only Paid assertion; retained for owner/independent review, not ignored automatically.
 - [x] Current Evidence CSV download and completed capture contents confirmed on published site; previously inspected shared encoder retained.
