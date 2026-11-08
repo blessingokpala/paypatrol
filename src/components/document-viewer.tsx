@@ -134,8 +134,9 @@ export function DocumentViewer({ path, fileName, uploadedAt, uploadedBy }: { pat
   const openFull = async () => {
     if (state.status === "ready") { window.open(state.url, "_blank", "noopener"); return; }
     const w = window.open("", "_blank");
-    const { data } = await supabase.storage.from("invoices").createSignedUrl(path, 120);
-    if (data && w) w.location.href = data.signedUrl; else w?.close();
+    // Authenticated download: access is checked against current membership at request time; no bearer-style signed link is issued.
+    const { data } = await supabase.storage.from("invoices").download(path);
+    if (data && w) { const u = URL.createObjectURL(data); w.location.href = u; setTimeout(() => URL.revokeObjectURL(u), 60_000); } else w?.close();
   };
   const meta = [
     state.status === "ready" ? (state.kind === "pdf" ? "PDF" : state.kind === "image" ? state.type.replace("image/", "").toUpperCase() + " image" : state.type) : null,
