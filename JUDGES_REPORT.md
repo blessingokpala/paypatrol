@@ -2,6 +2,41 @@
 
 **Current review date: 8 November 2026 (UTC).** The newest checkpoint supersedes conflicting current-state claims in the dated historical checkpoints. Sandbox test money only; no production payments. Historical engineering evidence remains in BUILD_LOG.md.
 
+## Final readiness checkpoint — 8 November 2026, 01:59 UTC
+
+**Verified**: TisVisitor independently approved PP-BATCH-ASSESS-20261108-001 and PP-BATCH-ASSESS-20261108-002, each CA$135 CAD/v1, at 01:51:01 UTC on 8 November 2026. Both saved approvals have method=batch and is_valid=true, with matching purchase_approved audit events. Published refresh, Completed and Evidence CSV confirmed both. At initial read-back neither had a reservation/attempt. A later, separate UXAItion payment action at 01:57:22 UTC created an active CA$135 reservation and confirmation_pending attempt on -001 (order 35R973218C432202U; zero recorded completed captures at 01:59 UTC). -002 remains Cleared for checkout with zero reservations/attempts. Batch approval itself did not move money; do not describe the later -001 state as zero accounting records.
+
+**Matching Evidence:** Select Ada’s Grocery → Approvals → Completed → review type Spending → outcome Approved / Verified. Both references display Spending approved and Batch approval. In Evidence history, find the two 8 November 01:51:01 UTC entries “Spending approved for CA$135.00 (batch approval).” Open each linked Request to identify its reference/v1. Export CSV matches action purchase_approved, details.method=batch, and entity IDs 1a9521e9-90b3-4fc2-87c6-9ad9ca4218e2 / 8dc40061-766d-4307-9e52-dcc36e8b9525. All links require authorised membership; presenters screen-share private Ada evidence.
+
+| Completion item | Current status | Evidence / remaining owner |
+|---|---|---|
+| Batch spending approval | **Verified** | Both exact references above; persisted batch decisions, Completed and exported audit records. Do not repeat. |
+| Independent positive supplier-change verification | **Unverified / integration blocker** | 0 approved supplier-change decisions; 0 verification records. Current single-merchant configuration cannot validate a genuine replacement account. Lovable must prepare supported onboarding/evidence before an independent reviewer can act; no safe positive-test link exists. Never approve TEST/TESTONLY. |
+| Independent supplier rejection | **Verified** | Nnenna’s PP-CHECKOUT-20261103 v2 rejection retained; current v3 CA$78/TEST remains blocked. No decision changed. |
+| Reviewer notifications | **Verified — published browser and saved records** | Task delivery to eligible reviewers; batch outcomes delivered once each to UXAItion; 0 duplicate recipient/event keys. Published TisVisitor mobile bell stayed at 13 when opened; opening only -002 history alert reduced 13→12, removed that item and routed to the correct business/request. Refresh persisted read_at 01:58:59 UTC; active tasks stayed 10. Actual Nnenna physical-device countdown still unverified. In-app only: no task email/push. |
+| Reject / Approve near summary | **Verified — published desktop/mobile** | Eligible TisVisitor viewing Nnenna’s pending sample: exact Reject left / Approve right, enabled, 48px high, at y401 desktop 1280×1800 and y634 mobile 390×844, visible initially, no horizontal page overflow or runtime errors. No decision submitted. |
+| First-time external judge access | **Partially verified; external round trip Unverified** | Published Create account screen and protected entry verified; previously read hosted signup/confirmation settings. No fresh judge-controlled inbox available to complete confirmation, isolated onboarding and invoice checking. Existing members are not proof of first-time access. |
+| Automated controls | **Verified for covered tests** | Fresh 76 tests / 13 files passed at 01:58 UTC; no new SQL/provider race test or penetration-test claim. |
+| Security readiness | **Not clean / unresolved** | Latest completed deep scan retains disputed Critical payment-confirmation finding and Warning for a 120-second signed document fallback after revocation. No automatic dismissal; no production security certification. |
+
+### Separate answers
+
+**Every agreed requirement met? No.** Positive independent supplier verification, fully external first-time access, security finding disposition and the documented physical-device/accessibility, high-volume pagination, scheduled-maintenance and genuine duplicate/delayed provider checks remain unclosed. Batch approval is no longer a gap.
+
+**Published build ready for hackathon judging? Yes, for a scoped, presenter-supported Sandbox demonstration with access arranged.** Not a fully verified self-service external judge experience, multi-merchant payment integration or production-ready system. Show invoice checking without merchant setup, hard-rule blocks, saved spending/batch decisions, negative supplier decisions and existing completed CA$25 capture evidence. Do not present positive supplier verification as proven.
+
+### Only remaining human checks / operational action
+
+1. **Fresh judge or presenter using a new judge-controlled inbox:** open https://paypatrol.lovable.app/auth → Create an account → confirm received email → sign in → Create a business with fictional demonstration data (isolated, not Ada’s Grocery) → upload the Maple Lane sample with no merchant ID and unmatched supplier → review, save/check, correct with reason and refresh. Expected: original extraction retained, payment unavailable, no Reserve/Pay. Alternative: an exact-email Request preparer invitation to a separate evaluation business. Do not share credentials or grant Ada Owner/Payer for inspection. Report the outcome for read-back; no password in chat.
+2. **Nnenna, only for physical-phone proof:** open her own bell and the still-unread PP-NNENNA-SPENDING-20261108-001 alert. Bell opening must keep count; item opening must decrement one and stay read after refresh while task stays pending. Fallback notification link https://paypatrol.lovable.app/notifications/73048a1f-949c-43df-b01d-10717ce39295 . Direct request navigation alone is not a bell test. No approval needed.
+3. **Authorised payer/presenter for newly pending -001:** open https://paypatrol.lovable.app/purchases/1a9521e9-90b3-4fc2-87c6-9ad9ca4218e2 and use Check payment confirmation on the existing attempt before any new payment. Order 35R973218C432202U has no recorded completed capture at this checkpoint; do not claim payment succeeded or create a replacement. The separate historical pending request 3fb48c87-56e3-4f82-b79d-974d39feaf58 also requires existing-attempt reconciliation before optional checkout. This assessment initiated neither payment nor reconciliation.
+
+**Lovable-owned blockers:** supported legitimate replacement-merchant scenario/evidence; security investigation/remediation or evidence-based disposition. No user action can safely substitute for these. No further batch action is required.
+
+**Sandbox limits:** only configured Harbourside Business merchant L8SVBX42QHT3U receives payments; merchant ID alone cannot onboard another merchant; TEST/TESTONLY and fictional contacts never establish verification. Refund/reversal handling unsupported and does not automatically restore budget. Saved invoice line items remain a summary total; Gemini may misread payment wording, so human review remains required. Already-issued signed fallback links may remain usable up to 120 seconds after revocation. Evidence chain has no independent external checkpoints. No task email/push, anonymous demo or read-only role. Private Ada evidence requires membership or presenter screen-share.
+
+This checkpoint supersedes older current-state claims. Read-only assessment except one expressly tested notification read marker; no request, decision, supplier record, rule, reservation or payment was created or changed by this check.
+
 ## Full published-scope assessment — 8 November 2026, 01:46 UTC
 
 - **Not every requirement is closed.** Presenter-supported scoped judging is feasible after access arrangements; fresh external judge confirmation-email/isolated-workspace onboarding remains unverified. Genuine batch approval and a legitimate positive supplier-change scenario remain unproved. Single configured Harbourside merchant support is a substantive limitation.
