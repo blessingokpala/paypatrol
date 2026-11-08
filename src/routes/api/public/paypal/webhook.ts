@@ -27,7 +27,7 @@ export const Route = createFileRoute("/api/public/paypal/webhook")({
       if (!order) return new Response("Unknown payment", { status: 404 });
       const { data: attempt } = await supabaseAdmin.from("payment_attempts").select("*").eq("id", order.payment_attempt_id).eq("org_id", order.org_id).single();
       if (!attempt) return new Response("Unknown payment", { status: 404 });
-      const { data: apply, error } = await supabaseAdmin.rpc("record_verified_sandbox_event", { _event: event.id, _type: event.event_type, _order: orderId, _capture: event.resource.id ?? null });
+      const { data: apply, error } = await supabaseAdmin.rpc("record_verified_sandbox_event", { _event: event.id, _type: event.event_type, _order: orderId, ...(event.resource.id ? { _capture: event.resource.id } : {}) });
       if (error) return new Response("Could not record event", { status: 500 });
       if (!apply) return new Response("Already processed", { status: 200 });
       await reconcileSandboxOrder(supabaseAdmin, token, attempt as unknown as PaymentSnapshot, orderId);

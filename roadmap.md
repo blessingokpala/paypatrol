@@ -1,5 +1,12 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
+## Release continuation — 8 November 2026
+- [ ] Fix webhook optional capture typing; confirm harness typecheck/production build and full unit suite.
+- [ ] Repair and execute rollback-only webhook gate SQL fixture; check unauthorized, forged, mismatched, matching and repeated event accounting.
+- [ ] Reconcile existing pending attempts only; retain completed CA$25 as default evidence.
+- [ ] Publish only after release checks pass, verify deployment, rerun deep scan; close Critical only with supporting evidence; retain document warning separately.
+- [ ] Produce visually checked v3 guide PDF and corrected assessment with verification scope and human-owned open checks.
+
 ## Final readiness update — 8 November 2026
 - [x] Record batch verification in completion table and versioned Judge Evaluation Guide; include exact references and matching Evidence locations.
 - [x] Published refresh/Completed/Evidence export, desktop/mobile buttons and one-item 13→12 notification persistence checked; 76 tests pass.
