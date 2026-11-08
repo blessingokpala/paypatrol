@@ -1,9 +1,9 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
 ## Review-first workflow — 7 November 2026
-- [ ] Create one fresh labelled pending spending test from a different submitter for tisvisitor@gmail.com; verify authorised published desktop/mobile buttons and leave pending.
-- [ ] Trace new member's 10 notifications and distinguish unread events from current tasks.
-- [ ] Put relevant supplier/spending review first; reveal separate rejection/evidence paths; retain server guards.
+- [x] Created PP-SPENDING-REVIEW-20261108-001 CA$135 from UXAItion; TisVisitor eligible, published paired buttons checked, zero decisions/reservations/attempts; left pending.
+- [x] Traced 10 distinct membership-backfilled supplier events; bell now distinguishes unread events from current tasks and labels original submissions.
+- [x] Review-first panels and separate reason/evidence paths published; unsupported recipient confirmation refused server-side; 76 tests passed.
 - [ ] Verify notification/Pending links, desktop/mobile, unsupported recipient and saved outcome refresh; publish and capture first screens.
 
 ## Judge evaluation guide — 7 November 2026
@@ -11,7 +11,7 @@
 - [x] Current decisions, individual-only methods, task/outcome read timestamps and one completed CA$25 capture/consumed reservation reconciled.
 - [x] Six-page guide and one-page fictional sample visually inspected and saved in Files with Markdown; collection references pending upload at creation.
 - [x] Human-only access/reviewer checks and integration/security limitations explicitly documented; no decisions/payments changed.
-- [ ] Fresh external judge signup/email confirmation and isolated business/invitation acceptance: needs a judge-controlled email and their own confirmation.
+- [x] User confirmed invitation/login issue resolved; TisVisitor authorised membership observed. Isolated judge workspace remains a separate guide option, not required for current review task.
 
 ## Completed
 - [x] Two existing CA$135 requests identified; partner-authorised 390px mobile selection enables Approve eligible (2), without submitting a decision.
