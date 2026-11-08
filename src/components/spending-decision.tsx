@@ -69,6 +69,10 @@ export function SpendingDecision({ request, supplier, findings, onDone, sticky =
         {error && !rejecting && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
       </>}
     </section>
+    {sticky && !block && <div className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-2 gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Spending quick actions">
+      <Button aria-label="Reject spending (quick action)" variant="outline" className="min-h-12 border-2 border-foreground" disabled={busy} onClick={() => { setError(null); setRejecting(true); }}>Reject</Button>
+      <Button aria-label="Approve spending (quick action)" className="min-h-12" disabled={busy} onClick={() => decide(true)}>Approve</Button>
+    </div>}
     <Dialog open={rejecting} onOpenChange={(open) => { if (!busy) setRejecting(open); }}>
       <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg">
         <DialogTitle>Reject spending request</DialogTitle>

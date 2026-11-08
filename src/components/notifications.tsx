@@ -76,7 +76,20 @@ export function NotificationBell() {
     const permitted = (membershipTimes.data ?? []).some(m => m.org_id === n.org_id && (m.role === "owner" || m.role === (n.kind === "supplier_review" ? "change_approver" : "payer")));
     return currentReviewTask(n.kind, n.purchases, n.supplier_change_requests, org.userId, permitted);
   };
-  const currentTasks = new Set((inbox.data ?? []).filter(n => n.org_id === org.orgId && taskFor(n)).map(n => n.change_request_id ?? n.purchase_id)).size;
+  const reviewTasks = useQuery({
+    queryKey: ["notification-current-tasks", org.orgId, org.userId],
+    refetchInterval: 15000,
+    queryFn: async () => {
+      const [spending, supplier] = await Promise.all([
+        supabase.from("purchases").select("id, status, version, requested_by").eq("org_id", org.orgId).eq("status", "approval_required"),
+        supabase.from("supplier_change_requests").select("id, status, proposed_by, proposed_recipient, purchases(status, version, requested_by, requested_recipient)").eq("org_id", org.orgId).in("status", ["pending_verification", "verified_pending_decision"]),
+      ]);
+      if (spending.error || supplier.error) throw spending.error ?? supplier.error;
+      return (spending.data ?? []).filter(p => currentReviewTask("spending_review", p, null, org.userId, org.has("payer", "owner"))).length +
+        (supplier.data ?? []).filter(c => currentReviewTask("supplier_review", c.purchases, c, org.userId, org.has("change_approver", "owner"))).length;
+    },
+  });
+  const currentTasks = reviewTasks.data;
   const isExisting = (n: NonNullable<typeof inbox.data>[number]) => (membershipTimes.data ?? []).some(m => m.org_id === n.org_id && m.created_at === n.created_at);
 
   const notifications = useMemo(() => {
@@ -167,7 +180,7 @@ export function NotificationBell() {
             </Button>
           )}
         </div>
-        <div className="border-b px-4 py-2 text-xs text-muted-foreground"><p>{unread} unread notifications · {currentTasks} current review tasks in {org.orgName}</p><p>Reading an alert does not remove a pending review task.</p><Button variant="link" className="h-auto p-0 text-xs" onClick={() => navigate({ to: "/approvals" })}>Open pending reviews</Button></div>
+        <div className="border-b px-4 py-2 text-xs text-muted-foreground"><p>{unread} unread notifications · {currentTasks ?? "…"} current review tasks in {org.orgName}</p><p>Reading an alert does not remove a pending review task.</p><Button variant="link" className="h-auto p-0 text-xs" onClick={() => navigate({ to: "/approvals" })}>Open pending reviews</Button></div>
         <div className="max-h-96 overflow-y-auto">
           {inbox.isError ? <p role="alert" className="p-4 text-sm text-blocked">Notifications could not load. <Button variant="link" onClick={() => inbox.refetch()}>Try again</Button></p> : inbox.isLoading ? <p role="status" className="p-4 text-sm text-muted-foreground">Loading notifications…</p> : visible.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">

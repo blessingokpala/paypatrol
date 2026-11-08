@@ -112,7 +112,7 @@ function Review() {
 
 
   return (
-    <>
+    <div className="pb-28 lg:pb-0">
       <BackLink to="/purchases" label="Back to purchases" />
       <PageHeader
         title={p.title}
@@ -333,7 +333,7 @@ function Review() {
         )}
         {!isTestData && org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending", "paid"].includes(p.status) && <SandboxCheckout purchaseId={p.id} onDone={refresh} />}
       </Panel>
-    </>
+    </div>
   );
 }
 
@@ -459,7 +459,8 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
   const open = current && !["paid", "cancelled", "failed"].includes(purchaseStatus) && (cr.status === "pending_verification" || cr.status === "verified_pending_decision");
   const [path, setPath] = useState<"reject" | "verify" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const supported = supplierConfirmationSupported(cr.status, cr.proposed_recipient, merchant, verifs.filter(v => v.outcome === "confirmed").map(v => v.channel_value), isDemo);
+  const latestCheck = [...verifs].sort((a, b) => b.contacted_at.localeCompare(a.contacted_at))[0];
+  const supported = supplierConfirmationSupported(cr.status, cr.proposed_recipient, merchant, latestCheck?.outcome === "confirmed" ? [latestCheck.channel_value] : [], isDemo);
   const [f, setF] = useState({ channel_value: "", person: "", when: new Date().toISOString().slice(0, 16), outcome: "denied", evidence: "" });
   const [note, setNote] = useState("");
 
@@ -543,6 +544,8 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
           )}
         </div>
       )}
+      {primary && open && canReview && <div className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-2 gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Supplier review quick actions"><Button aria-label="Reject supplier change (quick action)" variant="outline" className="min-h-12 whitespace-normal" onClick={() => { setPath("reject"); setError(null); document.getElementById(`steps-${cr.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Reject supplier change</Button><Button aria-label="Verify supplier change (quick action)" className="min-h-12 whitespace-normal" onClick={() => { setPath("verify"); setError(null); document.getElementById(`steps-${cr.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Verify supplier change</Button></div>}
+      <div id={`steps-${cr.id}`} className="scroll-mt-28" />
       {open && canReview && path === "reject" && <form noValidate onSubmit={e => { e.preventDefault(); void decide(false); }} className="space-y-3">
         <RequiredNote />
         <Label htmlFor={`reason-${cr.id}`}>Reason (required to reject)<Req /></Label>
