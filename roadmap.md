@@ -1,6 +1,7 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
 ## Review-first workflow — 7 November 2026
+- [x] Created PP-NNENNA-SPENDING-20261108-001 CA$135 v1 from UXAItion; Nnenna eligible under existing owner/Payer membership. Published desktop/mobile checked as Nnenna with Ada’s Grocery selected; enabled Reject/Approve visible initially. Only informational approval finding, zero supplier changes/reservations/payment attempts; left pending for her own decision.
 - [x] Created PP-SPENDING-REVIEW-20261108-001 CA$135 from UXAItion; TisVisitor eligible, published paired buttons checked, zero decisions/reservations/attempts; left pending.
 - [x] Traced 10 distinct membership-backfilled supplier events; bell now distinguishes unread events from current tasks and labels original submissions.
 - [x] Review-first panels and separate reason/evidence paths published; unsupported recipient confirmation refused server-side; 76 tests passed.
