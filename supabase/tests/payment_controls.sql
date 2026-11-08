@@ -280,7 +280,6 @@ begin
   perform public.configure_sandbox_merchant(v_org, v_sup, 'L8SVBX42QHT3U', a);
   v_p := public.submit_invoice(v_org, v_sup, 'INV-GATE', 12000, 'CAD', 'L8SVBX42QHT3U', null, 'packaging', 'T', null, null, null);
   perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
-  perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
   perform public.approve_purchase(v_p,1,'ok');
   v_res := public.reserve_budget(v_p);
   select (public.begin_sandbox_payment(v_p))->>'id' into v_att;
@@ -290,6 +289,9 @@ begin
   set local role authenticated;
   begin perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD'); res := res || 'FAIL browser recorder allowed; '; exception when insufficient_privilege then res := res || 'PASS browser recorder refused; '; end;
   begin perform public.record_verified_sandbox_event('WH-FORGED','PAYMENT.CAPTURE.COMPLETED','ORDER-GATE-1','CAP-GATE-1'); res := res || 'FAIL forged event allowed; '; exception when insufficient_privilege then res := res || 'PASS browser event forgery refused; '; end;
+  reset role;
+  set local role anon;
+  begin perform public.record_verified_sandbox_event('WH-ANON','PAYMENT.CAPTURE.COMPLETED','ORDER-GATE-1','CAP-GATE-1'); res := res || 'FAIL anonymous event allowed; '; exception when insufficient_privilege then res := res || 'PASS anonymous event refused; '; end;
   reset role;
   -- 1. COMPLETED without any verified webhook must not mark paid
   perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD');
