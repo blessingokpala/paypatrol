@@ -1,6 +1,7 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
 ## Review-first workflow — 7 November 2026
+- [ ] Create one fresh labelled pending spending test from a different submitter for tisvisitor@gmail.com; verify authorised published desktop/mobile buttons and leave pending.
 - [ ] Trace new member's 10 notifications and distinguish unread events from current tasks.
 - [ ] Put relevant supplier/spending review first; reveal separate rejection/evidence paths; retain server guards.
 - [ ] Verify notification/Pending links, desktop/mobile, unsupported recipient and saved outcome refresh; publish and capture first screens.

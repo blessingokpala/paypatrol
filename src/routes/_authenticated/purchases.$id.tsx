@@ -29,7 +29,7 @@ import { fromSearch } from "@/lib/return-to";
 import { FieldSelect } from "@/components/field-select";
 
 export const Route = createFileRoute("/_authenticated/purchases/$id")({
-  validateSearch: (s: Record<string, unknown>) => ({ ...fromSearch(s), review: s["review"] === "supplier" || s["review"] === "spending" ? s["review"] : undefined, change: typeof s["change"] === "string" && /^[0-9a-f-]{36}$/i.test(s["change"]) ? s["change"] : undefined }),
+  validateSearch: (s: Record<string, unknown>): { from?: string; review?: "supplier" | "spending" | undefined; change?: string | undefined } => ({ ...fromSearch(s), review: s["review"] === "supplier" || s["review"] === "spending" ? s["review"] : undefined, change: typeof s["change"] === "string" && /^[0-9a-f-]{36}$/i.test(s["change"]) ? s["change"] : undefined }),
   head: () => ({ meta: [{ title: "Request review — PayPatrol" }, { name: "description", content: "Compare a request against approved records." }, { property: "og:title", content: "Request review — PayPatrol" }, { property: "og:description", content: "Invoice evidence, recipient comparison and payment controls." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: Review,
 });
