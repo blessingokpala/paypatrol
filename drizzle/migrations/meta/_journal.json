@@ -253,6 +253,13 @@
       "when": 1794104780975,
       "tag": "0035_webhook_gated_capture_completion",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794106498378,
+      "tag": "0036_restrict_verified_webhook_recorder",
+      "breakpoints": true
     }
   ]
 }

@@ -219,7 +219,7 @@ begin
   raise exception 'RESULTS: %', res;
 end $$;
 
--- Block 6: spending rejection (reject_spending) is distinct from cancellation
+-- Block 5: spending rejection (reject_spending) is distinct from cancellation
 do $$
 declare
   a uuid := '00000000-0000-0000-0000-00000000000a';
@@ -274,19 +274,27 @@ declare
 begin
   perform set_config('request.jwt.claims', json_build_object('sub',a,'role','authenticated')::text, true);
   v_org := public.create_organization('Webhook Gate Test', true);
+  perform public.mark_test_workspace(v_org, 'Rollback-only webhook gate fixture; no provider operation');
   insert into public.memberships(org_id,user_id,role) values (v_org,b,'payer');
-  select s.id into v_sup from public.suppliers s where s.org_id=v_org limit 1;
-  perform public.configure_sandbox_merchant(v_org, v_sup, 'DEMO-MERCHANT-HARBOUR-001', a);
-  v_p := public.submit_invoice(v_org, v_sup, 'INV-GATE', 12000, 'CAD', 'DEMO-MERCHANT-HARBOUR-001', null, 'packaging', 'T', null, null, null);
+  select s.id into v_sup from public.suppliers s join public.supplier_versions sv on sv.id=s.current_version_id where s.org_id=v_org and sv.enrolment_status='demo_fixture' limit 1;
+  perform public.configure_sandbox_merchant(v_org, v_sup, 'L8SVBX42QHT3U', a);
+  v_p := public.submit_invoice(v_org, v_sup, 'INV-GATE', 12000, 'CAD', 'L8SVBX42QHT3U', null, 'packaging', 'T', null, null, null);
   perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
   perform public.approve_purchase(v_p,1,'ok');
   v_res := public.reserve_budget(v_p);
   select (public.begin_sandbox_payment(v_p))->>'id' into v_att;
   insert into public.paypal_orders(org_id,payment_attempt_id,paypal_order_id,status,payee_merchant_id,amount_minor,currency)
-    values (v_org,v_att,'ORDER-GATE-1','APPROVED','DEMO-MERCHANT-HARBOUR-001',12000,'CAD');
+    values (v_org,v_att,'ORDER-GATE-1','APPROVED','L8SVBX42QHT3U',12000,'CAD');
   update public.payment_attempts set status='capturing' where id=v_att;
+  set local role authenticated;
+  begin perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD'); res := res || 'FAIL browser recorder allowed; '; exception when insufficient_privilege then res := res || 'PASS browser recorder refused; '; end;
+  begin perform public.record_verified_sandbox_event('WH-FORGED','PAYMENT.CAPTURE.COMPLETED','ORDER-GATE-1','CAP-GATE-1'); res := res || 'FAIL forged event allowed; '; exception when insufficient_privilege then res := res || 'PASS browser event forgery refused; '; end;
+  reset role;
+  set local role anon;
+  begin perform public.record_verified_sandbox_event('WH-ANON','PAYMENT.CAPTURE.COMPLETED','ORDER-GATE-1','CAP-GATE-1'); res := res || 'FAIL anonymous event allowed; '; exception when insufficient_privilege then res := res || 'PASS anonymous event refused; '; end;
+  reset role;
   -- 1. COMPLETED without any verified webhook must not mark paid
-  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','DEMO-MERCHANT-HARBOUR-001',12000,'CAD');
+  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD');
   select status into v_st from public.purchases where id=v_p;
   res := res || case when v_st='paid' then 'FAIL paid without webhook; ' else 'PASS no webhook not paid (' || v_st || '); ' end;
   select status into v_st from public.payment_attempts where id=v_att;
@@ -298,30 +306,46 @@ begin
   -- 2. Verified webhook for a DIFFERENT capture must not complete this one
   insert into public.webhook_events(org_id,provider,event_id,event_type,verified,payload)
     values (v_org,'paypal_sandbox','WH-GATE-OTHER','PAYMENT.CAPTURE.COMPLETED',true,jsonb_build_object('order_id','ORDER-GATE-1','capture_id','CAP-OTHER'));
-  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','DEMO-MERCHANT-HARBOUR-001',12000,'CAD');
+  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD');
   select status into v_st from public.purchases where id=v_p;
   res := res || case when v_st='paid' then 'FAIL paid with mismatched webhook; ' else 'PASS mismatched webhook not paid; ' end;
-  -- 3. Verified webhook for the exact order+capture completes the payment
   insert into public.webhook_events(org_id,provider,event_id,event_type,verified,payload)
-    values (v_org,'paypal_sandbox','WH-GATE-1','PAYMENT.CAPTURE.COMPLETED',true,jsonb_build_object('order_id','ORDER-GATE-1','capture_id','CAP-GATE-1'));
-  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','DEMO-MERCHANT-HARBOUR-001',12000,'CAD');
+    values (v_org,'paypal_sandbox','WH-WRONG-ORDER','PAYMENT.CAPTURE.COMPLETED',true,jsonb_build_object('order_id','ORDER-OTHER','capture_id','CAP-GATE-1')),
+    (v_org,'paypal_sandbox','WH-WRONG-TYPE','PAYMENT.CAPTURE.PENDING',true,jsonb_build_object('order_id','ORDER-GATE-1','capture_id','CAP-GATE-1'));
+  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD');
+  select status into v_st from public.purchases where id=v_p;
+  res := res || case when v_st='payment_pending' then 'PASS wrong order and type refused; ' else 'FAIL wrong order/type ' || v_st || '; ' end;
+  -- 3. Verified webhook for the exact order+capture completes the payment
+  perform public.record_verified_sandbox_event('WH-GATE-1','PAYMENT.CAPTURE.COMPLETED','ORDER-GATE-1','CAP-GATE-1');
+  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD');
   select status into v_st from public.purchases where id=v_p;
   res := res || case when v_st='paid' then 'PASS verified webhook completes; ' else 'FAIL verified webhook not paid (' || v_st || '); ' end;
   select status into v_st from public.budget_reservations where id=v_res;
   res := res || case when v_st='consumed' then 'PASS budget consumed once; ' else 'FAIL budget ' || v_st || '; ' end;
   select count(*) into v_n from public.payment_attempts where purchase_id=v_p and status='completed';
   res := res || 'completed attempts=' || v_n || '; ';
+  perform public.finish_sandbox_event('WH-GATE-1');
+  if public.record_verified_sandbox_event('WH-GATE-1','PAYMENT.CAPTURE.COMPLETED','ORDER-GATE-1','CAP-GATE-1') then res := res || 'FAIL processed replay accepted; '; else res := res || 'PASS processed replay deduplicated; '; end if;
+  perform public.record_sandbox_capture(v_att,'ORDER-GATE-1','CAP-GATE-1','COMPLETED','L8SVBX42QHT3U',12000,'CAD');
+  select count(*) into v_n from public.audit_events where entity_id=v_p and action='sandbox_capture_completed';
+  res := res || case when v_n=1 then 'PASS one completion audit; ' else 'FAIL completion audit count=' || v_n || '; ' end;
+  select count(*) into v_n from public.budget_reservations where purchase_id=v_p and status='consumed';
+  res := res || case when v_n=1 then 'PASS one budget charge after repeat; ' else 'FAIL charge count=' || v_n || '; ' end;
+  select count(*) into v_n from public.paypal_captures where paypal_order_row_id=(select id from public.paypal_orders where payment_attempt_id=v_att);
+  res := res || case when v_n=1 then 'PASS one capture after repeat; ' else 'FAIL capture count=' || v_n || '; ' end;
   -- 4. Unverified webhook row must not complete
-  v_p := public.submit_invoice(v_org, v_sup, 'INV-GATE2', 12000, 'CAD', 'DEMO-MERCHANT-HARBOUR-001', null, 'packaging', 'T', null, null, null);
+  perform set_config('request.jwt.claims', json_build_object('sub',a,'role','authenticated')::text, true);
+  v_p := public.submit_invoice(v_org, v_sup, 'INV-GATE2', 12000, 'CAD', 'L8SVBX42QHT3U', null, 'packaging', 'T', null, null, null);
+  perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
   perform public.approve_purchase(v_p,1,'ok');
   v_res := public.reserve_budget(v_p);
   select (public.begin_sandbox_payment(v_p))->>'id' into v_att;
   insert into public.paypal_orders(org_id,payment_attempt_id,paypal_order_id,status,payee_merchant_id,amount_minor,currency)
-    values (v_org,v_att,'ORDER-GATE-2','APPROVED','DEMO-MERCHANT-HARBOUR-001',12000,'CAD');
+    values (v_org,v_att,'ORDER-GATE-2','APPROVED','L8SVBX42QHT3U',12000,'CAD');
   update public.payment_attempts set status='capturing' where id=v_att;
   insert into public.webhook_events(org_id,provider,event_id,event_type,verified,payload)
     values (v_org,'paypal_sandbox','WH-GATE-2','PAYMENT.CAPTURE.COMPLETED',false,jsonb_build_object('order_id','ORDER-GATE-2','capture_id','CAP-GATE-2'));
-  perform public.record_sandbox_capture(v_att,'ORDER-GATE-2','CAP-GATE-2','COMPLETED','DEMO-MERCHANT-HARBOUR-001',12000,'CAD');
+  perform public.record_sandbox_capture(v_att,'ORDER-GATE-2','CAP-GATE-2','COMPLETED','L8SVBX42QHT3U',12000,'CAD');
   select status into v_st from public.purchases where id=v_p;
   res := res || case when v_st='paid' then 'FAIL unverified webhook paid; ' else 'PASS unverified webhook not paid; ' end;
   raise exception 'RESULTS: %', res;

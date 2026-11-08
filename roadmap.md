@@ -1,11 +1,20 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
+## Release continuation — 8 November 2026
+- [x] Recovered exact TS2322 null/undefined diagnostic and fixed optional capture argument; harness build OK, 82/82 tests in 14 files pass.
+- [ ] Lovable/platform: obtain fresh separately identifiable current-version typecheck/production-build diagnostics; hosted status still returns historical run, no manual build permitted by platform workflow.
+- [x] Repaired merchant fixture with intact validation and marked rollback workspace. Initial SQL run exposed PUBLIC event-attestation privilege; applied 0036 and retested 13 PASS checks including anonymous/browser forgery refusals, matching event and one budget charge after repeat. Zero leftover fixtures/events.
+- [x] Reconciled both existing attempts via authorised preview UI; at 03:00 UTC both remain PENDING/confirmation_pending with active reservations; historical completed CA$25 and valid batch decisions preserved.
+- [ ] Blessing + Lovable: genuine existing completed-event resend to configured preview (or post-release production), verify signed acceptance/replay; genuine pending→Paid transition still awaits real completion, no new checkout now.
+- [ ] Lovable: publish only after release checks pass, verify deployment, then basic/deep scan and evidence-based Critical closure. Separate document-link warning remains active.
+- [x] Produced v3 guide PDF (all five pages visually inspected) and corrected internal assessment; explicit preview/published/scripted boundaries and human-owned open checks.
+
 ## Final readiness update — 8 November 2026
 - [x] Record batch verification in completion table and versioned Judge Evaluation Guide; include exact references and matching Evidence locations.
 - [x] Published refresh/Completed/Evidence export, desktop/mobile buttons and one-item 13→12 notification persistence checked; 76 tests pass.
 - [x] Both pending attempts reconciled via maintenance job against live PayPal (02:20 UTC): captures 9DS69868M5318110G (CA$135) and 015079546D223270G (CA$25) still PENDING at PayPal; attempts confirmation_pending; both reservations active; no replacement payment created.
-- [x] Critical finding fix implemented (migration 0035): Paid now requires a verified signed webhook bound to the exact order+capture; sync capture response alone records only PENDING. Live forgery tests: authenticated RPC 403, direct purchases UPDATE 403, anonymous RPC 401. 77/77 unit tests pass.
-- [ ] PARKED (credits): publish the webhook-gate fix; re-run deep security scan and mark finding fixed; finish SQL block 6 live run (configure_sandbox_merchant rejected DEMO merchant id — use a valid-format id); produce v3 judge guide PDF + v3 assessment; Nnenna phone check link: /notifications/73048a1f-949c-43df-b01d-10717ce39295.
+- [x] Webhook gate 0035 implemented; release continuation found and fixed recreated-recorder PUBLIC privilege in 0036. 13 rollback SQL checks PASS and 82 unit tests pass. Critical closure still requires release/genuine-event/deep-scan evidence.
+- [ ] Release tasks now tracked above; Nnenna physical-phone check remains open: /notifications/73048a1f-949c-43df-b01d-10717ce39295.
 
 ## Full published-scope assessment — 8 November 2026
 - [x] Assessed uploaded requirement matrix against published screens, live records, genuine no-merchant extraction/correction/reopen, 76 tests and fresh direct negative guards; saved dated assessment/screenshots.
@@ -49,7 +58,7 @@
 - [x] Current published screens verified; landing payment-scope correction and capture/order Evidence details published and observed.
 - [x] Genuine batch approval: PP-BATCH-ASSESS-20261108-001/-002 verified by saved batch methods, published Completed/refresh/Evidence; do not repeat.
 - [ ] Positive supplier-change verification: requires an isolated scenario with genuine independently evidenced replacement account and supported merchant/onboarding verification; do not assign unsupported TEST approval.
-- [ ] Disposition of disputed Critical scan finding: authenticated authoritative PayPal API confirmation is mistaken for a browser-only Paid assertion; retained for owner/independent review, not ignored automatically.
+- [ ] Close retained Critical only after genuine webhook/release/deep-scan evidence; real default event-attestation privilege bypass was fixed in 0036, not dismissed as false positive.
 - [x] Current Evidence CSV download and completed capture contents confirmed on published site; previously inspected shared encoder retained.
 
 ## Standing constraints
