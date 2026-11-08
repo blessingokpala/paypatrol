@@ -1,11 +1,12 @@
 # PayPatrol final verification roadmap — 6 November 2026
 
 ## Release continuation — 8 November 2026
+- [x] Read-only actual PayPal app/webhook/event/capture verification at 03:10 UTC: published destination unchanged, original completion exact-match; both other captures PENDING and reservations active. Repeated signed-in negative checks 42501; 82 unit tests pass; basic scan no findings.
 - [x] Recovered exact TS2322 null/undefined diagnostic and fixed optional capture argument; harness build OK, 82/82 tests in 14 files pass.
-- [ ] Lovable/platform: obtain fresh separately identifiable current-version typecheck/production-build diagnostics; hosted status still returns historical run, no manual build permitted by platform workflow.
+- [ ] Lovable/platform: separate typecheck stage evidence still unavailable; current hosted production-mode preview build br_967c2fa1 succeeded at 03:03:25 UTC for 8781ff7, in sync with empty diagnostics/failed_targets. No manual build permitted.
 - [x] Repaired merchant fixture with intact validation and marked rollback workspace. Initial SQL run exposed PUBLIC event-attestation privilege; applied 0036 and retested 13 PASS checks including anonymous/browser forgery refusals, matching event and one budget charge after repeat. Zero leftover fixtures/events.
 - [x] Reconciled both existing attempts via authorised preview UI; at 03:00 UTC both remain PENDING/confirmation_pending with active reservations; historical completed CA$25 and valid batch decisions preserved.
-- [ ] Blessing + Lovable: genuine existing completed-event resend to configured preview (or post-release production), verify signed acceptance/replay; genuine pending→Paid transition still awaits real completion, no new checkout now.
+- [ ] Lovable: genuine replay/transition proof blocked prepublication: hosted preview returns generic Unauthorized; actual app has one webhook targeting published URL. Prepare isolated public receiver with independent verification ID without changing published config, or obtain release approval for unchanged published destination. No Blessing resend/checkout action now.
 - [ ] Lovable: publish only after release checks pass, verify deployment, then basic/deep scan and evidence-based Critical closure. Separate document-link warning remains active.
 - [x] Produced v3 guide PDF (all five pages visually inspected) and corrected internal assessment; explicit preview/published/scripted boundaries and human-owned open checks.
 
