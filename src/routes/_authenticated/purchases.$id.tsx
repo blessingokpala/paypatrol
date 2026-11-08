@@ -112,7 +112,7 @@ function Review() {
 
 
   return (
-    <>
+    <div className="pb-40 lg:pb-0">
       <BackLink to="/purchases" label="Back to purchases" />
       <PageHeader
         title={p.title}
@@ -333,7 +333,7 @@ function Review() {
         )}
         {!isTestData && org.has("payer", "owner") && ["cleared_for_checkout", "payment_pending", "paid"].includes(p.status) && <SandboxCheckout purchaseId={p.id} onDone={refresh} />}
       </Panel>
-    </>
+    </div>
   );
 }
 
@@ -459,7 +459,8 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
   const open = current && !["paid", "cancelled", "failed"].includes(purchaseStatus) && (cr.status === "pending_verification" || cr.status === "verified_pending_decision");
   const [path, setPath] = useState<"reject" | "verify" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const supported = supplierConfirmationSupported(cr.status, cr.proposed_recipient, merchant, verifs.filter(v => v.outcome === "confirmed").map(v => v.channel_value), isDemo);
+  const latestCheck = [...verifs].sort((a, b) => b.contacted_at.localeCompare(a.contacted_at))[0];
+  const supported = supplierConfirmationSupported(cr.status, cr.proposed_recipient, merchant, latestCheck?.outcome === "confirmed" ? [latestCheck.channel_value] : [], isDemo);
   const [f, setF] = useState({ channel_value: "", person: "", when: new Date().toISOString().slice(0, 16), outcome: "denied", evidence: "" });
   const [note, setNote] = useState("");
 
@@ -488,7 +489,7 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
       <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] gap-2 text-sm"><p className="font-semibold">{supplier}</p><p className="font-bold">{amount}</p></div>
       <p className="mb-3 text-sm">Payment is held until this recipient change is independently reviewed. Current request: {humanize(purchaseStatus)}.</p>
       <dl className="mb-3 grid grid-cols-2 gap-3 text-xs"><div className="min-w-0"><dt className="text-muted-foreground">Approved recipient</dt><dd className="break-all font-mono">{sv?.paypal_merchant_id ?? "Not provided"}</dd></div><div className="min-w-0"><dt className="text-muted-foreground">Proposed recipient</dt><dd className="break-all font-mono">{cr.proposed_recipient}</dd></div></dl>
-      {open && canReview && <div className="sticky top-28 z-10 mb-4 border-y bg-card py-2 lg:static"><div className="grid grid-cols-2 gap-3"><Button variant="outline" className="min-h-12 whitespace-normal" onClick={() => { setPath("reject"); setError(null); }}>Reject supplier change</Button><Button className="min-h-12 whitespace-normal" onClick={() => { setPath("verify"); setError(null); }}>Verify supplier change</Button></div><p className="mt-1 text-xs text-muted-foreground">Choose a path. Verify opens the evidence step; it does not save a decision.</p></div>}
+      {open && canReview && <div className="mb-4 border-y bg-card py-2"><div className="grid grid-cols-2 gap-3"><Button variant="outline" className="min-h-12 whitespace-normal" onClick={() => { setPath("reject"); setError(null); }}>Reject supplier change</Button><Button className="min-h-12 whitespace-normal" onClick={() => { setPath("verify"); setError(null); }}>Verify supplier change</Button></div><p className="mt-1 text-xs text-muted-foreground">Choose a path. Verify opens the evidence step; it does not save a decision.</p></div>}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {current
           ? <ToneBadge tone="warning">Applies to the current version of this request</ToneBadge>
@@ -543,6 +544,8 @@ function ChangeReview({ cr, sv, verifs, names, onDone, current, isDemo, members,
           )}
         </div>
       )}
+      {primary && open && canReview && <div className="fixed inset-x-0 bottom-10 z-20 grid grid-cols-2 gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Supplier review quick actions"><Button aria-label="Reject supplier change (quick action)" variant="outline" className="min-h-12 whitespace-normal" onClick={() => { setPath("reject"); setError(null); document.getElementById(`steps-${cr.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Reject supplier change</Button><Button aria-label="Verify supplier change (quick action)" className="min-h-12 whitespace-normal" onClick={() => { setPath("verify"); setError(null); document.getElementById(`steps-${cr.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>Verify supplier change</Button></div>}
+      <div id={`steps-${cr.id}`} className="scroll-mt-28" />
       {open && canReview && path === "reject" && <form noValidate onSubmit={e => { e.preventDefault(); void decide(false); }} className="space-y-3">
         <RequiredNote />
         <Label htmlFor={`reason-${cr.id}`}>Reason (required to reject)<Req /></Label>

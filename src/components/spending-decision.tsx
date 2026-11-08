@@ -61,7 +61,7 @@ export function SpendingDecision({ request, supplier, findings, onDone, sticky =
       </div>
       {findings.length > 0 && <ul className="mb-3 max-h-24 space-y-1 overflow-y-auto text-xs text-muted-foreground" aria-label="Spending policy findings">{findings.map((f) => <li key={f.id}>{f.message}</li>)}</ul>}
       {block ? <p className="text-sm text-muted-foreground">{block}</p> : <>
-        <div className={sticky ? "sticky top-28 z-10 grid grid-cols-2 gap-3 bg-card py-2 lg:static" : "grid grid-cols-2 gap-3"}>
+        <div className={sticky ? "grid grid-cols-2 gap-3 bg-card py-2" : "grid grid-cols-2 gap-3"}>
           <Button variant="outline" className="min-h-12 border-2 border-foreground bg-card text-foreground" disabled={busy} onClick={() => { setError(null); setRejecting(true); }}>Reject</Button>
           <Button className="min-h-12" disabled={busy} onClick={() => decide(true)}>{busy ? "Saving…" : "Approve"}</Button>
         </div>
@@ -69,6 +69,10 @@ export function SpendingDecision({ request, supplier, findings, onDone, sticky =
         {error && !rejecting && <p role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
       </>}
     </section>
+    {sticky && !block && <div className="fixed inset-x-0 bottom-10 z-20 grid grid-cols-2 gap-3 border-t bg-card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden" aria-label="Spending quick actions">
+      <Button aria-label="Reject spending (quick action)" variant="outline" className="min-h-12 border-2 border-foreground" disabled={busy} onClick={() => { setError(null); setRejecting(true); }}>Reject</Button>
+      <Button aria-label="Approve spending (quick action)" className="min-h-12" disabled={busy} onClick={() => decide(true)}>Approve</Button>
+    </div>}
     <Dialog open={rejecting} onOpenChange={(open) => { if (!busy) setRejecting(open); }}>
       <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] overflow-y-auto rounded-lg">
         <DialogTitle>Reject spending request</DialogTitle>
