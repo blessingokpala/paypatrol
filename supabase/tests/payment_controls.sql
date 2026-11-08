@@ -280,7 +280,6 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub',b,'role','authenticated')::text, true);
   perform public.approve_purchase(v_p,1,'ok');
   v_res := public.reserve_budget(v_p);
-  v_att := (public.begin_sandbox_payment(v_p))->>'id'::uuid;
   select (public.begin_sandbox_payment(v_p))->>'id' into v_att;
   insert into public.paypal_orders(org_id,payment_attempt_id,paypal_order_id,status,payee_merchant_id,amount_minor,currency)
     values (v_org,v_att,'ORDER-GATE-1','APPROVED','DEMO-MERCHANT-HARBOUR-001',12000,'CAD');
