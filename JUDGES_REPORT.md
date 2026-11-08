@@ -1,5 +1,75 @@
 # PayPatrol — Judges’ Verification Report
 
+# PayPatrol internal release assessment — v3
+
+Checkpoint: 8 November 2026, 03:01 UTC. This supersedes earlier current-state claims, not historical evidence. Release is **not yet cleared for publication**. No fresh checkout, reservation, spending decision or supplier decision was created.
+
+## Build and automated results
+
+- Recovered exact hosted compiler diagnostic from build run br_c4314d13-97f1-442f-8052-29305651d3b4: `src/routes/api/public/paypal/webhook.ts(30,157): TS2322: Type string | null is not assignable to string | undefined`.
+- Cause: regenerated RPC typing declares `_capture?: string`; webhook passed `event.resource.id ?? null`. Fixed by omitting the optional argument when absent. Database default remains NULL; required matching capture is still needed to authorise Paid.
+- Automatic harness reports **build OK**, most recently 02:58:59 UTC. No manual production build/typecheck was run (platform workflow requires harness execution). Hosted build status still identifies the earlier 02:40 run and returns its historical diagnostic despite succeeded summary. Therefore independent, separately named current production-build and typecheck transcripts are not available; do not claim they were manually executed or treat the stale hosted summary as new release proof. Lovable must obtain current-version diagnostics before publication.
+- Complete unit suite: **82/82 tests, 14 files**, passed 02:58 UTC. Five new scripted route tests cover absent/forged signature, matching order/capture attestation, processed duplicate and unknown order. Scripted SUCCESS is not a genuine PayPal signature.
+
+## Database security discovery and repair
+
+SQL block 6 merchant `DEMO-MERCHANT-HARBOUR-001` violates the unchanged 13-character merchant validator. Fixture now uses existing configured Sandbox-format L8SVBX42QHT3U in a freshly created, explicitly marked, rollback-only test workspace. It selects the fixture supplier, uses the existing owner-authorised fictional baseline configuration, and does not call PayPal.
+
+First live block-6 run exposed a real bypass: migration 0035 dropped/recreated `record_verified_sandbox_event`, resetting PostgreSQL's PUBLIC EXECUTE default. An authenticated caller could insert an apparently verified event, then capture completion consumed budget. This was not dismissed as a false positive. All that run's fixtures rolled back.
+
+Applied **0036_restrict_verified_webhook_recorder.sql**: explicitly revoked PUBLIC, anon and authenticated execution; granted service_role only. Live privilege read confirms both browser roles cannot execute event recorder, capture recorder or finish-event function; service_role can. Actual signed-in preview calls returned permission code 42501 for event attestation, capture recording and direct Paid update. Prior guessed proxy-path 404 responses are explicitly excluded from evidence.
+
+Second live rollback test: **13 checks PASS**: browser capture refusal; browser forged event refusal; anonymous event refusal; capture response alone remains payment_pending; reservation remains active; mismatched capture refusal; wrong order/type refusal; matching privileged verified event completes; processed replay deduplication; exactly one completion audit; one consumed reservation after repeat; one capture after repeat; unverified event refusal. The deliberate final RESULTS exception is the rollback mechanism, not a failed assertion. Zero leftover Webhook Gate Test workspaces and zero forged release events verified.
+
+**Positive proof boundary:** SQL tests simulate a privileged attestation; they do not cryptographically sign a PayPal event. The existing genuine completion event is retained and exact-bound to historical order/capture. New end-to-end genuine signed delivery through the revised handler remains unverified.
+
+## Preview versus published checks
+
+Preview: authorised existing-attempt reconciliation used normal Check payment confirmation on both payment pages; both remained pending. Historical PP-PAYMENT-TEST-001 remained Paid after refresh; no page errors. All actual signed-in forgery refusals above were against preview with the shared live database.
+
+Published: actual unsigned and forged-signature POSTs to `https://paypatrol.lovable.app/api/public/paypal/webhook` both returned **401**, with no forged event recorded. This proves published rejection only, not publication of the revised handler. Current server edits have **not been published during this continuation**. Earlier published desktop/mobile paired Reject/Approve, notifications, Completed/Evidence and invoice flows remain dated prior evidence; no fresh physical-phone or outside-judge claim.
+
+Basic database safety scan: no findings. Critical `lov_finding_4a3ab3845f7cdc6d` remains active until genuine revised-handler proof, deployment verification and new deep scan support closure. Do not ignore it. A new deep scan was not started before publication because the requested order is post-publication and scans use last-saved code; it is a Lovable-owned release step, not a clean-security claim.
+
+## Preserve payment evidence
+
+Default judge payment: **PP-PAYMENT-TEST-001, CA$25 CAD**, purchase fb1f53a8-237f-46f1-84da-3ee3dc587c18; order **6PP262896T830104W**, capture **2X730686B0899582N**, COMPLETED; one completed attempt and one consumed CA$25 reservation. Two cancelled/released attempts remain historical, not extra charges. Genuine signed PENDING and COMPLETED events are stored; completion event payload now includes the exact capture. Do not run another checkout to demonstrate this evidence.
+
+Reconciled existing CA$135 attempt c1a93675-cfb7-4c33-a235-cf22bd8ae80c: order **35R973218C432202U**, capture **9DS69868M5318110G**. At 03:00 UTC capture PENDING, attempt confirmation_pending, reservation active. Older CA$25 attempt adccd16d-ec71-4254-a7d2-8b82c8e9496f: order **5E761948D4771801C**, capture **015079546D223270G**, same pending/active result. UI reconciliation was exercised; do not interpret a generic pending response as a distinct new provider status payload. Shared records remained pending after reconciliation and maintenance updates. No replacement payment authorised.
+
+Batch approvals **Verified**: PP-BATCH-ASSESS-20261108-001 and -002, each CA$135 CAD/v1, method batch, valid. Saved at 8 November 01:51:01 UTC. Ada's Grocery → Approvals → Completed → Spending → Approved. Evidence: linked “Spending approved for CA$135.00 (batch approval)” entries, purchase IDs 1a9521e9-90b3-4fc2-87c6-9ad9ca4218e2 / 8dc40061-766d-4307-9e52-dcc36e8b9525. -001's subsequent pending payment is separate from batch approval.
+
+PP-CHECKOUT-20261103 is currently **CA$78/v3/TEST/Blocked**, not CA$80. Nnenna's recorded rejection concerned CA$80/v2, reason “This is not the right price”. No corrections or decisions were repeated, and no reservation/payment exists.
+
+## Deployment pairing and next genuine webhook action
+
+Database migrations **0035 + 0036** are already applied immediately to the shared live backend. The server release must include revised `src/routes/api/public/paypal/webhook.ts` (passes exact capture ID) and `src/lib/paypal.server.ts` (reports Paid only if the persisted attempt is completed). Older published handler can still record events without capture ID; database then conservatively retains pending. Do not remove gate or loosen access to restore old completion behaviour.
+
+**No new Sandbox checkout is necessary yet.** Blessing can use the existing connected PayPal Developer Sandbox app's webhook event history to resend the genuine stored **PAYMENT.CAPTURE.COMPLETED** event **WH-2P19156481704070K-9975648204500261Y**, order 6PP262896T830104W / capture 2X730686B0899582N, to the preview webhook endpoint already used by that app. Do not use the simulator or invent signatures. Confirm destination is the intended preview handler before resending; if the app only targets production, wait for a cleared release and resend after publication. This tests genuine signature acceptance/deduplication of completed evidence without moving money. Lovable must observe handler/provider logs, exact event binding and unchanged single budget charge; a screenshot of resend alone is not proof.
+
+Because that event is already processed, a resend proves genuine acceptance/replay handling, **not a fresh pending→Paid transition**. If genuine positive transition is needed, wait for either existing pending capture to complete and its real signed completion event. Only if PayPal cannot complete either, discuss a separately authorised labelled CAD25 Harbourside scenario after checking available budget; do not create or start it yet. A merchant ID alone never authorises an additional recipient.
+
+## Separate document-link warning
+
+Warning `lov_finding_a4420bda72eee73a`: a previously issued private document fallback link may remain valid **up to 120 seconds** after membership revocation. New access is checked; no permanent public URL. This remains active, was not silently fixed/ignored, and is separate from Paid completion. Owner: Lovable to replace short-lived signed fallback with per-request authorised streaming or document the accepted revocation window; user has not approved a weaker requirement. No broad production readiness claimed.
+
+## Remaining blockers, owners, next actions
+
+1. **Current explicit typecheck/production-build evidence — Lovable/platform.** Obtain fresh current-version harness diagnostics; resolve any failure. 82 tests and build OK are available, separate transcripts are not.
+2. **Genuine revised-handler acceptance/transition — Blessing + Lovable.** Resend existing genuine completed event to configured preview when available; Lovable verifies replay/accounting. Existing pending attempts' real completion must be verified before claiming fresh transition; no new checkout now.
+3. **Publication and deployed verification/deep scan — Lovable, after checks; Blessing release approval if needed.** Publish both server edits, verify actual deployed behavior, run basic then deep scan; close Critical only with evidence. Not started early and no clean scan promise.
+4. **Fresh judge onboarding — fresh judge/presenter with own inbox.** Sign up, confirm email, create isolated business, upload/review/save no-merchant invoice, correct with reason, refresh; do not grant Ada financial roles for inspection.
+5. **Nnenna physical-phone notification — Nnenna.** Open bell (count unchanged), open one unread item (count minus one), refresh (read persists); normal task stays pending. Link /notifications/73048a1f-949c-43df-b01d-10717ce39295 is a routing aid, not a bell-test substitute. No decision needed.
+6. **Successful independent legitimate replacement-supplier verification — Lovable integration + business account owner + different authorised reviewer.** Current one-merchant integration cannot prove replacement onboarding. Do not approve TEST/TESTONLY, invent evidence, or substitute Harbourside.
+7. **Document revocation warning — Lovable.** Active separate warning as above. Broader production blocker; disclose during scoped judging.
+
+Every agreed requirement met: **No**. Scoped presenter-supported hackathon judging: demonstrated invoice checking, saved review/batch outcomes and historical CA$25 payment are usable, but the new release is **not cleared yet** and external self-service onboarding is not verified. Sandbox limits: one Harbourside receiving merchant; refunds/reversals unsupported/no budget restoration; invoice lines saved as summary; AI requires human review; no task email/push; accessibility/physical-device, high-volume pagination, scheduled-job firing and genuine delayed/concurrent provider delivery remain open.
+
+
+## Historical checkpoints (superseded for current state)
+
+# PayPatrol — Judges’ Verification Report
+
 **Current review date: 8 November 2026 (UTC).** The newest checkpoint supersedes conflicting current-state claims in the dated historical checkpoints. Sandbox test money only; no production payments. Historical engineering evidence remains in BUILD_LOG.md.
 
 ## Final readiness checkpoint — 8 November 2026, 01:59 UTC

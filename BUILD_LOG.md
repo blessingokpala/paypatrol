@@ -1,5 +1,15 @@
 # PayPatrol — Build Log
 
+## Release continuation — 8 November 2026, 03:01 UTC
+
+- Exact TS2322 recovered from hosted diagnostics: optional RPC capture accepted string/undefined, not null. Optional argument now omitted. Harness build OK; separate current-version hosted typecheck/production transcripts still unavailable.
+- SQL block 6 valid-format merchant fixture preserved validation and rolled back. Initial run exposed recreated event recorder PUBLIC EXECUTE; migration 0036 restricts event attestation to service_role. Live browser/anonymous function grants verified. Second run: 13 PASS checks including exact matching event, forgery refusals, response-only pending and single budget charge after repeat. SQL positive is scripted attestation, not genuine signed delivery.
+- 82 unit tests/14 files pass, including 5 scripted webhook boundary tests. Preview actual signed-in writes refused (42501); unsigned/forged preview and published webhooks 401. No genuine revised-handler delivery yet; Critical remains open.
+- Both existing attempts reconciled via preview UI; records remain pending with active reservations at 03:00 UTC. Historical CA$25 completed payment and verified batch approvals preserved; no new payment.
+- Server fix not published in this continuation; v3 assessment describes release blockers and separate 120-second document warning.
+
+# PayPatrol — Build Log
+
 
 ## Owner setup guidance and capture checkpoint — 2026-11-03, 16:34 UTC
 
