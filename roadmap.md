@@ -4,7 +4,7 @@
 - [x] Created PP-SPENDING-REVIEW-20261108-001 CA$135 from UXAItion; TisVisitor eligible, published paired buttons checked, zero decisions/reservations/attempts; left pending.
 - [x] Traced 10 distinct membership-backfilled supplier events; bell now distinguishes unread events from current tasks and labels original submissions.
 - [x] Review-first panels and separate reason/evidence paths published; unsupported recipient confirmation refused server-side; 76 tests passed.
-- [ ] Verify notification/Pending links, desktop/mobile, unsupported recipient and saved outcome refresh; publish and capture first screens.
+- [x] Verified published notification/Pending links, desktop/mobile, unsupported recipient and saved outcome refresh; published final mobile clearance and captured first screens.
 
 ## Judge evaluation guide — 7 November 2026
 - [x] Published public entry/settings and authorised evidence checked; genuine no-merchant invoice extracted in 5.0s, saved/reopened on desktop/mobile; zero reservations/attempts.
@@ -24,7 +24,7 @@
 
 ## Pending with explicit blockers
 - [x] Clear individual/batch spending decisions published; 68 tests pass; published desktop/mobile read-only fixture checks confirm paired buttons, reason error and sticky layout. No decisions/reservations/payments created.
-- [ ] Genuine eligible reviewer save/refresh/Evidence verification for new decision controls: Ada's Grocery currently has no awaiting spending approvals; requires a future submission and reviewer's own action, not impersonation.
+- [ ] Genuine eligible reviewer save/refresh/Evidence verification for new decision controls: PP-SPENDING-REVIEW-20261108-001 is now awaiting TisVisitor's own action; deliberately not submitted during screen verification.
 - [x] Trace missed notifications; durable eligible-reviewer delivery/outcomes, business-aware links/read persistence/deduplication implemented; 14 eligible pending partner records backfilled once.
 - [x] Published notification core verified using owner-labelled PP-NOTIFY-20261106-001; exactly one unread partner record, zero reservations/payments; report updated. No partner session used.
 - [ ] Partner confirms actual device bell behaviour; existing task was opened/read and individually approved, requester outcome delivered/read; device rendering not inferred from records.
