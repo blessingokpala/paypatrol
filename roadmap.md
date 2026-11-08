@@ -3,7 +3,9 @@
 ## Final readiness update — 8 November 2026
 - [x] Record batch verification in completion table and versioned Judge Evaluation Guide; include exact references and matching Evidence locations.
 - [x] Published refresh/Completed/Evidence export, desktop/mobile buttons and one-item 13→12 notification persistence checked; 76 tests pass.
-- [ ] New -001 CA$135 pending checkout requires authorised existing-attempt reconciliation; no repeat payment.
+- [x] Both pending attempts reconciled via maintenance job against live PayPal (02:20 UTC): captures 9DS69868M5318110G (CA$135) and 015079546D223270G (CA$25) still PENDING at PayPal; attempts confirmation_pending; both reservations active; no replacement payment created.
+- [x] Critical finding fix implemented (migration 0035): Paid now requires a verified signed webhook bound to the exact order+capture; sync capture response alone records only PENDING. Live forgery tests: authenticated RPC 403, direct purchases UPDATE 403, anonymous RPC 401. 77/77 unit tests pass.
+- [ ] PARKED (credits): publish the webhook-gate fix; re-run deep security scan and mark finding fixed; finish SQL block 6 live run (configure_sandbox_merchant rejected DEMO merchant id — use a valid-format id); produce v3 judge guide PDF + v3 assessment; Nnenna phone check link: /notifications/73048a1f-949c-43df-b01d-10717ce39295.
 
 ## Full published-scope assessment — 8 November 2026
 - [x] Assessed uploaded requirement matrix against published screens, live records, genuine no-merchant extraction/correction/reopen, 76 tests and fresh direct negative guards; saved dated assessment/screenshots.
