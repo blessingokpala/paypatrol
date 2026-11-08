@@ -8,9 +8,7 @@ PayPatrol is licensed under the [MIT License](LICENSE). Third-party dependencies
 
 ## Public repository setup
 
-Connect this project through Lovable **Project settings → Git → GitHub**. Lovable creates a private repository initially. After reviewing the repository and its history for secrets and personal information, change visibility in GitHub under **Settings → General → Danger Zone → Change repository visibility → Public**.
-
-The root `LICENSE` file lets GitHub recognise the MIT license and display its license link in the repository sidebar. In the sidebar's **About** settings, add the description, topics and website `https://paypatrol.lovable.app`.
+The root `LICENSE` file lets GitHub recognise the MIT license and display its license link in the repository sidebar. 
 
 GitHub hosts the source code; the running application remains published through Lovable. Never publish private keys, account credentials or private invoice documents. Existing review reports contain personal and payment-test details and require a privacy review before making the repository public. Ignoring a file does not remove it from existing repository history.
 
